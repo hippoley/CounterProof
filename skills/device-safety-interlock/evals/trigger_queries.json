@@ -1,0 +1,19 @@
+{
+  "skill": "device-safety-interlock",
+  "should_trigger": [
+    "Never close doors if fire alarm is active",
+    "Stop the device if someone is in the way",
+    "Gas leak should block all heating",
+    "Emergency mode should override all automation",
+    "Create a safety interlock for window closing",
+    "The device must not operate during emergency"
+  ],
+  "should_not_trigger": [
+    "Close the window when it rains",
+    "Turn on the fan when hot",
+    "Save energy at night",
+    "Set a schedule for the lights",
+    "Open the window for ventilation",
+    "What is the temperature?"
+  ]
+}

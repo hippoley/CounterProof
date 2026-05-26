@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov", "ruff", "mypy"]
 llm = ["openai>=1.0", "anthropic>=0.25"]
+web = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
 
 [project.scripts]
 skill-factory = "skill_factory.cli.main:cli"

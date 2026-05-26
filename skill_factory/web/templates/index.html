@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skill Factory — Review UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --accent: #6c8ef5;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #8892b0;
+      --radius: 10px;
+      --font: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+    /* ── layout ── */
+    .layout { display: grid; grid-template-columns: 320px 1fr; height: 100vh; overflow: hidden; }
+    .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .main { overflow-y: auto; padding: 28px; }
+
+    /* ── header ── */
+    .header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+    .header p { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── search ── */
+    .search-bar { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .search-bar input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 0.85rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+
+    /* ── skill list ── */
+    .skill-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .skill-item {
+      padding: 12px; border-radius: var(--radius); cursor: pointer;
+      border: 1px solid transparent; margin-bottom: 4px; transition: all 0.15s;
+    }
+    .skill-item:hover { background: var(--surface2); border-color: var(--border); }
+    .skill-item.active { background: var(--surface2); border-color: var(--accent); }
+    .skill-item-name { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .skill-item-desc { font-size: 0.75rem; color: var(--muted); margin-top: 4px; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .skill-item-meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+    /* ── badges ── */
+    .badge {
+      font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+    .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+    .badge-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); }
+    .badge-blue { background: rgba(108,142,245,0.15); color: var(--accent); }
+    .badge-purple { background: rgba(167,139,250,0.15); color: var(--accent2); }
+
+    /* ── main content ── */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 60vh; color: var(--muted); gap: 12px; }
+    .empty-state .icon { font-size: 3rem; }
+
+    .skill-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .skill-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
+    .skill-subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 4px; line-height: 1.5; }
+    .action-bar { display: flex; gap: 10px; flex-shrink: 0; }
+
+    /* ── buttons ── */
+    .btn {
+      padding: 8px 18px; border-radius: 7px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-approve { background: var(--green); color: #0a1a12; }
+    .btn-approve:hover { background: #6ee7b7; }
+    .btn-reject { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+    .btn-reject:hover { background: rgba(248,113,113,0.25); }
+    .btn-validate { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-validate:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── tabs ── */
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab { padding: 8px 16px; font-size: 0.85rem; cursor: pointer; color: var(--muted);
+      border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── validation box ── */
+    .validation-box { border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+    .validation-box.pass { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); }
+    .validation-box.fail { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); }
+    .validation-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; }
+    .validation-item { font-size: 0.82rem; padding: 3px 0; display: flex; gap: 8px; }
+
+    /* ── code block ── */
+    .code-block {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #cdd6f4;
+    }
+
+    /* ── info grid ── */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .info-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .info-card-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .info-card-value { font-size: 1rem; font-weight: 700; margin-top: 4px; }
+
+    /* ── eval cases ── */
+    .eval-case { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px; margin-bottom: 10px; }
+    .eval-case-id { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
+    .eval-case-task { font-size: 0.88rem; margin: 6px 0; }
+    .eval-case-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── trigger queries ── */
+    .trigger-section { margin-bottom: 16px; }
+    .trigger-section h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+    .trigger-item { font-size: 0.85rem; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; }
+    .trigger-item.should { background: rgba(52,211,153,0.08); border-left: 3px solid var(--green); }
+    .trigger-item.should-not { background: rgba(248,113,113,0.08); border-left: 3px solid var(--red); }
+
+    /* ── toast ── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: var(--radius);
+      font-size: 0.85rem; font-weight: 600; z-index: 1000; animation: slideIn 0.2s ease;
+      max-width: 360px;
+    }
+    .toast.success { background: var(--green); color: #0a1a12; }
+    .toast.error { background: var(--red); color: #1a0a0a; }
+    .toast.info { background: var(--accent); color: #0a0f1a; }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── loading ── */
+    .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── registry badge in sidebar ── */
+    .registry-count { background: var(--accent); color: #0a0f1a; font-size: 0.65rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 10px; }
+
+    /* ── section title ── */
+    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+  </style>
+</head>
+
+
+<body>
+<div class="layout">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="header">
+      <h1>🏭 Skill Factory</h1>
+      <p>Review &amp; approve agent skills</p>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search skills..." oninput="filterSkills()" />
+    </div>
+    <div class="skill-list" id="skillList">
+      <div style="padding:16px;color:var(--muted);font-size:0.82rem;">Loading skills…</div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main" id="mainContent">
+    <div class="empty-state">
+      <div class="icon">🔍</div>
+      <div style="font-size:1rem;font-weight:600;">Select a skill to review</div>
+      <div style="font-size:0.85rem;">Choose a skill from the sidebar to view details, validation results, and eval cases.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let allSkills = [];
+  let currentSkill = null;
+
+  // ── init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    await loadSkills();
+  }
+
+  async function loadSkills() {
+    try {
+      const res = await fetch('/api/skills');
+      const data = await res.json();
+      allSkills = data.skills || [];
+      renderSkillList(allSkills);
+    } catch (e) {
+      document.getElementById('skillList').innerHTML =
+        '<div style="padding:16px;color:var(--red);font-size:0.82rem;">Failed to load skills</div>';
+    }
+  }
+
+  // ── sidebar list ──────────────────────────────────────────────────────────
+  function renderSkillList(skills) {
+    const el = document.getElementById('skillList');
+    if (!skills.length) {
+      el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.82rem;">No skills found</div>';
+      return;
+    }
+    el.innerHTML = skills.map(s => {
+      const passed = s.validation?.passed;
+      const statusBadge = passed
+        ? '<span class="badge badge-green">✓ valid</span>'
+        : '<span class="badge badge-red">✗ errors</span>';
+      const warnBadge = (s.validation?.warnings?.length > 0)
+        ? `<span class="badge badge-yellow">${s.validation.warnings.length} warn</span>` : '';
+      const domainBadge = s.domain ? `<span class="badge badge-blue">${s.domain}</span>` : '';
+      const evalBadge = s.has_evals ? '<span class="badge badge-purple">evals</span>' : '';
+      return `
+        <div class="skill-item" id="item-${s.name}" onclick="selectSkill('${s.name}')">
+          <div class="skill-item-name">${s.name}</div>
+          <div class="skill-item-desc">${s.description || ''}</div>
+          <div class="skill-item-meta">${statusBadge}${warnBadge}${domainBadge}${evalBadge}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function filterSkills() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allSkills.filter(s =>
+      s.name?.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q) ||
+      s.domain?.toLowerCase().includes(q) || s.tags?.some(t => t.toLowerCase().includes(q))
+    );
+    renderSkillList(filtered);
+  }
+
+  // ── skill detail ──────────────────────────────────────────────────────────
+  async function selectSkill(name) {
+    // Highlight sidebar item
+    document.querySelectorAll('.skill-item').forEach(el => el.classList.remove('active'));
+    const item = document.getElementById(`item-${name}`);
+    if (item) item.classList.add('active');
+
+    document.getElementById('mainContent').innerHTML =
+      '<div style="padding:40px;color:var(--muted)"><span class="loading"></span> Loading…</div>';
+
+    try {
+      const res = await fetch(`/api/skills/${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const skill = await res.json();
+      currentSkill = skill;
+      renderSkillDetail(skill);
+    } catch (e) {
+      document.getElementById('mainContent').innerHTML =
+        `<div style="padding:40px;color:var(--red)">Failed to load skill: ${e.message}</div>`;
+    }
+  }
+
+  function renderSkillDetail(skill) {
+    const v = skill.validation || {};
+    const validBox = v.passed
+      ? `<div class="validation-box pass">
+           <div class="validation-title" style="color:var(--green)">✓ Validation Passed</div>
+           ${(v.warnings||[]).map(w => `<div class="validation-item"><span style="color:var(--yellow)">⚠</span>${w}</div>`).join('')}
+         </div>`
+      : `<div class="validation-box fail">
+           <div class="validation-title" style="color:var(--red)">✗ Validation Failed</div>
+           ${(v.errors||[]).map(e => `<div class="validation-item"><span style="color:var(--red)">✗</span>${e}</div>`).join('')}
+           ${(v.warnings||[]).map(w => `<div class="validation-item"><span style="color:var(--yellow)">⚠</span>${w}</div>`).join('')}
+         </div>`;
+
+    const tags = (skill.tags||[]).map(t => `<span class="badge badge-purple">${t}</span>`).join(' ');
+
+    const evalsHtml = skill.evals ? renderEvals(skill.evals) : '<div style="color:var(--muted);font-size:0.85rem;">No eval cases found.</div>';
+    const triggerHtml = skill.trigger_queries ? renderTriggers(skill.trigger_queries) : '<div style="color:var(--muted);font-size:0.85rem;">No trigger queries found.</div>';
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="skill-header">
+        <div>
+          <div class="skill-title">${skill.name}</div>
+          <div class="skill-subtitle">${skill.description || ''}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            ${skill.domain ? `<span class="badge badge-blue">${skill.domain}</span>` : ''}
+            <span class="badge badge-blue">v${skill.version || '?'}</span>
+            ${tags}
+          </div>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-validate" onclick="revalidate('${skill.name}')">↻ Re-validate</button>
+          <button class="btn btn-reject" onclick="rejectSkill('${skill.name}')">✗ Reject</button>
+          <button class="btn btn-approve" id="approveBtn" onclick="approveSkill('${skill.name}')"
+            ${!v.passed ? 'disabled title="Fix validation errors first"' : ''}>
+            ✓ Approve
+          </button>
+        </div>
+      </div>
+
+      ${validBox}
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-label">Domain</div>
+          <div class="info-card-value">${skill.domain || '—'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Version</div>
+          <div class="info-card-value">${skill.version || '—'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Evals</div>
+          <div class="info-card-value" style="color:${skill.has_evals ? 'var(--green)' : 'var(--muted)'}">${skill.has_evals ? '✓ Yes' : '✗ No'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Scripts</div>
+          <div class="info-card-value" style="color:${skill.has_scripts ? 'var(--green)' : 'var(--muted)'}">${skill.has_scripts ? '✓ Yes' : '✗ No'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">References</div>
+          <div class="info-card-value" style="color:${skill.has_references ? 'var(--green)' : 'var(--muted)'}">${skill.has_references ? '✓ Yes' : '✗ No'}</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('skill-md', this)">SKILL.md</div>
+        <div class="tab" onclick="switchTab('evals', this)">Eval Cases</div>
+        <div class="tab" onclick="switchTab('triggers', this)">Trigger Queries</div>
+      </div>
+
+      <div id="panel-skill-md" class="panel active">
+        <div class="section-title">SKILL.md content</div>
+        <div class="code-block">${escHtml(skill.skill_md || '')}</div>
+      </div>
+      <div id="panel-evals" class="panel">
+        <div class="section-title">A/B Eval Cases</div>
+        ${evalsHtml}
+      </div>
+      <div id="panel-triggers" class="panel">
+        <div class="section-title">Trigger Queries</div>
+        ${triggerHtml}
+      </div>
+    `;
+  }
+
+  function renderEvals(evals) {
+    const cases = evals.cases || [];
+    if (!cases.length) return '<div style="color:var(--muted)">No cases defined.</div>';
+    return cases.map(c => `
+      <div class="eval-case">
+        <div class="eval-case-id">${c.id}</div>
+        <div class="eval-case-task">${c.task}</div>
+        <div class="eval-case-meta">
+          <span class="badge ${c.expected_pass ? 'badge-green' : 'badge-red'}">${c.expected_pass ? 'should pass' : 'should fail'}</span>
+          <span class="badge badge-blue">${c.verifier || 'schema'}</span>
+          ${c.metadata?.complexity ? `<span class="badge badge-purple">${c.metadata.complexity}</span>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  function renderTriggers(tq) {
+    const should = tq.should_trigger || [];
+    const shouldNot = tq.should_not_trigger || [];
+    return `
+      <div class="trigger-section">
+        <h4>✓ Should trigger (${should.length})</h4>
+        ${should.map(q => `<div class="trigger-item should">${q}</div>`).join('')}
+      </div>
+      <div class="trigger-section">
+        <h4>✗ Should NOT trigger (${shouldNot.length})</h4>
+        ${shouldNot.map(q => `<div class="trigger-item should-not">${q}</div>`).join('')}
+      </div>`;
+  }
+
+  // ── tabs ──────────────────────────────────────────────────────────────────
+  function switchTab(panelId, tabEl) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tabEl.classList.add('active');
+    document.getElementById(`panel-${panelId}`)?.classList.add('active');
+  }
+
+  // ── actions ───────────────────────────────────────────────────────────────
+  async function revalidate(name) {
+    showToast('Re-validating…', 'info');
+    try {
+      const res = await fetch(`/api/skills/${encodeURIComponent(name)}/validate`);
+      const data = await res.json();
+      if (data.passed) showToast('Validation passed ✓', 'success');
+      else showToast(`Validation failed: ${data.errors.length} error(s)`, 'error');
+      await selectSkill(name);
+    } catch (e) { showToast('Validation request failed', 'error'); }
+  }
+
+  async function approveSkill(name) {
+    const btn = document.getElementById('approveBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await fetch('/api/registry/approve', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({skill_name: name, overwrite: false})
+      });
+      const data = await res.json();
+      if (res.ok && data.approved) {
+        showToast(`✓ ${name} approved and added to registry`, 'success');
+        await loadSkills();
+      } else if (res.status === 409) {
+        // Already in registry — offer overwrite
+        if (confirm(`${name} is already in the registry. Overwrite?`)) {
+          const res2 = await fetch('/api/registry/approve', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({skill_name: name, overwrite: true})
+          });
+          const d2 = await res2.json();
+          if (d2.approved) showToast(`✓ ${name} updated in registry`, 'success');
+        }
+      } else {
+        showToast(data.reason || 'Approval failed', 'error');
+      }
+    } catch (e) { showToast('Approval request failed', 'error'); }
+    finally { if (btn) btn.disabled = false; }
+  }
+
+  async function rejectSkill(name) {
+    if (!confirm(`Reject skill "${name}"? This will mark it as rejected.`)) return;
+    try {
+      const res = await fetch('/api/registry/reject', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({skill_name: name})
+      });
+      if (res.ok) {
+        showToast(`${name} marked as rejected`, 'info');
+        await loadSkills();
+      }
+    } catch (e) { showToast('Reject request failed', 'error'); }
+  }
+
+  // ── utils ─────────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showToast(msg, type = 'info') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,10 +1,24 @@
-# Skill Factory
+<div align="center">
 
-> **Forge skills from real failures, not imagination.**
+# 🏭 Skill Factory
 
-Skill Factory is an open-source framework for creating, evaluating, and managing **Agent Skills** — reusable, versioned capability packages that make AI agents smarter over time.
+**Forge agent skills from real task failures, not imagination.**
 
-Instead of writing skills from scratch, Skill Factory extracts them from real task trajectories, failure logs, human corrections, and execution feedback — then validates every skill with deterministic verifiers and A/B evals before it enters the registry.
+[![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![PyPI](https://img.shields.io/badge/pypi-skill--factory-orange.svg)](https://pypi.org/project/skill-factory/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+</div>
+
+---
+
+Skill Factory is an open-source framework for **creating, evaluating, and managing Agent Skills** — reusable, versioned capability packages that make AI agents smarter over time.
+
+Instead of writing skills from scratch, Skill Factory **extracts them from real task trajectories**, failure logs, human corrections, and execution feedback — then validates every skill with deterministic verifiers and A/B evals before it enters the registry.
+
+> A skill only enters the registry if it proves it improves task outcomes. No evidence, no entry.
 
 ---
 
@@ -12,24 +26,143 @@ Instead of writing skills from scratch, Skill Factory extracts them from real ta
 
 Most teams hit the same wall:
 
-- Prompt templates cannot cover open-ended scenarios
-- Hand-crafting rules does not scale
-- LLMs hallucinate skills with no grounding in real domain knowledge
-- There is no way to know if a skill actually helps
+| Problem | Why it hurts |
+|---|---|
+| Prompt templates can't cover open-ended scenarios | Every new edge case needs manual work |
+| Hand-crafting rules doesn't scale | 100 templates → 1000 edge cases |
+| LLMs hallucinate skills with no domain grounding | Garbage in, garbage out |
+| No way to know if a skill actually helps | Skills accumulate, quality degrades |
 
-## The Solution
+## The Solution: Skill Factory Pipeline
 
-    Real tasks / Failures / Human corrections / Execution logs
-            |
-    LLM synthesizes Skill candidates
-            |
-    Static checks + Trigger tests + A/B task evaluation
-            |
-    Deterministic verifier / LLM judge / Human review
-            |
-    Versioned Skill Registry
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Real tasks · Failures · Human corrections · Exec logs      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │   LLM Skill Generator  │  trajectory → SKILL.md candidate
+              └────────────┬───────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │   Static Verifier      │  frontmatter · safety · schema
+              └────────────┬───────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │   A/B Eval Runner      │  with skill vs without skill
+              └────────────┬───────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │  Deterministic Verifier│  JSON schema · state machine · safety
+              │  + LLM Judge           │  pass rate · token delta · latency
+              │  + Human Review        │  low-confidence & high-risk only
+              └────────────┬───────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │   Versioned Registry   │  indexed · searchable · auditable
+              └────────────────────────┘
+```
 
-Skills are **forged from evidence**, not invented. Every skill must prove it improves task outcomes before it enters the registry.
+---
+
+## Architecture
+
+```
+skill_factory/
+├── models.py          # SkillMeta · Skill · EvalCase · EvalReport
+├── loader.py          # SKILL.md parser · progressive disclosure
+├── registry/          # Versioned skill store (add · get · remove · search)
+├── verifier/          # Static checker (frontmatter · safety · schema · evals)
+├── evaluator/         # A/B eval runner (with skill vs without skill)
+├── generator/         # Trajectory model · LLM prompt builder
+└── cli/               # CLI: validate · generate · registry · eval
+
+skills/                # Example skills (one directory per skill)
+├── thing-model-condition-template/
+├── energy-saving-schedule/
+├── multi-sensor-priority-control/
+└── device-safety-interlock/
+
+tests/
+├── unit/              # 15+ unit tests
+└── integration/
+
+docs/
+├── skill-format.md    # SKILL.md specification
+└── eval-guide.md      # Evaluation guide
+```
+
+---
+
+## Quick Start
+
+```bash
+# Install
+pip install skill-factory
+
+# Generate a skill from a real task trajectory
+skill-factory generate --trajectory trajectory.json --output skills/
+
+# Validate a skill (static checks)
+skill-factory validate skills/my-skill/
+
+# Run A/B eval
+skill-factory eval skills/my-skill/ --task-set evals/tasks.json
+
+# Manage the registry
+skill-factory registry list
+skill-factory registry add skills/my-skill/
+skill-factory registry search "smart-home"
+skill-factory registry remove my-skill
+```
+
+---
+
+## Skill Directory Format
+
+Every skill is a self-contained directory:
+
+```
+my-skill/
+├── SKILL.md                    # Required: frontmatter + instructions
+├── scripts/
+│   └── validate.py             # Deterministic verifier script
+├── references/
+│   └── protocol.md             # Domain knowledge docs
+├── assets/
+│   ├── output.schema.json      # Expected output JSON schema
+│   └── examples.json           # Worked examples
+└── evals/
+    ├── evals.json              # A/B eval test cases
+    └── trigger_queries.json    # Should / should-not trigger queries
+```
+
+**SKILL.md** uses YAML frontmatter + Markdown:
+
+```yaml
+---
+name: my-skill
+description: Use this skill when... (one sentence, specific trigger)
+version: "0.1.0"
+license: apache-2.0
+compatibility: Requires schema v3
+metadata:
+  owner: team-name
+  domain: smart-home
+  tags: [iot, condition, behavior-tree]
+---
+
+## Purpose
+## When to use
+## Procedure
+## Gotchas
+## Validation
+```
 
 ---
 
@@ -37,56 +170,54 @@ Skills are **forged from evidence**, not invented. Every skill must prove it imp
 
 | Concept | Description |
 |---|---|
-| **Skill** | A directory with SKILL.md + scripts + references + assets + evals |
+| **Skill** | A directory with `SKILL.md` + scripts + references + assets + evals |
 | **Skill Registry** | Versioned store of validated skills, indexed by domain and trigger |
-| **Skill Generator** | Synthesizes skill candidates from trajectories and feedback |
-| **Skill Evaluator** | Runs A/B tests: with skill vs without skill |
-| **Skill Verifier** | Deterministic checks: schema, syntax, safety, conflicts |
-| **Progressive Disclosure** | Load only name+description at startup; full skill on match |
+| **Skill Generator** | Synthesizes skill candidates from trajectories and LLM feedback |
+| **Skill Evaluator** | Runs A/B tests: with skill vs without skill, measures delta |
+| **Skill Verifier** | Deterministic checks: schema, syntax, safety, conflict detection |
+| **Progressive Disclosure** | Load only `name`+`description` at startup; full skill on match |
 
 ---
 
-## Quick Start
+## Evaluation Philosophy
 
-    pip install skill-factory
+Skills are evaluated on measurable signals — not intuition:
 
-    skill-factory generate --trajectory trajectory.json --output skills/
-    skill-factory validate skills/my-skill/
-    skill-factory eval skills/my-skill/ --task-set evals/tasks.json
-    skill-factory registry list
-    skill-factory registry add skills/my-skill/
+| Metric | Description |
+|---|---|
+| **Pass rate delta** | Primary: did the skill improve task success rate? |
+| **Schema compliance** | Does output pass deterministic validators? |
+| **Trigger precision** | Low false-positive and false-negative rates |
+| **Token delta** | Did the skill increase token cost significantly? |
+| **Safety** | No prompt injection, no unauthorized actions |
 
----
-
-## Project Structure
-
-    skill_factory/
-      registry/       # Skill Registry: store, index, version
-      generator/      # Skill Generator: trajectory to skill candidate
-      evaluator/      # Skill Evaluator: A/B eval runner
-      verifier/       # Skill Verifier: deterministic checks
-      cli/            # CLI entry points
-    skills/           # Example skills
-    tests/            # Unit and integration tests
-    docs/             # Documentation
+A skill passes if: `pass_rate_delta > 0` AND no safety violations AND `token_delta < 20%`.
 
 ---
 
 ## Roadmap
 
 - [x] Skill directory format (SKILL.md spec)
-- [x] Skill Registry (add, list, get, remove)
-- [x] Static verifier (frontmatter, schema, safety)
-- [x] Trigger evaluator (should/should-not trigger)
+- [x] Skill Registry (add, list, get, remove, search)
+- [x] Static verifier (frontmatter, schema, safety patterns)
+- [x] Trigger evaluator (should / should-not trigger)
 - [x] A/B eval runner
-- [ ] Trajectory-based skill generator (LLM)
-- [ ] LLM judge integration
-- [ ] Red team / safety scanner
-- [ ] Web UI for skill review
-- [ ] GitHub Actions CI for skill validation
+- [x] Example skill: `thing-model-condition-template`
+- [ ] `skill-factory generate` — LLM-powered skill synthesis from trajectories
+- [ ] LLM judge integration (OpenAI / Anthropic)
+- [ ] Red team / safety scanner (promptfoo integration)
+- [ ] Web UI for skill review (approve / reject / diff)
+- [ ] More example skills (energy, multi-sensor, safety interlock)
+- [ ] PyPI release
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). All skills submitted to the registry must pass the full eval pipeline.
 
 ---
 
 ## License
 
-Apache 2.0
+[Apache 2.0](LICENSE) — © 2025 Skill Factory Contributors

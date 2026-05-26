@@ -1,0 +1,43 @@
+{
+  "skill": "multi-sensor-priority-control",
+  "version": "0.1.0",
+  "cases": [
+    {
+      "id": "eval-001",
+      "task": "The window should open when CO2 is high, but close when it rains. Rain takes priority.",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "two-sensor-conflict"
+      }
+    },
+    {
+      "id": "eval-002",
+      "task": "The fan should turn on when temperature is high OR when CO2 is high, but turn off if fire alarm is active",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "safety-override"
+      }
+    },
+    {
+      "id": "eval-003",
+      "task": "Open the window when it is hot, but the user can manually override",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "manual-override"
+      }
+    },
+    {
+      "id": "eval-004",
+      "task": "Open the window",
+      "expected_pass": false,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "no-conflict",
+        "note": "No competing triggers, wrong skill"
+      }
+    }
+  ]
+}

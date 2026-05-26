@@ -1,0 +1,19 @@
+{
+  "skill": "energy-saving-schedule",
+  "should_trigger": [
+    "Save energy when no one is home",
+    "Automatically reduce heating at night",
+    "Turn off devices on a schedule",
+    "Create an energy saving schedule for weekdays",
+    "Set up away mode for HVAC",
+    "Reduce electricity usage during peak hours"
+  ],
+  "should_not_trigger": [
+    "Turn on the light now",
+    "What is my current energy usage?",
+    "When it rains close the windows",
+    "Set the temperature to 22 degrees",
+    "Show me my schedule",
+    "Why is my bill so high?"
+  ]
+}

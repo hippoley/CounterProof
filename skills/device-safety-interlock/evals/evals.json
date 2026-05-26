@@ -1,0 +1,43 @@
+{
+  "skill": "device-safety-interlock",
+  "version": "0.1.0",
+  "cases": [
+    {
+      "id": "eval-001",
+      "task": "Never close the windows or doors if the fire alarm is active",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "fire-alarm-block"
+      }
+    },
+    {
+      "id": "eval-002",
+      "task": "Stop the window from closing if a person is detected in the window path",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "person-in-path"
+      }
+    },
+    {
+      "id": "eval-003",
+      "task": "If a gas leak is detected, turn off all heating devices and open windows",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "gas-leak-multi-action"
+      }
+    },
+    {
+      "id": "eval-004",
+      "task": "Close the window when it rains",
+      "expected_pass": false,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "no-safety",
+        "note": "No safety condition, wrong skill"
+      }
+    }
+  ]
+}

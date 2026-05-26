@@ -1,0 +1,54 @@
+[
+  {
+    "task_id": "co2-ventilation-fail-001",
+    "user_request": "When CO2 exceeds 1000ppm, open the ventilation window automatically, but stop if someone manually closes it",
+    "domain": "smart-home",
+    "passed": false,
+    "failure_reason": "Generated template missing interruption_rule field; state machine only had idle and running states",
+    "schema_errors": [
+      "Missing required field: state_machine.states must include 'success' and 'failure'",
+      "Missing required field: interruption_rule"
+    ],
+    "human_correction": "{\"template_id\": \"co2-ventilation-v1\", \"trigger\": {\"device_type\": \"co2_sensor\", \"capability\": \"co2_level\", \"condition\": \"co2_ppm > threshold\", \"threshold\": 1000}, \"action\": {\"device_type\": \"smart_window\", \"capability\": \"position_control\", \"command\": \"open\"}, \"state_machine\": {\"states\": [\"idle\", \"running\", \"success\", \"failure\"], \"transitions\": [{\"from\": \"idle\", \"to\": \"running\", \"on\": \"trigger_fired\"}, {\"from\": \"running\", \"to\": \"success\", \"on\": \"command_ack\"}, {\"from\": \"running\", \"to\": \"failure\", \"on\": \"timeout_or_error\"}, {\"from\": \"success\", \"to\": \"idle\", \"on\": \"reset\"}, {\"from\": \"failure\", \"to\": \"idle\", \"on\": \"reset\"}]}, \"interruption_rule\": {\"condition\": \"manual_override==true\", \"action\": \"stop\"}}",
+    "correction_notes": "Always include all 4 states. Always check if the action is interruptible \u2014 window control always is.",
+    "steps": [
+      {
+        "step": 1,
+        "action": "retrieve_template",
+        "input": "co2 ventilation",
+        "output": "no match found",
+        "success": false,
+        "notes": "No existing template for CO2-triggered ventilation"
+      },
+      {
+        "step": 2,
+        "action": "generate",
+        "input": "user request",
+        "output": "partial template",
+        "success": false,
+        "notes": "LLM omitted interruption_rule and failure state"
+      },
+      {
+        "step": 3,
+        "action": "validate",
+        "input": "partial template",
+        "output": "2 schema errors",
+        "success": false,
+        "notes": "Schema validation caught missing fields"
+      },
+      {
+        "step": 4,
+        "action": "human_review",
+        "input": "partial template + errors",
+        "output": "corrected template",
+        "success": true,
+        "notes": "Human added interruption_rule and fixed state machine"
+      }
+    ],
+    "final_output": "",
+    "metadata": {
+      "reviewer": "engineer-a",
+      "review_time_minutes": 8
+    }
+  }
+]

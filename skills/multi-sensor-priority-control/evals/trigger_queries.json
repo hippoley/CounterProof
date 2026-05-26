@@ -1,0 +1,17 @@
+{
+  "skill": "multi-sensor-priority-control",
+  "should_trigger": [
+    "Rain and CO2 both control the window but conflict",
+    "Multiple sensors compete to control the same device",
+    "Temperature and occupancy both affect the AC but with different priorities",
+    "The window should open for ventilation but close for rain, which wins?",
+    "Create a priority rule for conflicting sensor triggers"
+  ],
+  "should_not_trigger": [
+    "Open the window when it rains",
+    "Turn on the fan when hot",
+    "Set a schedule for the lights",
+    "What sensors do I have?",
+    "Turn off all devices"
+  ]
+}

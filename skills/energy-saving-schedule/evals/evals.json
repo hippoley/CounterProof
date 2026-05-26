@@ -1,0 +1,43 @@
+{
+  "skill": "energy-saving-schedule",
+  "version": "0.1.0",
+  "cases": [
+    {
+      "id": "eval-001",
+      "task": "Turn off all lights automatically when no one is home",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "basic-occupancy"
+      }
+    },
+    {
+      "id": "eval-002",
+      "task": "Set the thermostat to 18 degrees on weeknights after 11pm and restore to 21 degrees at 7am",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "time-based-setback"
+      }
+    },
+    {
+      "id": "eval-003",
+      "task": "Reduce AC setpoint by 3 degrees during peak electricity hours on weekdays, but not if temperature exceeds 30 degrees",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "conditional-setback"
+      }
+    },
+    {
+      "id": "eval-004",
+      "task": "Turn off the living room light",
+      "expected_pass": false,
+      "verifier": "schema",
+      "metadata": {
+        "complexity": "too-specific",
+        "note": "One-time action, not a schedule"
+      }
+    }
+  ]
+}
