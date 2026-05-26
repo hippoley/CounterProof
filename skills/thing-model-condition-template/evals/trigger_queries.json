@@ -1,0 +1,19 @@
+{
+  "skill": "thing-model-condition-template",
+  "should_trigger": [
+    "When it rains, close the windows automatically",
+    "If CO2 is too high, open the ventilation",
+    "When temperature drops below threshold, activate heating and close windows",
+    "Create a condition template for rain-triggered window control",
+    "Generate a thing-model template for humidity-based fan control",
+    "The existing template doesn't cover my scenario with multiple sensors"
+  ],
+  "should_not_trigger": [
+    "What is the weather today?",
+    "List all my devices",
+    "Turn on the living room light",
+    "What templates do I already have?",
+    "Explain what a thing model is",
+    "Debug why my automation isn't working"
+  ]
+}

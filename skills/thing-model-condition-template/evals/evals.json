@@ -1,0 +1,47 @@
+{
+  "skill": "thing-model-condition-template",
+  "version": "0.1.0",
+  "cases": [
+    {
+      "id": "eval-001",
+      "task": "When it rains, automatically close all windows in the living room",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "domain": "smart-home",
+        "complexity": "basic"
+      }
+    },
+    {
+      "id": "eval-002",
+      "task": "If the indoor CO2 level exceeds 1000ppm, open the ventilation window, but stop if someone manually closes it",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "domain": "smart-home",
+        "complexity": "with-interruption"
+      }
+    },
+    {
+      "id": "eval-003",
+      "task": "When temperature drops below 18 degrees at night, close all windows and turn on heating, but never close windows if fire alarm is active",
+      "expected_pass": true,
+      "verifier": "schema",
+      "metadata": {
+        "domain": "smart-home",
+        "complexity": "with-safety-constraint"
+      }
+    },
+    {
+      "id": "eval-004",
+      "task": "Close the bedroom window",
+      "expected_pass": false,
+      "verifier": "schema",
+      "metadata": {
+        "domain": "smart-home",
+        "complexity": "too-specific",
+        "note": "No trigger condition, should not produce a reusable template"
+      }
+    }
+  ]
+}

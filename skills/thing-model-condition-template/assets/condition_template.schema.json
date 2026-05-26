@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConditionTemplate",
+  "type": "object",
+  "required": [
+    "template_id",
+    "name",
+    "domain",
+    "trigger",
+    "action",
+    "state_machine"
+  ],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "description": "Unique template identifier"
+    },
+    "name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "trigger": {
+      "type": "object",
+      "required": [
+        "device_type",
+        "capability",
+        "condition"
+      ],
+      "properties": {
+        "device_type": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "device_type",
+        "capability",
+        "command"
+      ],
+      "properties": {
+        "device_type": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      }
+    },
+    "state_machine": {
+      "type": "object",
+      "required": [
+        "states",
+        "transitions"
+      ],
+      "properties": {
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Must include: idle, running, success, failure"
+        },
+        "transitions": {
+          "type": "array"
+        }
+      }
+    },
+    "interruption_rule": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "safety_constraints": {
+      "type": "array"
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}
