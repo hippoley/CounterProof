@@ -1,10 +1,10 @@
 """Static verifier: checks SKILL.md structure, safety, and completeness."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from skill_factory.loader import load_skill, parse_frontmatter
-
 
 DANGEROUS_PATTERNS = [
     "rm -rf",
@@ -47,7 +47,7 @@ def verify_skill(skill_dir: Path | str) -> CheckResult:
 
     try:
         skill = load_skill(skill_dir)
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         result.add_error(f"Failed to parse SKILL.md: {e}")
         return result
 
@@ -55,7 +55,7 @@ def verify_skill(skill_dir: Path | str) -> CheckResult:
 
     # 2. Required frontmatter fields
     try:
-        data, body = parse_frontmatter(content)
+        data, _body = parse_frontmatter(content)
     except ValueError as e:
         result.add_error(str(e))
         return result

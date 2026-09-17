@@ -1,8 +1,5 @@
 """Tests for static verifier."""
-import pytest
-from pathlib import Path
 from skill_factory.verifier.static_check import verify_skill
-
 
 VALID_SKILL_MD = """---
 name: test-skill

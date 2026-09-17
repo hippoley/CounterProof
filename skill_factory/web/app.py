@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from skill_factory.loader import load_skill, load_skill_index
+from skill_factory.loader import load_skill
 from skill_factory.registry.registry import SkillRegistry
 from skill_factory.verifier.static_check import verify_skill
 
@@ -71,7 +70,7 @@ def _skill_to_dict(skill_dir: Path) -> dict[str, Any]:
             "has_scripts": any((skill_dir / "scripts").glob("*.py")) if (skill_dir / "scripts").exists() else False,
             "has_references": (skill_dir / "references").exists(),
         }
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         return {"name": skill_dir.name, "error": str(e), "path": str(skill_dir)}
 
 
@@ -196,7 +195,7 @@ async def approve_skill(action: RegistryAction) -> JSONResponse:
         })
     except FileExistsError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 

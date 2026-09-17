@@ -1,7 +1,7 @@
 """Builds LLM prompts for skill generation from trajectories."""
 from __future__ import annotations
-from skill_factory.generator.trajectory import Trajectory
 
+from skill_factory.generator.trajectory import Trajectory
 
 SKILL_GENERATION_SYSTEM_PROMPT = """You are a Skill Engineer. Your job is to extract reusable,
 generalizable agent skills from task execution trajectories and human feedback.

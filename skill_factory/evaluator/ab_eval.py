@@ -1,12 +1,12 @@
 """A/B evaluator: compares task performance with skill vs without skill."""
 from __future__ import annotations
+
 import json
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from skill_factory.models import EvalCase, EvalReport, EvalResult, Skill
-
 
 # Type alias for a task runner function
 # Signature: (task: str, skill_content: str | None) -> (passed: bool, score: float, tokens: int)

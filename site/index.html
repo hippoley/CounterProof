@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="SkillFactory live review surface, built from real repository skills and validation results.">
+  <title>SkillFactory · Failure to reusable skill</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><a href="https://github.com/hippoley/SkillFactory" class="logo">SKILL<span>FACTORY</span></a><div id="build">VERIFYING BUILD…</div></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">FAILURE → TRAJECTORY → SKILL → EVAL</p>
+      <h1>Agent skills should be forged from<br><em>what actually went wrong.</em></h1>
+      <p class="lead">Inspect the repository’s real smart-home skills, their trigger boundaries, evaluation cases and static safety checks. GitHub Actions rebuilds this review surface on every change.</p>
+      <div class="summary"><div><strong id="total">—</strong><span>skills</span></div><div><strong id="valid">—</strong><span>passing validation</span></div><div><strong id="cases">—</strong><span>evaluation cases</span></div></div>
+    </section>
+
+    <section class="factory">
+      <aside>
+        <div class="aside-head"><span>REPOSITORY SKILLS</span><input id="search" placeholder="Filter skills"></div>
+        <div id="skills" class="skill-list"><p class="loading">Loading build output…</p></div>
+      </aside>
+      <article id="detail">
+        <div class="blank"><b>Select a skill</b><p>Open its contract, validation result, eval cases and trigger boundary.</p></div>
+      </article>
+    </section>
+
+    <section class="pipeline">
+      <p class="eyebrow">THE CONTRACT</p><h2>Not a prompt folder. A controlled learning loop.</h2>
+      <div class="steps"><div><i>01</i><b>Capture failure</b><span>Preserve the task, actions, observation and outcome.</span></div><div><i>02</i><b>Extract pattern</b><span>Generalize the reusable constraint—not the one-off answer.</span></div><div><i>03</i><b>Verify skill</b><span>Check structure, safety, scope and executable resources.</span></div><div><i>04</i><b>Run A/B eval</b><span>Keep only skills that improve behavior under held-out tasks.</span></div></div>
+    </section>
+  </main>
+  <footer><span>SkillFactory</span><span>Forge agent skills from real task failures, not imagination.</span><a href="https://github.com/hippoley/SkillFactory">Source</a></footer>
+  <script src="app.js"></script>
+</body>
+</html>

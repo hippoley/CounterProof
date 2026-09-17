@@ -1,8 +1,8 @@
 """Tests for skill loader."""
-import pytest
-from pathlib import Path
-from skill_factory.loader import load_skill, parse_frontmatter, load_skill_index
 
+import pytest
+
+from skill_factory.loader import load_skill, load_skill_index, parse_frontmatter
 
 VALID_SKILL_MD = """---
 name: test-skill

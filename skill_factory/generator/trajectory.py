@@ -1,5 +1,6 @@
 """Trajectory data model: captures a task run for skill extraction."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,7 +47,7 @@ class Trajectory:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Trajectory":
+    def from_dict(cls, data: dict) -> Trajectory:
         steps = [TrajectoryStep(**s) for s in data.get("steps", [])]
         return cls(
             task_id=data["task_id"],

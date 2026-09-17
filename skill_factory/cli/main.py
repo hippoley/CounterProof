@@ -1,5 +1,6 @@
 """Skill Factory CLI entry point."""
 from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -9,7 +10,6 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
-from skill_factory.loader import load_skill
 from skill_factory.registry.registry import SkillRegistry
 from skill_factory.verifier.static_check import verify_skill
 
@@ -189,7 +189,7 @@ def generate(
             output_dir=Path(output),
             skill_name=skill_name or None,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI boundary reports provider failures cleanly
         console.print(f"[red]ERROR[/red] Generation failed: {e}")
         raise SystemExit(1)
 
@@ -214,7 +214,7 @@ def generate(
         for warn in result.warnings:
             console.print(f"  [yellow]WARN[/yellow]  {warn}")
 
-    console.print(f"\nNext steps:")
+    console.print("\nNext steps:")
     console.print(f"  skill-factory validate {skill_dir}")
     console.print(f"  skill-factory registry add {skill_dir}")
 
@@ -234,7 +234,7 @@ def serve(host: str, port: int, reload: bool) -> None:
     Then open: http://localhost:7860
     """
     try:
-        import uvicorn  # type: ignore  # noqa: F401
+        import uvicorn  # type: ignore
     except ImportError:
         console.print("[red]ERROR[/red] uvicorn not installed. Run: pip install skill-factory[web]")
         raise SystemExit(1)

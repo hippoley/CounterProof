@@ -1,12 +1,12 @@
 """Skill loader: reads SKILL.md and associated resources."""
 from __future__ import annotations
+
 import re
 from pathlib import Path
 
 import yaml
 
 from skill_factory.models import Skill, SkillMeta
-
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
@@ -59,6 +59,6 @@ def load_skill_index(skills_dir: Path) -> list[SkillMeta]:
         try:
             skill = load_skill(skill_dir)
             index.append(skill.meta)
-        except Exception:
-            pass  # skip malformed skills during index scan
+        except (OSError, TypeError, ValueError):
+            continue  # skip malformed skills during index scan
     return index

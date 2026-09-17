@@ -1,8 +1,8 @@
 """Tests for skill registry."""
-import pytest
-from pathlib import Path
-from skill_factory.registry.registry import SkillRegistry
 
+import pytest
+
+from skill_factory.registry.registry import SkillRegistry
 
 SKILL_MD = """---
 name: my-skill
