@@ -93,6 +93,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically.",
     },
     {
+        "id": "next-probe-planner",
+        "name": "Next discriminating probe planning for ambiguous survivors",
+        "status": "tested",
+        "evidence": "When survivor behavior signatures are identical, EvoPR emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
+        "limitation": "The planner produces experiment-design guidance, not an automatically instantiated executable domain test.",
+    },
+    {
         "id": "active-evolve",
         "name": "Trace -> multi-intervention discrimination -> guarded selection",
         "status": "tested",
