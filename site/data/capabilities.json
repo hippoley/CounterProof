@@ -23,6 +23,13 @@
       "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically."
     },
     {
+      "id": "proof-receipt",
+      "name": "Reproducible Proof Receipt with source fingerprints",
+      "status": "tested",
+      "evidence": "EvoPR can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
+      "limitation": "The receipt fingerprints source artifacts; it does not yet capture a full container image, dependency lock or external service state."
+    },
+    {
       "id": "packaged-install",
       "name": "Clean wheel install and packaged playground",
       "status": "tested",
@@ -150,7 +157,7 @@
     }
   ],
   "summary": {
-    "tested": 12,
+    "tested": 13,
     "partial": 4,
     "demo": 1,
     "planned": 4
