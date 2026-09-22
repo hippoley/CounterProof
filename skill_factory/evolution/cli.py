@@ -158,7 +158,6 @@ def prove(
     surface: str | None,
     out_file: str,
     packet_out: str | None,
-    probe_plan_out: str | None,
 ) -> None:
     """Compile a trace, select one hypothesis, run replay, and render Behavior Proof."""
     trace = load_trace(Path(trace_file))
@@ -223,6 +222,7 @@ def evolve(
     out_file: str,
     matrix_out: str | None,
     packet_out: str | None,
+    probe_plan_out: str | None,
 ) -> None:
     """Actively discriminate hypotheses and select only a unique surviving mutation."""
     trace = load_trace(Path(trace_file))
