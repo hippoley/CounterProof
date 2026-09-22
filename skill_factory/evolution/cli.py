@@ -11,7 +11,7 @@ from pathlib import Path
 import click
 
 from .capabilities import capability_report
-from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ReplayResult
+from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ProbeSpec, ReplayResult
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
@@ -20,6 +20,7 @@ from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
 def _packet_from_json(raw: dict) -> EvolutionPacket:
     evidence = tuple(Evidence(**item) for item in raw.get("evidence", []))
     hypotheses = tuple(Hypothesis(**item) for item in raw.get("hypotheses", []))
+    probes = tuple(ProbeSpec(**item) for item in raw.get("probes", []))
 
     candidates: list[CandidateMutation] = []
     for source in raw.get("candidates", []):
@@ -39,6 +40,7 @@ def _packet_from_json(raw: dict) -> EvolutionPacket:
         outcome_receipt=raw["outcome_receipt"],
         evidence=evidence,
         hypotheses=hypotheses,
+        probes=probes,
         candidates=tuple(candidates),
         selected_candidate_id=raw.get("selected_candidate_id"),
         metadata=raw.get("metadata", {}),
