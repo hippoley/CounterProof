@@ -290,7 +290,102 @@ A missing variant, timeout, or infrastructure error makes that intervention **in
 
 ---
 
-## Proof Receipts: evidence should expire when inputs drift
+## One adapter, many probes
+
+You do not have to repeat a command for every case × intervention.
+
+A discrimination manifest can define one reusable adapter:
+
+~~~json
+{
+  "status": "ready",
+  "root": "..",
+  "adapter": ["python", "my_probe_adapter.py"],
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "payload": {
+        "tenant_scope": "provisional"
+      },
+      "variants": {
+        "policy": {"expect": "pass"},
+        "skill": {"expect": "pass"}
+      }
+    }
+  ]
+}
+~~~
+
+EvoPR invokes the same adapter with:
+
+~~~text
+EVOPR_CASE_ID
+EVOPR_VARIANT
+EVOPR_CASE_JSON
+~~~
+
+So your adapter only needs to answer:
+
+> Given this case payload and this intervention surface, does the target agent behavior pass or fail?
+
+The included example:
+
+~~~bash
+evopr discriminate examples/traces/tenant_failure.json \
+  --experiment-manifest examples/adapter_discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --surface prompt
+~~~
+
+uses a single env-driven Python adapter across the full matrix.
+
+---
+
+# Ambiguity → draft executable scaffold
+
+When EvoPR cannot distinguish two surviving hypotheses, `evopr evolve` can emit both the prose plan and a machine-readable next experiment:
+
+~~~bash
+evopr evolve examples/traces/tenant_failure.json \
+  --experiment-manifest examples/ambiguous_discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --probe-plan-out NEXT_PROBE.md \
+  --probe-scaffold-out NEXT_EXPERIMENT.json
+~~~
+
+The generated scaffold contains two crossed cases:
+
+~~~text
+CASE A
+isolate policy lever
+policy expects PASS
+skill expects FAIL
+
+CASE B
+isolate skill lever
+policy expects FAIL
+skill expects PASS
+~~~
+
+But it is intentionally emitted as:
+
+~~~json
+{
+  "status": "draft",
+  "adapter": ["TODO_REPLACE_WITH_ADAPTER"],
+  "review_required": true
+}
+~~~
+
+EvoPR refuses to execute a draft scaffold, and it also refuses a `ready` scaffold that still contains the adapter placeholder.
+
+This is deliberate: **automatic experiment design is not the same thing as a trustworthy executable test.**
+
+---
+
+# Proof Receipts: evidence should expire when inputs drift
 
 A Behavior Proof should not stay trustworthy after its source inputs silently change.
 
@@ -579,6 +674,8 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Pre-registered predictions | **TESTED** | Expected PASS/FAIL outcomes are recorded before execution; contradicted predictions can block selection |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Probe Adapter protocol | **TESTED** | One adapter argv can execute many cases/variants via EVOPR_CASE_ID / EVOPR_VARIANT / EVOPR_CASE_JSON |
+| Draft probe scaffold | **TESTED** | Ambiguity can emit crossed experiment cases with pre-registered predictions; execution is blocked until reviewed |
 | Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
 | Behavior PR renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
 | Proof Receipt | **TESTED** | Trace + experiment hashes and observed/expected signatures can be stored and later verified for drift |
@@ -751,12 +848,14 @@ examples/
 ├── replay_suite.json
 ├── discrimination_suite.json
 ├── ambiguous_discrimination_suite.json
+├── adapter_discrimination_suite.json
 ├── traces/
 │   ├── tenant_failure.json
 │   └── homeai_correction.json
 └── replay/
     ├── tenant_policy.py
-    └── tenant_discrimination.py
+    ├── tenant_discrimination.py
+    └── env_probe_adapter.py
 
 site/
 ├── index.html
