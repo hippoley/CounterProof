@@ -37,9 +37,11 @@ competing hypotheses
   ↓
 falsifiable Probe Contracts
   ↓
-one candidate mutation
+SAME cases × MULTIPLE interventions
   ↓
-REAL baseline / candidate replay
+survivor / falsified / ambiguous
+  ↓
+guarded mutation selection
   ↓
 Behavior Proof
   ↓
@@ -56,6 +58,8 @@ The following paths are exercised in CI:
 generic JSON / JSONL trace ingest TESTED
 Trace → Evolution Packet          TESTED
 Probe Contracts                   TESTED
+Active multi-intervention compare TESTED
+Trace → discriminate → selection  TESTED
 Trace → replay → Behavior Proof   TESTED
 Promotion gate                    TESTED
 Behavior PR Markdown renderer     TESTED
@@ -68,6 +72,7 @@ These are **not implemented yet**:
 
 ```text
 live GitHub / framework trace adapters
+automatic intervention synthesis
 learned / unique causal attribution
 captured world-state forks
 automatic mutation application to every surface
@@ -91,30 +96,38 @@ EvoPR intentionally exposes its limitations instead of turning roadmap items int
 ```bash
 git clone -b feat/evopr-evolution-runtime https://github.com/hippoley/SkillFactory.git
 cd SkillFactory
-
 pip install -e .
 
-# 1. Build a review artifact WITH measured baseline/candidate replay attached
-evopr build examples/evolution_pr.json \\
-  --replay-manifest examples/replay_suite.json \\
-  --out EVOLUTION_PR.md
+# Raw trace → competing interventions → guarded selection → Behavior Proof
+evopr evolve examples/traces/tenant_failure.json \
+  --experiment-manifest examples/discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --surface prompt \
+  --out EVOLUTION_REVIEW.md \
+  --packet-out EVOLVED_PACKET.json
 
-# 2. Or run replay separately when you only want raw measurements
-evopr replay examples/replay_suite.json --out REPLAY_RESULTS.json
-
-# 3. Inspect capability status
+# Inspect the project's own capability truth table
 evopr audit
 
-# 4. Open the interactive Behavior Proof playground
+# Open the interactive Behavior Proof Sheet
 evopr demo
 # http://127.0.0.1:8765
 ```
 
-The trace compiler extracts the last relevant decision before a negative outcome, builds a Decision Capsule and Outcome Receipt, converts corrections/verifier results into evidence, ranks candidate mutation surfaces, and creates one falsifiable Probe Contract per hypothesis.
+The trace compiler extracts the last relevant decision before a negative outcome, builds a Decision Capsule and Outcome Receipt, turns corrections/verifier results into evidence, ranks candidate mutation surfaces, and creates a falsifiable Probe Contract for each hypothesis.
 
-Those hypotheses are **heuristic proposals, not causal truth**. The command replay then launches real baseline and candidate processes, records return codes, duration and output, and attaches measured evidence to the selected mutation.
+Then `evopr evolve` runs the **same baseline cases against multiple executable interventions**. A candidate can be:
 
-The current example intentionally uses a tiny deterministic fixture so the behavior is reproducible in CI. Your project can replace those commands with its own tests, evaluator, agent harness, simulator or workflow.
+```text
+SURVIVED      all required cases ran; failure improved; no regression
+FALSIFIED     an explicit failure or regression was observed
+INCONCLUSIVE  missing / timed-out evidence, or no useful improvement
+```
+
+EvoPR automatically selects a mutation only when exactly one tested intervention survives. If multiple interventions survive, it leaves `selected_candidate_id` empty rather than inventing certainty.
+
+That still does **not** establish unique causal truth. It establishes relative support among the interventions and cases actually tested.
 
 ---
 
@@ -128,7 +141,11 @@ One case becomes one experiment:
 INCIDENT
    ↓
 CAUSE LENS
-   ↓
+   ├── TEST THIS CAUSE
+   └── COMPARE ALL CAUSES
+             ↓
+      intervention matrix
+             ↓
 MUTATION POINT
   ↙         ↘
 recorded   candidate
@@ -213,6 +230,51 @@ the failure survives, or an unrelated case regresses
 HOLDOUT
 a nearby case that must remain unchanged
 ~~~
+
+---
+
+# Active discrimination
+
+The key difference from a single trajectory-to-skill pass is that EvoPR can compare **several explanations under the same cases**.
+
+```bash
+evopr discriminate examples/traces/tenant_failure.json \
+  --experiment-manifest examples/discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --surface prompt \
+  --out DISCRIMINATION.md \
+  --json-out DISCRIMINATION.json
+```
+
+An experiment manifest supplies one baseline command and multiple intervention commands per case:
+
+```json
+{
+  "case_id": "cross-tenant-attack-07",
+  "baseline": ["python", "eval.py", "baseline", "cross-tenant-attack-07"],
+  "variants": {
+    "policy": ["python", "eval.py", "policy", "cross-tenant-attack-07"],
+    "skill": ["python", "eval.py", "skill", "cross-tenant-attack-07"],
+    "prompt": ["python", "eval.py", "prompt", "cross-tenant-attack-07"]
+  }
+}
+```
+
+For the included tenant example the behavior signatures are:
+
+```text
+                    original   security holdout   normal holdout
+policy                 PASS          PASS              PASS
+skill                  PASS          FAIL              PASS
+prompt                 PASS          FAIL              PASS
+```
+
+The security holdout is therefore a **diagnostic case**: it separates the policy intervention from the alternatives.
+
+If two surviving variants have identical signatures, EvoPR reports the pair as unresolved and asks for a new case where their predictions differ. It does not manufacture a winner.
+
+A missing variant, timeout, or infrastructure error makes that intervention **inconclusive**, not silently promotable.
 
 ---
 
@@ -350,24 +412,28 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 
 # Capability truth table
 
-| Capability | Status | What the status means |
+| Capability | Status | What is actually proven |
 |---|---|---|
-| Evolution Packet model | **TESTED** | Constructed and validated in unit tests |
-| Promotion gate | **TESTED** | Regression, risk and infra-error behavior are tested |
-| Behavior PR renderer | **TESTED** | CLI renders the real example in CI |
-| Command replay | **TESTED** | CI starts real baseline/candidate subprocesses |
-| Clean install | **TESTED** | CI builds a wheel, installs into a fresh venv, runs the CLI |
-| Multiple mutation surfaces | **PARTIAL** | Data contract exists; live mutation executors do not |
-| Evidence semantics | **PARTIAL** | Kind/verdict/confidence represented; calibrated weighting not implemented |
-| Rollback contract | **PARTIAL** | References are stored/rendered; runtime rollback is not implemented |
-| Interactive playground | **DEMO** | UI interaction tested; replay values inside the page are fixture data |
-| Automatic trace ingestion | **PLANNED** | Not implemented |
-| Automatic causal selector | **PLANNED** | Not implemented |
-| Captured counterfactual worlds | **PLANNED** | Not implemented |
-| Automatic GitHub change control | **PLANNED** | Not implemented |
+| Evolution Packet model | **TESTED** | Packet integrity, hypothesis/candidate/probe references validated |
+| Generic JSON / JSONL trace ingestion | **TESTED** | Raw traces compile into evidence-backed packets |
+| Probe Contracts | **TESTED** | Each heuristic hypothesis gets intervention/support/falsifier/holdout guidance |
+| Command replay | **TESTED** | Real baseline/candidate subprocesses execute in CI |
+| Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
+| Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Behavior PR renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
+| Clean install | **TESTED** | Wheel installs in a new venv and the CLI + packaged UI run outside the checkout |
+| Multiple mutation surfaces | **PARTIAL** | Data/review contract exists; generic live mutation executors do not |
+| Heuristic causal proposals | **PARTIAL** | Deterministic ranking exists; it is not learned or unique causal inference |
+| Evidence semantics | **PARTIAL** | Types/confidence exist; calibrated weighting is not implemented |
+| Runtime rollback | **PARTIAL** | Rollback references exist; no general rollback executor |
+| Interactive playground | **DEMO** | Browser behavior is tested; displayed outcome matrix is fixture data |
+| Live GitHub / agent-framework adapters | **PLANNED** | No automatic external trace ingestion yet |
+| Automatic intervention / test synthesis | **PLANNED** | Experiment commands and discriminating cases are still supplied by users |
+| Captured counterfactual worlds | **PLANNED** | No arbitrary world snapshot / restore |
+| GitHub merge-to-promote / revert automation | **PLANNED** | Not wired yet |
 | Shadow / canary rollout | **PLANNED** | Not implemented |
 
-The same table is available from the runtime:
+The same truth table is generated by the runtime:
 
 ```bash
 evopr audit --json-output
@@ -377,28 +443,28 @@ evopr audit --json-output
 
 # What CI actually proves
 
-Every pull request currently checks:
+Every pull request checks:
 
-1. Python 3.10 / 3.11 / 3.12.
-2. Ruff.
-3. Unit and CLI tests.
-4. A measured baseline/candidate replay.
-5. The capability truth table.
-6. A wheel built from the repository and installed into a clean virtualenv.
-7. `evopr build` executed from outside the repository using that installed wheel.
-8. The browser JavaScript syntax.
-9. A Chromium interaction test that:
-   - opens the playground,
-   - chooses a bad hypothesis,
-   - proves it cannot be promoted,
-   - chooses the better fixture hypothesis,
-   - runs proof,
-   - accepts the mutation,
-   - rolls it back.
+1. Python 3.10 / 3.11 / 3.12 and Ruff.
+2. Unit tests for packet integrity, promotion, replay, trace compilation and Probe Contracts.
+3. Unique-survivor, multiple-survivor, no-survivor and incomplete-evidence discrimination cases.
+4. Real baseline/candidate subprocess replay.
+5. A wheel built and installed into a clean virtualenv.
+6. From that clean install, outside the repository:
+   - `evopr ingest`
+   - `evopr prove`
+   - `evopr discriminate`
+   - `evopr evolve`
+   - `evopr demo`
+7. Chromium opens the playground and exercises:
+   - Compare All Causes,
+   - a falsified hypothesis,
+   - a surviving hypothesis,
+   - accept,
+   - rollback.
+8. Capability truth-table synchronization.
 
-This does **not** prove that EvoPR can already ingest and evolve arbitrary third-party agents end to end.
-
-It proves the narrower capabilities above.
+This proves the **narrow executable loop** above. It does not prove arbitrary third-party agents can already be mutated, deployed and rolled back automatically.
 
 ---
 
@@ -442,16 +508,19 @@ Only the bolded/tested subset in the capability table is available today.
 
 # Roadmap
 
-## v0.1 — Evidence packet + real command replay
+## v0.1 — Behavior proof + active discrimination
 
 Current branch.
 
+- raw JSON / JSONL trace compiler
 - explicit Evolution Packet
-- Behavior PR
+- falsifiable Probe Contracts
 - deterministic command replay
+- multi-intervention discrimination matrix
+- guarded unique-survivor selection via `evopr evolve`
 - conservative promotion gate
 - honest capability audit
-- worldline playground
+- worldline + Compare Causes playground
 
 ## v0.2 — Replay adapters
 
@@ -463,12 +532,12 @@ Make replay richer without tying EvoPR to one agent stack:
 - agent-harness adapter contract
 - structured scoring beyond exit code
 
-## v0.3 — Causal probes
+## v0.3 — Probe synthesis
 
-- Trace → Decision Capsule compiler
-- competing failure hypotheses
-- discriminating case generation
-- evidence-weight updates
+- automatic intervention construction
+- automatic discriminating-case generation
+- pairwise information-gain probe selection
+- calibrated evidence-weight updates
 
 ## v0.4 — Git-native evolution
 
@@ -504,6 +573,8 @@ skill_factory/
 └── evolution/
     ├── models.py
     ├── replay.py
+    ├── discriminate.py
+    ├── trace.py
     ├── report.py
     ├── capabilities.py
     └── cli.py
@@ -512,8 +583,13 @@ examples/
 ├── evolution_pr.json
 ├── EVOLUTION_PR.md
 ├── replay_suite.json
+├── discrimination_suite.json
+├── traces/
+│   ├── tenant_failure.json
+│   └── homeai_correction.json
 └── replay/
-    └── tenant_policy.py
+    ├── tenant_policy.py
+    └── tenant_discrimination.py
 
 site/
 ├── index.html
