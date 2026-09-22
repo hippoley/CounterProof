@@ -86,10 +86,12 @@ cd SkillFactory
 
 pip install -e .
 
-# 1. Build a review artifact from an explicit Evolution Packet
-evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
+# 1. Build a review artifact WITH measured baseline/candidate replay attached
+evopr build examples/evolution_pr.json \\
+  --replay-manifest examples/replay_suite.json \\
+  --out EVOLUTION_PR.md
 
-# 2. Execute REAL baseline/candidate commands
+# 2. Or run replay separately when you only want raw measurements
 evopr replay examples/replay_suite.json --out REPLAY_RESULTS.json
 
 # 3. Inspect capability status
@@ -100,7 +102,7 @@ evopr demo
 # http://127.0.0.1:8765
 ```
 
-The command replay is not a mocked UI animation. EvoPR launches the baseline and candidate processes, records return codes, duration and output, then produces measured replay evidence.
+The command replay is not a mocked UI animation. EvoPR launches the baseline and candidate processes, records return codes, duration and output, and can attach those measured results directly to the selected mutation in the Behavior PR.
 
 The current example intentionally uses a tiny deterministic fixture so the behavior is reproducible in CI. Your project can replace those commands with its own tests, evaluator, agent harness, simulator or workflow.
 
