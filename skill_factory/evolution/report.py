@@ -101,14 +101,18 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
             "",
             "## 6. Evidence semantics",
             "",
-            "Verified outcomes, human corrections, undo, retry, silence, and "
-            "infrastructure failure are not treated as equivalent signals. "
-            "Infrastructure failures do not count as behavior failures.",
+            (
+                "Verified outcomes, human corrections, undo, retry, silence, and "
+                "infrastructure failure are not treated as equivalent signals. "
+                "Infrastructure failures do not count as behavior failures."
+            ),
             "",
             "## 7. Lifecycle",
             "",
-            "observe -> attribute -> mutate -> counterfactual replay -> holdout -> "
-            "shadow/canary -> promote or rollback",
+            (
+                "observe -> attribute -> mutate -> counterfactual replay -> holdout -> "
+                "shadow/canary -> promote or rollback"
+            ),
             "",
         ]
     )
