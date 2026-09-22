@@ -11,6 +11,11 @@ from pathlib import Path
 import click
 
 from .capabilities import capability_report
+from .discriminate import (
+    discrimination_to_dict,
+    render_discrimination_markdown,
+    run_discrimination_manifest,
+)
 from .models import (
     CandidateMutation,
     Evidence,
@@ -188,6 +193,78 @@ def prove(
             "Note: top-ranked attribution is heuristic. Replay validates the tested mutation, "
             "not unique causal truth."
         )
+    click.echo(f"Built {out_file}")
+
+
+@cli.command("discriminate")
+@click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--experiment-manifest",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+@click.option(
+    "--surface",
+    "surfaces",
+    multiple=True,
+    type=click.Choice(["skill", "prompt", "policy", "router", "memory", "tool", "eval"]),
+    help="Mutation surfaces to compare. Repeat the flag. Defaults to compiled trace candidates.",
+)
+@click.option("--out", "out_file", default="DISCRIMINATION.md", show_default=True)
+@click.option("--json-out", default=None, type=click.Path(dir_okay=False))
+def discriminate(
+    trace_file: str,
+    experiment_manifest: str,
+    surfaces: tuple[str, ...],
+    out_file: str,
+    json_out: str | None,
+) -> None:
+    """Run competing interventions on the same cases to discriminate hypotheses."""
+    trace = load_trace(Path(trace_file))
+    packet = compile_trace(trace)
+    compiled_surfaces = tuple(dict.fromkeys(candidate.surface for candidate in packet.candidates))
+    selected_surfaces = surfaces or compiled_surfaces
+
+    try:
+        run = run_discrimination_manifest(
+            Path(experiment_manifest),
+            surfaces=selected_surfaces,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    mechanisms = {
+        hypothesis.target_surface: hypothesis.mechanism
+        for hypothesis in packet.hypotheses
+    }
+    report = render_discrimination_markdown(run, mechanisms=mechanisms)
+    Path(out_file).write_text(report, encoding="utf-8")
+
+    payload = discrimination_to_dict(run)
+    payload["source_trace_id"] = packet.metadata.get("source_trace_id", "")
+    payload["tested_surfaces"] = list(selected_surfaces)
+    payload["interpretation"] = (
+        "relative support among tested interventions; not proof of unique causal truth"
+    )
+    if json_out:
+        Path(json_out).write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    if run.discriminated_surface:
+        click.echo(
+            f"Current probe matrix discriminated {run.discriminated_surface!r} "
+            "from the tested alternatives."
+        )
+    elif len(run.survivors) > 1:
+        click.echo(
+            "Probe matrix is ambiguous; survivors: "
+            + ", ".join(item.surface for item in run.survivors)
+        )
+    else:
+        click.echo("No tested surface survived the current probe matrix.")
+    click.echo("This is relative evidence, not unique causal proof.")
     click.echo(f"Built {out_file}")
 
 
