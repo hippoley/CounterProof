@@ -7,7 +7,7 @@ from .models import CandidateMutation, EvolutionPacket
 def _status(candidate: CandidateMutation) -> str:
     if candidate.eligible_for_promotion:
         return "PROMOTE"
-    if candidate.regression_count:
+    if candidate.failure_count or candidate.regression_count:
         return "REJECT"
     return "HOLD"
 
@@ -22,6 +22,22 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
         f"**Agent:** {packet.agent}",
         f"**Failure:** {packet.failure_summary}",
         "",
+    ]
+    if packet.metadata:
+        lines.extend(
+            [
+                "## Provenance",
+                "",
+                *[
+                    f"- **{key.replace('_', ' ')}:** {value}"
+                    for key, value in packet.metadata.items()
+                    if value
+                ],
+                "",
+            ]
+        )
+    lines.extend(
+        [
         "## 1. Decision Capsule",
         "",
         packet.decision_capsule,
@@ -116,4 +132,5 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
             "",
         ]
     )
+    lines[-4] = "## 7. Target lifecycle (roadmap)"
     return "\n".join(lines)
