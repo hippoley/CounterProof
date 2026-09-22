@@ -283,13 +283,20 @@ def evolve(
             },
         )
     else:
-        result = "ambiguous" if run.survivors else "no-survivor"
         packet = replace(
             packet,
             metadata={
                 **metadata,
-                "discrimination_result": result,
-                "survivors": ",".join(item.surface for item in run.survivors),
+                "discrimination_result": run.selection_state,
+                "runtime_survivors": ",".join(
+                    item.surface for item in run.survivors
+                ),
+                "eligible_survivors": ",".join(
+                    item.surface for item in run.eligible_survivors
+                ),
+                "prediction_blocked_survivors": ",".join(
+                    item.surface for item in run.prediction_blocked_survivors
+                ),
             },
         )
 
@@ -328,10 +335,10 @@ def evolve(
             "Selection is relative to the tested intervention matrix, not proof of "
             "unique causal truth."
         )
-    elif run.survivors:
+    elif len(run.eligible_survivors) > 1:
         click.echo(
-            "No automatic selection: multiple interventions survived — "
-            + ", ".join(item.surface for item in run.survivors)
+            "No automatic selection: multiple eligible interventions survived — "
+            + ", ".join(item.surface for item in run.eligible_survivors)
         )
         if suggestions:
             click.echo(
@@ -341,6 +348,14 @@ def evolve(
                     for item in suggestions
                 )
             )
+    elif run.prediction_blocked_survivors:
+        click.echo(
+            "No automatic selection: runtime survivor(s) were blocked by their "
+            "pre-registered prediction contract — "
+            + ", ".join(
+                item.surface for item in run.prediction_blocked_survivors
+            )
+        )
     else:
         click.echo(
             "No automatic selection: none of the tested interventions survived."
@@ -415,10 +430,17 @@ def discriminate(
             f"Current probe matrix discriminated {run.discriminated_surface!r} "
             "from the tested alternatives."
         )
-    elif len(run.survivors) > 1:
+    elif len(run.eligible_survivors) > 1:
         click.echo(
-            "Probe matrix is ambiguous; survivors: "
-            + ", ".join(item.surface for item in run.survivors)
+            "Probe matrix is ambiguous; eligible survivors: "
+            + ", ".join(item.surface for item in run.eligible_survivors)
+        )
+    elif run.prediction_blocked_survivors:
+        click.echo(
+            "Runtime survivor(s) blocked by pre-registered prediction contracts: "
+            + ", ".join(
+                item.surface for item in run.prediction_blocked_survivors
+            )
         )
     else:
         click.echo("No tested surface survived the current probe matrix.")
