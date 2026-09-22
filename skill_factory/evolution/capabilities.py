@@ -86,6 +86,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "Selection is heuristic unless the user explicitly supplies a mutation surface.",
     },
     {
+        "id": "active-discrimination",
+        "name": "Active discrimination across competing interventions",
+        "status": "tested",
+        "evidence": "The discriminate CLI runs the same baseline cases across multiple mutation surfaces and reports survivors, falsified variants, or ambiguity.",
+        "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically.",
+    },
+    {
         "id": "causal-selector",
         "name": "Heuristic causal hypothesis proposals",
         "status": "partial",
