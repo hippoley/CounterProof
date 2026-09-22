@@ -1,154 +1,270 @@
 const byId = id => document.getElementById(id);
-let cases = [], activeCase = null, activeHypothesis = null, replayDone = false, promoted = false;
+const NS = "http://www.w3.org/2000/svg";
+let cases = [];
+let capabilities = [];
+let activeCase = null;
+let activeHypothesis = null;
+let proofRan = false;
+let accepted = false;
 
 const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const confidence = h => Math.round((1 - Number(h.uncertainty ?? .5)) * 100);
+const candidate = () => activeCase?.candidates.find(c => c.hypothesis_id === activeHypothesis?.id) || null;
 
-function candidate() {
-  return activeCase?.candidates.find(c => c.hypothesis_id === activeHypothesis?.id) || null;
-}
-function packetState(label, mode="neutral") {
-  byId("packetStatus").textContent = label;
-  byId("packetStatus").className = "pill " + mode;
-}
 function toast(message) {
   const el = byId("toast");
   el.textContent = message;
   el.classList.add("show");
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 1900);
 }
-function renderCaseSelector() {
-  byId("caseSelect").innerHTML = cases.map(c => '<option value="' + esc(c.id) + '">' + esc(c.short_title) + '</option>').join("");
-}
-function renderHypotheses() {
-  byId("hypothesisList").innerHTML = activeCase.hypotheses.map(h =>
-    '<button class="hypothesis ' + (activeHypothesis?.id === h.id ? "active" : "") + '" data-id="' + esc(h.id) + '">' +
-      '<div class="hypothesis-top"><div><span class="hypothesis-id">' + esc(h.id) + '</span><span class="surface">' + esc(h.target_surface) + '</span></div><span class="confidence">' + confidence(h) + '%</span></div>' +
-      '<p>' + esc(h.mechanism) + '</p></button>'
+
+function renderCaseReel() {
+  byId("caseReel").innerHTML = cases.map((item, index) =>
+    '<button type="button" class="case-ticket ' + (item.id === activeCase?.id ? "active" : "") + '" data-case="' + esc(item.id) + '">' +
+    '<span>CASE ' + String(index + 1).padStart(2, "0") + '</span><b>' + esc(item.short_title) + '</b></button>'
   ).join("");
-  document.querySelectorAll(".hypothesis").forEach(btn => btn.addEventListener("click", () => {
-    activeHypothesis = activeCase.hypotheses.find(h => h.id === btn.dataset.id);
-    replayDone = false; promoted = false;
-    renderHypotheses(); renderMutation(); resetReplay();
-    packetState("HYPOTHESIS SELECTED");
-  }));
+  document.querySelectorAll(".case-ticket").forEach(button => {
+    button.addEventListener("click", () => {
+      activeCase = cases.find(item => item.id === button.dataset.case);
+      renderCase();
+    });
+  });
 }
-function renderMutation() {
+
+function renderEvidence() {
+  byId("decisionCapsule").innerHTML = Object.entries(activeCase.decision_capsule).map(([key, value]) =>
+    '<div><dt>' + esc(key.replaceAll("_", " ")) + '</dt><dd>' + esc(value) + '</dd></div>'
+  ).join("");
+  byId("outcomeReceipt").textContent = activeCase.outcome_receipt;
+  byId("evidenceList").innerHTML = activeCase.evidence.map(item =>
+    '<div class="evidence-line"><b>' + esc(item.kind) + ' · ' + Math.round(item.confidence * 100) + '%</b><span>' + esc(item.note) + '</span></div>'
+  ).join("");
+}
+
+function renderHypotheses() {
+  byId("hypothesisLenses").innerHTML = activeCase.hypotheses.map(item =>
+    '<button type="button" class="lens ' + (item.id === activeHypothesis?.id ? "active" : "") + '" data-hypothesis="' + esc(item.id) + '">' +
+      '<div class="lens-top"><span>' + esc(item.id) + ' / ' + esc(item.target_surface) + '</span><span>' + confidence(item) + '%</span></div>' +
+      '<p>' + esc(item.mechanism) + '</p></button>'
+  ).join("");
+  document.querySelectorAll(".lens").forEach(button => {
+    button.addEventListener("click", () => {
+      activeHypothesis = activeCase.hypotheses.find(item => item.id === button.dataset.hypothesis);
+      resetProof();
+      renderHypotheses();
+      updateSelectedMutation();
+    });
+  });
+}
+
+function updateSelectedMutation() {
   const c = candidate();
-  if (!c) return;
-  byId("mutationTitle").textContent = c.title;
-  byId("surfaceTag").textContent = c.surface.toUpperCase();
-  byId("beforeDiff").textContent = c.behavior.before;
-  byId("afterDiff").textContent = c.behavior.after;
+  byId("selectedConfidence").textContent = confidence(activeHypothesis) + "%";
+  byId("surfaceLabel").textContent = activeHypothesis.target_surface.toUpperCase() + " MUTATION";
+  byId("mutationNote").textContent = c.title + " — " + c.surface + " surface";
+  byId("runProofBtn").disabled = true;
+  drawIdleWorldline();
 }
-function resetReplay() {
-  byId("worldFork").classList.add("hidden");
-  byId("meanDelta").textContent = "—";
-  byId("regressions").textContent = "—";
-  byId("riskFlags").textContent = "—";
-  byId("promoteBtn").disabled = true;
-  byId("rollbackBtn").disabled = true;
-  byId("gateText").textContent = "WAITING FOR REPLAY";
-  byId("gateLight").className = "gate-light";
-  byId("replayMatrix").className = "replay-matrix empty";
-  byId("replayMatrix").innerHTML = '<span>REPLAY MATRIX</span><p>Fork the world and run replay to produce promotion evidence.</p>';
-}
+
 function renderCase() {
-  activeHypothesis = [...activeCase.hypotheses].sort((a,b) => confidence(b) - confidence(a))[0];
-  replayDone = false; promoted = false;
-  byId("packetId").textContent = activeCase.id;
+  proofRan = false;
+  accepted = false;
+  activeHypothesis = [...activeCase.hypotheses].sort((a, b) => confidence(b) - confidence(a))[0];
+  const number = cases.indexOf(activeCase) + 1;
+  byId("sheetNumber").textContent = "EVO—" + String(number).padStart(3, "0");
   byId("failureTitle").textContent = activeCase.failure_title;
   byId("failureSummary").textContent = activeCase.failure_summary;
-  byId("outcomeReceipt").textContent = activeCase.outcome_receipt;
-  byId("decisionCapsule").innerHTML = Object.entries(activeCase.decision_capsule).map(([k,v]) =>
-    '<div class="capsule-row"><span>' + esc(k.replaceAll("_"," ")) + '</span><span>' + esc(v) + '</span></div>'
-  ).join("");
-  byId("evidenceList").innerHTML = activeCase.evidence.map(e =>
-    '<div class="evidence"><div class="evidence-top"><b>' + esc(e.kind.replaceAll("_"," ")) + '</b><i>' + Math.round(e.confidence*100) + '% CONF</i></div><p>' + esc(e.note) + '</p></div>'
-  ).join("");
-  packetState("READY TO PROBE");
-  renderHypotheses(); renderMutation(); resetReplay();
+  renderEvidence();
+  renderHypotheses();
+  renderCaseReel();
+  byId("evidenceDrawer").hidden = true;
+  byId("evidenceToggle").setAttribute("aria-expanded", "false");
+  byId("evidenceToggle").textContent = "show evidence + decision capsule ↓";
+  resetProof();
+  updateSelectedMutation();
 }
-function flow(target, steps, changed=false) {
-  byId(target).innerHTML = steps.map((step,i) => '<div class="flow-step ' + (changed && i===steps.length-2 ? "changed":"") + '">' + esc(step) + '</div>').join("");
+
+function svgEl(name, attrs = {}) {
+  const node = document.createElementNS(NS, name);
+  Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
+  return node;
 }
-function forkWorld() {
+
+function addText(svg, x, y, text, options = {}) {
+  const node = svgEl("text", {
+    x, y,
+    "font-size": options.size || 13,
+    fill: options.fill || "#51534c",
+    "text-anchor": options.anchor || "middle"
+  });
+  node.textContent = text;
+  svg.appendChild(node);
+}
+
+function addNode(svg, x, y, label, color, side) {
+  svg.appendChild(svgEl("circle", {cx:x, cy:y, r:7, fill:"#fbfaf6", stroke:color, "stroke-width":3}));
+  const anchor = side === "left" ? "end" : "start";
+  const tx = side === "left" ? x - 16 : x + 16;
+  addText(svg, tx, y + 4, label, {anchor, size:11, fill:"#353730"});
+}
+
+function drawIdleWorldline() {
+  const svg = byId("worldSvg");
+  svg.innerHTML = "";
+  svg.appendChild(svgEl("line", {x1:500,y1:28,x2:500,y2:325,stroke:"#cbc7bc","stroke-width":2,"stroke-dasharray":"5 8"}));
+  svg.appendChild(svgEl("circle", {cx:500,cy:82,r:10,fill:"#f2efe8",stroke:"#171814","stroke-width":2}));
+  addText(svg, 500, 20, "same recorded case", {size:11});
+  addText(svg, 500, 116, "test a cause to split the worldline", {size:12});
+}
+
+function drawWorldline(ran = false) {
   const c = candidate();
-  byId("worldFork").classList.remove("hidden");
-  byId("forkHypothesis").textContent = activeHypothesis.id + " · " + c.surface;
-  flow("baselineFlow", c.baseline_flow);
-  flow("candidateFlow", c.candidate_flow, true);
-  byId("baselineResult").textContent = c.baseline_result;
-  byId("baselineResult").className = "world-result bad";
-  byId("candidateResult").textContent = "NOT RUN";
-  byId("candidateResult").className = "world-result pending";
-  packetState("WORLD FORKED","running");
+  const svg = byId("worldSvg");
+  svg.innerHTML = "";
+
+  const baseColor = "#d74c35";
+  const candidateColor = "#3f63a8";
+  svg.appendChild(svgEl("path", {d:"M500 22 L500 84 C500 120 335 120 300 156 L300 322",fill:"none",stroke:baseColor,"stroke-width":3}));
+  svg.appendChild(svgEl("path", {d:"M500 84 C500 120 665 120 700 156 L700 322",fill:"none",stroke:candidateColor,"stroke-width":3,"stroke-dasharray":ran ? "0" : "8 8",opacity:ran ? "1" : ".55"}));
+  svg.appendChild(svgEl("circle", {cx:500,cy:84,r:10,fill:"#e2d46d",stroke:"#171814","stroke-width":2}));
+  addText(svg, 500, 20, "shared state", {size:11});
+  addText(svg, 500, 72, "mutation point", {size:10, fill:"#77796f"});
+
+  const baseSteps = c.baseline_flow.slice(0, 5);
+  const candSteps = c.candidate_flow.slice(0, 5);
+  const yStart = 164;
+  const yGapBase = Math.min(50, 150 / Math.max(1, baseSteps.length - 1));
+  const yGapCand = Math.min(50, 150 / Math.max(1, candSteps.length - 1));
+
+  baseSteps.forEach((step, i) => addNode(svg, 300, yStart + i * yGapBase, step, baseColor, "left"));
+  candSteps.forEach((step, i) => addNode(svg, 700, yStart + i * yGapCand, step, candidateColor, "right"));
+
+  addText(svg, 300, 345, c.baseline_result, {size:14, fill:baseColor});
+  addText(svg, 700, 345, ran ? c.candidate_result : "UNRUN", {size:14, fill:ran ? (c.eligible ? "#386c49" : "#d74c35") : "#77796f"});
 }
-function runReplay() {
+
+function spliceWorld() {
+  byId("worldlineSection").classList.remove("muted-stage");
+  drawWorldline(false);
+  byId("runProofBtn").disabled = false;
+  byId("mutationNote").textContent = "World fork prepared. Baseline stays fixed; only " + candidate().surface + " changes.";
+  byId("worldlineSection").scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+function resetProof() {
+  proofRan = false;
+  accepted = false;
+  byId("proofResult").hidden = true;
+  byId("worldlineSection").classList.add("muted-stage");
+  byId("runProofBtn").disabled = true;
+  byId("promoteBtn").disabled = true;
+  byId("rollbackBtn").hidden = true;
+  byId("rejectBtn").hidden = false;
+  drawIdleWorldline();
+}
+
+function renderReceipts(c) {
+  byId("replayReceipts").innerHTML = c.replays.map(item => {
+    const regressed = item.delta < 0;
+    return '<div class="receipt-ticket ' + (regressed ? "regressed" : "") + '">' +
+      '<div class="r-head"><span>' + esc(item.case_id) + '</span><span>' + esc(item.suite) + '</span></div>' +
+      '<strong>' + item.baseline.toFixed(1) + ' → ' + item.candidate.toFixed(1) + '</strong>' +
+      '<span class="delta">' + (item.delta >= 0 ? "+" : "") + item.delta.toFixed(1) + ' delta</span></div>';
+  }).join("");
+}
+
+function runProof() {
   const c = candidate();
-  packetState("REPLAYING","running");
-  byId("replayBtn").disabled = true;
-  byId("candidateResult").textContent = "RUNNING…";
+  byId("runProofBtn").disabled = true;
+  byId("runProofBtn").textContent = "MEASURING…";
   setTimeout(() => {
-    replayDone = true;
-    byId("replayBtn").disabled = false;
-    byId("candidateResult").textContent = c.candidate_result;
-    byId("candidateResult").className = "world-result " + (c.eligible ? "good":"bad");
+    proofRan = true;
+    drawWorldline(true);
+    byId("proofResult").hidden = false;
+    byId("mutationTitle").textContent = c.title;
+    byId("beforeDiff").textContent = c.behavior.before;
+    byId("afterDiff").textContent = c.behavior.after;
     byId("meanDelta").textContent = (c.mean_delta >= 0 ? "+" : "") + c.mean_delta.toFixed(3);
     byId("regressions").textContent = c.regressions;
     byId("riskFlags").textContent = c.risk_flags.length;
-    byId("replayMatrix").className = "replay-matrix";
-    byId("replayMatrix").innerHTML = '<span>REPLAY MATRIX</span><table class="replay-table"><thead><tr><th>CASE</th><th>SUITE</th><th>BASE</th><th>CAND</th><th>Δ</th></tr></thead><tbody>' +
-      c.replays.map(r => '<tr><td>' + esc(r.case_id) + '</td><td>' + esc(r.suite) + '</td><td>' + r.baseline.toFixed(1) + '</td><td>' + r.candidate.toFixed(1) + '</td><td class="' + (r.delta>=0?"delta-good":"") + '">' + (r.delta>=0?"+":"") + r.delta.toFixed(1) + '</td></tr>').join("") +
-      '</tbody></table>';
-    byId("gateText").textContent = c.eligible ? "ELIGIBLE FOR PROMOTION" : "HOLD / REJECT";
-    byId("gateLight").className = "gate-light " + (c.eligible ? "pass":"fail");
+    byId("verdictStamp").textContent = c.eligible ? "SURVIVED" : "BROKE";
+    byId("verdictStamp").className = "verdict-stamp " + (c.eligible ? "pass" : "fail");
+    byId("gateExplanation").textContent = c.eligible
+      ? "The fixture replay improves the failing cases without measured regression. Eligible in this demo gate."
+      : "The candidate fixes part of the failure but introduces a regression or risk flag. Do not promote.";
     byId("promoteBtn").disabled = !c.eligible;
-    packetState(c.eligible ? "REPLAY PASSED":"REPLAY FAILED", c.eligible ? "pass":"running");
-    toast(c.eligible ? "Replay passed. Candidate can be promoted." : "Replay exposed a regression.");
-  }, 650);
+    byId("runProofBtn").textContent = "RUN PROOF →";
+    renderReceipts(c);
+    byId("proofResult").scrollIntoView({behavior:"smooth", block:"start"});
+    toast(c.eligible ? "Candidate survived the fixture proof." : "Proof found a regression.");
+  }, 520);
 }
-function promote() {
-  if (!replayDone || !candidate()?.eligible) return;
-  promoted = true;
+
+function acceptMutation() {
+  if (!proofRan || !candidate().eligible) return;
+  accepted = true;
+  byId("verdictStamp").textContent = "ACCEPTED";
   byId("promoteBtn").disabled = true;
-  byId("rollbackBtn").disabled = false;
-  byId("gateText").textContent = "PROMOTED · ROLLBACK READY";
-  packetState("PROMOTED","promoted");
-  toast("Capability promoted in demo state.");
+  byId("rollbackBtn").hidden = false;
+  byId("gateExplanation").textContent = "Accepted in browser demo state. No repository or runtime mutation was performed.";
+  toast("Accepted locally. Runtime deployment is not wired yet.");
 }
+
 function rollback() {
-  if (!promoted) return;
-  promoted = false;
-  byId("rollbackBtn").disabled = true;
+  if (!accepted) return;
+  accepted = false;
+  byId("verdictStamp").textContent = "ROLLED BACK";
+  byId("rollbackBtn").hidden = true;
   byId("promoteBtn").disabled = false;
-  byId("gateText").textContent = "ROLLED BACK · CANDIDATE STILL VALID";
-  packetState("ROLLED BACK");
-  toast("Rolled back to previous capability.");
+  byId("gateExplanation").textContent = "Browser state returned to the pre-acceptance candidate.";
+  toast("Demo state rolled back.");
 }
+
+function rejectMutation() {
+  byId("verdictStamp").textContent = "REJECTED";
+  byId("verdictStamp").className = "verdict-stamp fail";
+  byId("promoteBtn").disabled = true;
+  byId("gateExplanation").textContent = "Rejected by reviewer in browser demo state.";
+  toast("Mutation rejected.");
+}
+
+function renderCapabilities() {
+  byId("capabilityGrid").innerHTML = capabilities.map(item =>
+    '<div class="capability-row"><span class="cap-status ' + esc(item.status) + '">' + esc(item.status) + '</span>' +
+    '<b>' + esc(item.name) + '</b><p>' + esc(item.evidence) + (item.limitation ? ' <strong>Limit:</strong> ' + esc(item.limitation) : '') + '</p></div>'
+  ).join("");
+}
+
 async function init() {
   try {
-    const [payload, build] = await Promise.all([
-      fetch("data/evolution_cases.json").then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
+    const [casePayload, capabilityPayload, buildPayload] = await Promise.all([
+      fetch("data/evolution_cases.json").then(r => { if (!r.ok) throw new Error("case data " + r.status); return r.json(); }),
+      fetch("data/capabilities.json").then(r => { if (!r.ok) throw new Error("capabilities " + r.status); return r.json(); }),
       fetch("data/skills.json").then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
-    cases = payload.cases;
-    if (build?.commit) byId("build").textContent = "BUILD " + build.commit;
-    renderCaseSelector();
+    cases = casePayload.cases;
+    capabilities = capabilityPayload.capabilities;
     activeCase = cases[0];
+    if (buildPayload?.commit) byId("build").textContent = "build " + buildPayload.commit;
     renderCase();
+    renderCapabilities();
   } catch (error) {
-    document.querySelector(".workspace").innerHTML = '<div style="padding:40px;color:#ff6b5f">Demo data unavailable: ' + esc(error) + '</div>';
+    byId("failureTitle").textContent = "Demo data could not be loaded.";
+    byId("failureSummary").textContent = String(error);
   }
 }
 
-byId("caseSelect").addEventListener("change", e => { activeCase = cases.find(c => c.id === e.target.value); renderCase(); });
-byId("forkBtn").addEventListener("click", forkWorld);
-byId("replayBtn").addEventListener("click", runReplay);
-byId("promoteBtn").addEventListener("click", promote);
-byId("rollbackBtn").addEventListener("click", rollback);
-document.addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !byId("worldFork").classList.contains("hidden")) runReplay();
+byId("evidenceToggle").addEventListener("click", () => {
+  const drawer = byId("evidenceDrawer");
+  drawer.hidden = !drawer.hidden;
+  const expanded = !drawer.hidden;
+  byId("evidenceToggle").setAttribute("aria-expanded", String(expanded));
+  byId("evidenceToggle").textContent = expanded ? "hide evidence + decision capsule ↑" : "show evidence + decision capsule ↓";
 });
+byId("spliceBtn").addEventListener("click", spliceWorld);
+byId("runProofBtn").addEventListener("click", runProof);
+byId("promoteBtn").addEventListener("click", acceptMutation);
+byId("rollbackBtn").addEventListener("click", rollback);
+byId("rejectBtn").addEventListener("click", rejectMutation);
 init();
