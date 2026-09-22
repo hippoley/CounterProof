@@ -11,6 +11,7 @@ from skill_factory.evolution.models import (
     Evidence,
     EvolutionPacket,
     Hypothesis,
+    ProbeSpec,
     ReplayResult,
 )
 from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
@@ -340,6 +341,9 @@ def test_trace_compiler_extracts_tenant_failure_without_manual_packet():
     assert packet.hypotheses[0].target_surface == "policy"
     assert packet.hypotheses[0].uncertainty <= 0.05
     assert packet.candidates[0].surface == "policy"
+    assert len(packet.probes) == len(packet.hypotheses)
+    assert packet.probes[0].hypothesis_id == packet.hypotheses[0].id
+    assert "execution precondition" in packet.probes[0].intervention
     assert packet.metadata["compiler"] == "trace-heuristic-v0.1"
     assert packet.selected_candidate_id is None
 
@@ -415,6 +419,7 @@ def test_evopr_ingest_cli_builds_packet_from_raw_trace(tmp_path):
     assert raw["selected_candidate_id"] == "C1"
     assert raw["metadata"]["source_trace_id"] == "tenant-scope-418"
     assert raw["hypotheses"][0]["target_surface"] == "policy"
+    assert raw["probes"][0]["hypothesis_id"] == raw["hypotheses"][0]["id"]
 
 
 def test_evopr_prove_runs_trace_to_measured_behavior_proof(tmp_path):
@@ -441,6 +446,7 @@ def test_evopr_prove_runs_trace_to_measured_behavior_proof(tmp_path):
     measured = json.loads(packet_output.read_text(encoding="utf-8"))
 
     assert "## Provenance" in rendered
+    assert "## 3b. Discriminating probes" in rendered
     assert "selection mode:** explicit-surface" in rendered
     assert "failure-418" in rendered
     assert "Eligible for promotion." in rendered
@@ -480,3 +486,23 @@ def test_report_rejects_explicit_failed_replay_even_without_score_regression():
 
     rendered = render_evolution_pr(packet)
     assert "**REJECT**" in rendered
+
+
+def test_packet_rejects_probe_for_unknown_hypothesis():
+    with pytest.raises(ValueError):
+        EvolutionPacket(
+            packet_id="broken-probe",
+            agent="agent",
+            failure_summary="failure",
+            decision_capsule="capsule",
+            outcome_receipt="receipt",
+            probes=(
+                ProbeSpec(
+                    id="P1",
+                    hypothesis_id="missing",
+                    intervention="change one thing",
+                    expected_if_true="failure disappears",
+                    falsifier="failure survives",
+                ),
+            ),
+        )
