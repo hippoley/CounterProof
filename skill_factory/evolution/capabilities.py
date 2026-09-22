@@ -86,6 +86,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "Selection is heuristic unless the user explicitly supplies a mutation surface.",
     },
     {
+        "id": "preregistered-predictions",
+        "name": "Pre-registered PASS / FAIL predictions for intervention cases",
+        "status": "tested",
+        "evidence": "Experiment manifests can register expected outcomes before execution; contradicted or partial predictions are tracked separately from runtime pass/fail and can block automatic selection.",
+        "limitation": "Prediction quality still depends on the experiment author or adapter; EvoPR does not yet learn calibrated causal predictions.",
+    },
+    {
         "id": "active-discrimination",
         "name": "Active discrimination across competing interventions",
         "status": "tested",
