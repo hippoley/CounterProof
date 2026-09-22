@@ -8,7 +8,9 @@ from pathlib import Path
 
 import click
 
+from .capabilities import capability_report
 from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ReplayResult
+from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 
 
@@ -55,6 +57,35 @@ def build(packet_file: str, out_file: str) -> None:
     output = render_evolution_pr(packet)
     Path(out_file).write_text(output, encoding="utf-8")
     click.echo(f"Built {out_file}")
+
+
+@cli.command("replay")
+@click.argument("manifest_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--out", "out_file", default="REPLAY_RESULTS.json", show_default=True)
+def replay(manifest_file: str, out_file: str) -> None:
+    """Run real baseline/candidate commands and record replay evidence."""
+    executed = run_replay_manifest(Path(manifest_file))
+    payload = serialize_replays(executed)
+    Path(out_file).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    passed = sum(case["verdict"] == "pass" for case in payload["cases"])
+    click.echo(f"Executed {len(payload['cases'])} replay cases; {passed} candidate passes.")
+    click.echo(f"Wrote {out_file}")
+
+
+@cli.command("audit")
+@click.option("--json-output", is_flag=True, help="Emit machine-readable JSON.")
+def audit(json_output: bool) -> None:
+    """Show what EvoPR can actually do today, with evidence and limitations."""
+    report = capability_report()
+    if json_output:
+        click.echo(json.dumps(report, indent=2))
+        return
+
+    for item in report["capabilities"]:
+        click.echo(f"[{item['status'].upper():7}] {item['name']}")
+        click.echo(f"          {item['evidence']}")
+        if item["limitation"]:
+            click.echo(f"          limit: {item['limitation']}")
 
 
 @cli.command("demo")
