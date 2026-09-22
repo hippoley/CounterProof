@@ -67,6 +67,17 @@ jobs:
           /tmp/evopr-clean/bin/evopr build "$GITHUB_WORKSPACE/examples/evolution_pr.json" --out /tmp/EVOLUTION_PR.md
           grep -q "Eligible for promotion" /tmp/EVOLUTION_PR.md
 
+      - name: Serve packaged interactive demo
+        run: |
+          /tmp/evopr-clean/bin/evopr demo --port 8877 >/tmp/evopr-demo.log 2>&1 &
+          echo $! >/tmp/evopr-demo.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:8877/ | grep -q "Behavior Proof" && break
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:8877/data/capabilities.json | grep -q "command-replay"
+          kill "$(cat /tmp/evopr-demo.pid)"
+
   validate-example-skills:
     runs-on: ubuntu-latest
     steps:
