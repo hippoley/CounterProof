@@ -2,7 +2,7 @@ name: Deploy review demo
 
 on:
   push:
-    branches: [main, feat/evopr-evolution-runtime]
+    branches: [main]
     paths:
       - 'skill_factory/**'
       - 'skills/**'
