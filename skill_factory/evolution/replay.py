@@ -38,11 +38,17 @@ class ExecutedReplay:
     candidate: CommandOutcome
 
 
+def _declared_root(manifest_dir: Path, relative: str) -> Path:
+    """Resolve the user-declared replay root relative to the manifest."""
+    return (manifest_dir.resolve() / relative).resolve()
+
+
 def _safe_cwd(root: Path, relative: str) -> Path:
+    """Resolve a case cwd while preventing escape from the declared replay root."""
     root = root.resolve()
     cwd = (root / relative).resolve()
     if cwd != root and root not in cwd.parents:
-        raise ValueError(f"replay cwd escapes root: {relative}")
+        raise ValueError(f"replay cwd escapes declared root: {relative}")
     return cwd
 
 
@@ -95,7 +101,7 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
     """Execute all baseline/candidate command pairs in a replay manifest."""
     path = path.resolve()
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    root = _safe_cwd(path.parent, raw.get("root", "."))
+    root = _declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
     results: list[ExecutedReplay] = []
 
