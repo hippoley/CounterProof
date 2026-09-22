@@ -207,6 +207,10 @@ def run_discrimination_manifest(
         or not all(isinstance(part, str) and part for part in adapter)
     ):
         raise ValueError("adapter must be a non-empty argv list")
+    if adapter and str(adapter[0]).startswith("TODO_"):
+        raise ValueError(
+            "probe adapter placeholder has not been replaced; configure a real adapter before execution"
+        )
     cases = raw.get("cases", [])
     if not cases:
         raise ValueError("discrimination manifest contains no cases")
