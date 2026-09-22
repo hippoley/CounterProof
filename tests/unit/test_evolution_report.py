@@ -1,3 +1,8 @@
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.models import (
     CandidateMutation,
     EvolutionPacket,
@@ -57,3 +62,21 @@ def test_report_contains_behavior_change_and_replay_matrix():
     assert "Replay matrix" in report
     assert "query first -> validate first" in report
     assert "Eligible for promotion." in report
+
+
+def test_evopr_cli_builds_real_example(tmp_path):
+    output = tmp_path / "EVOLUTION_PR.md"
+    example = Path("examples/evolution_pr.json")
+
+    result = CliRunner().invoke(
+        evo_cli,
+        ["build", str(example), "--out", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert output.exists()
+    rendered = output.read_text(encoding="utf-8")
+    assert "evo-tenant-scope-001" in rendered
+    assert "Enforce tenant validation precondition" in rendered
+    assert "security-holdout" in rendered
+    assert "Eligible for promotion." in rendered
