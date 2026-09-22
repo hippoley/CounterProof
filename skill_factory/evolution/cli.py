@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -51,10 +52,32 @@ def cli() -> None:
 @cli.command("build")
 @click.argument("packet_file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--out", "out_file", default="EVOLUTION_PR.md", show_default=True)
-def build(packet_file: str, out_file: str) -> None:
+@click.option(
+    "--replay-manifest",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Execute real replay commands and attach results to the selected candidate.",
+)
+def build(packet_file: str, out_file: str, replay_manifest: str | None) -> None:
     """Build a reviewable behavior PR from an evolution packet."""
     raw = json.loads(Path(packet_file).read_text(encoding="utf-8"))
     packet = _packet_from_json(raw)
+
+    if replay_manifest:
+        if packet.selected_candidate_id is None:
+            raise click.ClickException(
+                "--replay-manifest requires selected_candidate_id in the packet"
+            )
+        executed = run_replay_manifest(Path(replay_manifest))
+        measured = tuple(item.result for item in executed)
+        candidates = tuple(
+            replace(candidate, replay_results=measured)
+            if candidate.id == packet.selected_candidate_id
+            else candidate
+            for candidate in packet.candidates
+        )
+        packet = replace(packet, candidates=candidates)
+
     output = render_evolution_pr(packet)
     Path(out_file).write_text(output, encoding="utf-8")
     click.echo(f"Built {out_file}")
