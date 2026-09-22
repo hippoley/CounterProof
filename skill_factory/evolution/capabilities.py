@@ -37,6 +37,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It is command-based replay, not yet a captured world-state/time-travel runtime.",
     },
     {
+        "id": "probe-contract",
+        "name": "Falsifiable probe contracts per hypothesis",
+        "status": "tested",
+        "evidence": "Trace compilation emits intervention, expected result, falsifier, and holdout guidance for each ranked hypothesis.",
+        "limitation": "Probe text is deterministic guidance; only attached replay results provide executable evidence.",
+    },
+    {
         "id": "mutation-surfaces",
         "name": "Multiple mutation surfaces",
         "status": "partial",
