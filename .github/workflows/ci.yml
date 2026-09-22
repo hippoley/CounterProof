@@ -107,11 +107,23 @@ jobs:
             --surface skill \
             --surface prompt \
             --out /tmp/EVOLUTION_REVIEW.md \
-            --packet-out /tmp/EVOLVED_PACKET.json
+            --packet-out /tmp/EVOLVED_PACKET.json \
+            --receipt-out /tmp/PROOF_RECEIPT.json
           grep -q '"selected_candidate_id": "C1"' /tmp/EVOLVED_PACKET.json
           grep -q '"discrimination_result": "unique-survivor:policy"' /tmp/EVOLVED_PACKET.json
           grep -q "Eligible for promotion" /tmp/EVOLUTION_REVIEW.md
           grep -q "EvoPR Discrimination Matrix" /tmp/EVOLUTION_REVIEW.md
+          /tmp/evopr-clean/bin/evopr verify-receipt /tmp/PROOF_RECEIPT.json \
+            --trace "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json"
+          cp "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" /tmp/changed-trace.json
+          printf '\n ' >> /tmp/changed-trace.json
+          if /tmp/evopr-clean/bin/evopr verify-receipt /tmp/PROOF_RECEIPT.json \
+            --trace /tmp/changed-trace.json \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json"; then
+            echo "Expected receipt verification to reject changed trace"
+            exit 1
+          fi
 
       - name: Run packaged ambiguity to next-probe workflow
         run: |
