@@ -120,9 +120,26 @@ class DiscriminationRun:
         )
 
     @property
+    def prediction_blocked_survivors(self) -> tuple[VariantEvidence, ...]:
+        eligible = {item.surface for item in self.eligible_survivors}
+        return tuple(
+            item for item in self.survivors if item.surface not in eligible
+        )
+
+    @property
     def discriminated_surface(self) -> str | None:
         survivors = self.eligible_survivors
         return survivors[0].surface if len(survivors) == 1 else None
+
+    @property
+    def selection_state(self) -> str:
+        if self.discriminated_surface:
+            return "unique-survivor"
+        if len(self.eligible_survivors) > 1:
+            return "ambiguous"
+        if self.prediction_blocked_survivors:
+            return "prediction-blocked"
+        return "no-survivor"
 
     @property
     def diagnostic_cases(self) -> tuple[str, ...]:
@@ -297,6 +314,10 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
         "discriminated_surface": run.discriminated_surface,
         "survivors": [item.surface for item in run.survivors],
         "eligible_survivors": [item.surface for item in run.eligible_survivors],
+        "prediction_blocked_survivors": [
+            item.surface for item in run.prediction_blocked_survivors
+        ],
+        "selection_state": run.selection_state,
         "has_preregistered_predictions": run.has_preregistered_predictions,
         "variants": [
             {
@@ -429,6 +450,14 @@ def render_discrimination_markdown(
         lines.append(
             f"Multiple hypotheses survived: **{labels}**. The current cases do not "
             "discriminate between them; add a case where their predicted behaviors differ."
+        )
+    elif run.prediction_blocked_survivors:
+        blocked = ", ".join(
+            item.surface for item in run.prediction_blocked_survivors
+        )
+        lines.append(
+            f"Runtime survivor(s) **{blocked}** were blocked from selection because "
+            "their pre-registered predictions were contradicted, partial, or inconclusive."
         )
     else:
         lines.append(
