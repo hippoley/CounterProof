@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import ReplayResult
-from .replay import CommandOutcome, _declared_root, _run, _safe_cwd
+from .replay import CommandOutcome, resolve_declared_root, run_command, safe_cwd
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ def run_discrimination_manifest(
     """Run the same cases across multiple candidate mutation variants."""
     path = path.resolve()
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    root = _declared_root(path.parent, str(raw.get("root", ".")))
+    root = resolve_declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
     cases = raw.get("cases", [])
     if not cases:
@@ -105,11 +105,11 @@ def run_discrimination_manifest(
     for case in cases:
         case_id = str(case["case_id"])
         suite = str(case.get("suite", "discrimination"))
-        cwd = _safe_cwd(root, str(case.get("cwd", ".")))
+        cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
         common_env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
 
-        baseline = _run(
+        baseline = run_command(
             list(case["baseline"]),
             cwd=cwd,
             timeout_seconds=timeout,
@@ -131,7 +131,7 @@ def run_discrimination_manifest(
                 variant_results[surface].append(result)
                 continue
 
-            outcome = _run(
+            outcome = run_command(
                 list(variants[surface]),
                 cwd=cwd,
                 timeout_seconds=timeout,
