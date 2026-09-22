@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="EvoPR — review agent behavior changes before they become permanent.">
+  <title>EvoPR · Pull requests for agent behavior</title>
+  <style>:root{--bg:#0b0d0c;--panel:#111412;--line:#283029;--ink:#f2f5f0;--muted:#8e9a91;--soft:#c5cec7;--acid:#c8ff63;--red:#ff6b5f;--amber:#ffbf69;--cyan:#7ee5d8}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,sans-serif}button,select{font:inherit}.topbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;background:#0b0d0cef;backdrop-filter:blur(16px)}.brand{display:flex;align-items:center;gap:9px;color:var(--ink);text-decoration:none;font-weight:800}.mark{width:28px;height:28px;border-radius:8px;background:var(--acid);color:#091006;display:grid;place-items:center;font:900 14px monospace}.brand i{color:var(--muted);font-style:normal;font-weight:500}.topmeta{display:flex;align-items:center;gap:10px;color:var(--muted);font:10px monospace}.topmeta a{color:var(--acid);text-decoration:none}.live-dot{width:7px;height:7px;background:var(--acid);border-radius:50%;box-shadow:0 0 0 5px #c8ff6312}.divider{width:1px;height:13px;background:var(--line)}main{max-width:1500px;margin:auto;padding:0 28px}.hero{padding:76px 0 52px}.kicker,.micro,.section-label{font:10px monospace;letter-spacing:.14em;color:#87938a}.hero h1{font-size:clamp(42px,5.5vw,78px);line-height:.98;letter-spacing:-.065em;margin:14px 0 24px;max-width:1100px}.hero h1 em,.manifesto h2 em{font-style:normal;color:var(--acid)}.hero-copy{max-width:790px;color:var(--soft);font-size:18px}.hero-line{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px;font:10px monospace;color:#778078}.hero-line b{color:var(--acid)}.workspace{border:1px solid #333d35;border-radius:18px;overflow:hidden;background:var(--panel);box-shadow:0 30px 100px #0008}.workspace-head{min-height:74px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.workspace-head>div:first-child{display:flex;align-items:center;gap:16px}.workspace-head .micro{margin:0}select{background:#191d1a;color:var(--ink);border:1px solid #374038;border-radius:9px;padding:9px 34px 9px 11px;min-width:310px}.packet-health{display:flex;align-items:center;gap:12px}.pill{font:9px monospace;padding:5px 8px;border:1px solid #39433b;border-radius:999px}.pill.running{color:var(--amber)}.pill.pass{color:var(--acid)}.pill.promoted{background:var(--acid);color:#071007;border-color:var(--acid)}.mono{font:10px monospace;color:var(--muted)}.triage-grid{display:grid;grid-template-columns:minmax(270px,.9fr) minmax(400px,1.2fr) minmax(330px,1fr);min-height:760px}.pane{padding:20px;min-width:0}.pane+.pane{border-left:1px solid var(--line)}.pane-title{display:flex;gap:10px;align-items:center;padding-bottom:17px;border-bottom:1px solid var(--line);margin-bottom:17px}.pane-title>span{width:28px;height:28px;border:1px solid #364038;border-radius:7px;display:grid;place-items:center;color:var(--acid);font:10px monospace}.pane-title b,.pane-title small{display:block}.pane-title small{color:var(--muted);font-size:11px}.failure-card{border:1px solid #512a27;background:linear-gradient(145deg,#201312,#121513);padding:16px;border-radius:12px}.danger{color:var(--red);font:9px monospace}.failure-card h2{font-size:22px;line-height:1.12;letter-spacing:-.03em;margin:12px 0 8px}.failure-card p,.receipt{color:var(--soft);margin:0}.capsule{margin-top:22px}.capsule-body{margin-top:9px;border-left:2px solid #343d35;padding-left:12px}.capsule-row{display:grid;grid-template-columns:95px 1fr;gap:8px;padding:7px 0;border-bottom:1px dashed #232823}.capsule-row span:first-child{color:var(--muted);font:9px monospace;text-transform:uppercase}.receipt-label{margin-top:20px}.receipt{margin-top:9px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0d100e}.evidence-label{margin-top:20px}.evidence-list{display:grid;gap:8px;margin-top:9px}.evidence{padding:10px;border:1px solid var(--line);border-radius:10px;background:#0e110f}.evidence-top{display:flex;justify-content:space-between;gap:8px}.evidence b{font-size:11px}.evidence i{font-style:normal;font:9px monospace;color:var(--acid)}.evidence p{font-size:11px;color:var(--muted);margin:6px 0 0}.probe-instruction{display:flex;gap:9px;padding:11px;border:1px solid #2b3726;border-radius:10px;background:#0e120e;margin-bottom:12px}.probe-instruction p{margin:0;color:var(--soft);font-size:12px}.pulse{margin-top:5px;width:7px;height:7px;border-radius:50%;background:var(--acid);box-shadow:0 0 14px var(--acid)}.hypothesis-list{display:grid;gap:9px}.hypothesis{width:100%;text-align:left;border:1px solid var(--line);background:#0e110f;border-radius:11px;padding:12px;color:var(--ink);cursor:pointer}.hypothesis.active{border-color:#6d8d45;background:#182114;box-shadow:inset 3px 0 0 var(--acid)}.hypothesis-top{display:flex;justify-content:space-between}.hypothesis-top div{display:flex;gap:8px}.hypothesis-id,.surface,.confidence{font:9px monospace}.surface{color:var(--cyan)}.confidence{color:var(--acid);font-size:11px}.hypothesis p{margin:7px 0 0;color:#adb6af;font-size:12px}.primary-action,.replay-action,.promote-action,.secondary-action{width:100%;border:0;cursor:pointer;border-radius:10px}.primary-action{margin-top:14px;background:var(--acid);color:#081006;padding:12px;text-align:left}.primary-action span,.primary-action small{display:block}.primary-action span{font-weight:900}.primary-action small{opacity:.65}.world-fork{margin-top:14px;border:1px solid #333d35;border-radius:12px;overflow:hidden;background:#0c0f0d}.hidden{display:none}.fork-head{display:flex;justify-content:space-between;padding:9px 11px;border-bottom:1px solid var(--line);font:9px monospace;color:var(--muted)}.worlds{display:grid;grid-template-columns:1fr 1fr}.world{padding:11px}.world+.world{border-left:1px solid var(--line)}.world-top{display:flex;justify-content:space-between;font:9px monospace;color:var(--muted)}.world-top i{font-style:normal}.flow{margin:12px 0;min-height:90px}.flow-step{font:10px monospace;padding:6px 7px;border:1px solid var(--line);border-radius:7px;margin-bottom:5px}.flow-step.changed{border-color:#6d8d45;color:var(--acid)}.world-result{text-align:center;border-radius:6px;padding:5px;font:900 9px monospace}.bad{background:#341815;color:var(--red)}.good{background:#18290d;color:var(--acid)}.pending{background:#222620;color:var(--muted)}.replay-action{border-radius:0;border-top:1px solid var(--line);background:#181d19;color:var(--ink);padding:10px;font:10px monospace}.replay-action span{float:right;color:var(--muted)}.selected-mutation{display:flex;justify-content:space-between;gap:12px}.selected-mutation h3{margin:7px 0 0;font-size:19px}.surface-tag{font:9px monospace;border:1px solid #335954;color:var(--cyan);border-radius:999px;padding:4px 7px}.behavior-diff{margin-top:16px;border:1px solid #333d35;border-radius:12px;overflow:hidden;background:#0b0e0c}.diff-head{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line);font:9px monospace;color:var(--muted)}.diff-block{padding:10px}.diff-block>span{font:9px monospace}.before>span{color:var(--red)}.after>span{color:var(--acid)}pre{white-space:pre-wrap;word-break:break-word;color:#c8d0ca;font:10px/1.55 monospace;margin:7px 0 0}.diff-arrow{text-align:center;border-block:1px solid var(--line);color:var(--muted)}.replay-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.replay-metrics div{border:1px solid var(--line);border-radius:9px;padding:9px;background:#0f120f}.replay-metrics span,.replay-metrics strong{display:block}.replay-metrics span{font:8px monospace;color:var(--muted)}.replay-metrics strong{margin-top:4px;font-size:17px}.replay-matrix{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#0e110f}.replay-matrix>span{font:9px monospace;color:var(--muted)}.replay-matrix p{color:var(--muted);font-size:11px}.replay-table{width:100%;border-collapse:collapse;margin-top:7px;font:9px monospace}.replay-table th,.replay-table td{text-align:left;padding:6px 4px;border-top:1px solid var(--line)}.replay-table th{color:var(--muted)}.delta-good{color:var(--acid)}.gate{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px;border:1px solid #333d35;border-radius:10px;background:#121613}.gate b{display:block;margin-top:4px;font-size:12px}.gate-light{width:10px;height:10px;border-radius:50%;background:#525952}.gate-light.pass{background:var(--acid);box-shadow:0 0 17px #c8ff638c}.gate-light.fail{background:var(--red)}.actions{display:grid;grid-template-columns:.7fr 1.3fr;gap:8px;margin-top:10px}.secondary-action,.promote-action{padding:11px;font:900 10px monospace}.secondary-action{background:#171a18;color:var(--muted);border:1px solid #333d35}.promote-action{background:var(--acid);color:#091006}.actions button:disabled{opacity:.28;cursor:not-allowed}.demo-note{font-size:10px;color:#68716a;text-align:center}.manifesto{padding:110px 0}.manifesto h2{font-size:clamp(36px,4vw,58px);line-height:1.02;letter-spacing:-.055em;max-width:930px}.manifesto-grid{display:grid;grid-template-columns:repeat(4,1fr);border-block:1px solid var(--line)}.manifesto-grid div{padding:22px;border-right:1px solid var(--line)}.manifesto-grid div:last-child{border:0}.manifesto-grid span{font:10px monospace;color:var(--acid)}.manifesto-grid b{display:block;margin:25px 0 8px}.manifesto-grid p{color:var(--muted);font-size:12px}.toast{position:fixed;right:24px;bottom:24px;opacity:0;transform:translateY(15px);background:#1b211c;border:1px solid #3e4a40;border-radius:10px;padding:11px 14px;transition:.2s}.toast.show{opacity:1;transform:none}footer{border-top:1px solid var(--line);padding:25px 4vw;display:flex;justify-content:space-between;color:#6e786f;font:9px monospace}footer a{color:var(--acid);text-decoration:none}@media(max-width:1180px){.triage-grid{grid-template-columns:1fr 1fr}.diff-pane{grid-column:1/-1;border-left:0!important;border-top:1px solid var(--line)}.manifesto-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){main{padding:0 14px}.brand i,#build,.divider{display:none}.hero{padding:50px 0 35px}.workspace-head{flex-direction:column;align-items:flex-start}.workspace-head>div:first-child{display:block;width:100%}select{width:100%;min-width:0;margin-top:7px}.triage-grid{grid-template-columns:1fr}.pane+.pane{border-left:0;border-top:1px solid var(--line)}.diff-pane{grid-column:auto}.worlds{grid-template-columns:1fr}.world+.world{border-left:0;border-top:1px solid var(--line)}.manifesto-grid{grid-template-columns:1fr}footer{flex-direction:column;gap:8px}}</style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="https://github.com/hippoley/SkillFactory"><span class="mark">E</span><span>EvoPR</span><i>/ SkillFactory</i></a>
+    <div class="topmeta"><span class="live-dot"></span><span>INTERACTIVE DEMO</span><span class="divider"></span><span id="build">BUILD —</span><a href="https://github.com/hippoley/SkillFactory/pull/2">PR #2 ↗</a></div>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="kicker">VERIFIED AGENT EVOLUTION</p>
+      <h1>Your agent can rewrite itself.<br><em>Make it open a pull request first.</em></h1>
+      <p class="hero-copy">Inspect the failure, challenge the causal hypothesis, replay the same world, then promote only the smallest behavior change that survives evidence.</p>
+      <div class="hero-line"><span>TRACE</span><b>→</b><span>CAUSE</span><b>→</b><span>FORK</span><b>→</b><span>BEHAVIOR DIFF</span><b>→</b><span>PROMOTE / ROLLBACK</span></div>
+    </section>
+    <section class="workspace">
+      <div class="workspace-head">
+        <div><p class="micro">ACTIVE EVOLUTION PACKET</p><select id="caseSelect" aria-label="Choose evolution case"></select></div>
+        <div class="packet-health"><span id="packetStatus" class="pill neutral">READY TO PROBE</span><span id="packetId" class="mono">—</span></div>
+      </div>
+      <div class="triage-grid">
+        <section class="pane failure-pane">
+          <div class="pane-title"><span>01</span><div><b>Reality</b><small>What actually happened</small></div></div>
+          <div class="failure-card"><span class="label danger">FAILURE</span><h2 id="failureTitle">—</h2><p id="failureSummary">—</p></div>
+          <div class="capsule"><div class="section-label">DECISION CAPSULE</div><div id="decisionCapsule" class="capsule-body"></div></div>
+          <div class="section-label receipt-label">OUTCOME RECEIPT</div><div id="outcomeReceipt" class="receipt"></div>
+          <div class="section-label evidence-label">EVIDENCE</div><div id="evidenceList" class="evidence-list"></div>
+        </section>
+        <section class="pane probe-pane">
+          <div class="pane-title"><span>02</span><div><b>Causal Probe</b><small>Challenge the explanation</small></div></div>
+          <div class="probe-instruction"><span class="pulse"></span><p>Select the mechanism you think caused the failure. EvoPR will fork the recorded world and test its mutation.</p></div>
+          <div id="hypothesisList" class="hypothesis-list"></div>
+          <button id="forkBtn" class="primary-action"><span>FORK WORLD</span><small>same task · same state · one capability changed</small></button>
+          <div id="worldFork" class="world-fork hidden">
+            <div class="fork-head"><span>COUNTERFACTUAL REPLAY</span><span id="forkHypothesis" class="mono">—</span></div>
+            <div class="worlds">
+              <div class="world baseline"><div class="world-top"><span>BASELINE</span><i>recorded</i></div><div id="baselineFlow" class="flow"></div><div id="baselineResult" class="world-result bad">FAIL</div></div>
+              <div class="world candidate"><div class="world-top"><span>CANDIDATE</span><i>mutation</i></div><div id="candidateFlow" class="flow"></div><div id="candidateResult" class="world-result pending">NOT RUN</div></div>
+            </div>
+            <button id="replayBtn" class="replay-action">RUN REPLAY <span>⌘↵</span></button>
+          </div>
+        </section>
+        <section class="pane diff-pane">
+          <div class="pane-title"><span>03</span><div><b>Behavior PR</b><small>Review what changes in the same world</small></div></div>
+          <div class="selected-mutation"><div><span class="section-label">SELECTED MUTATION</span><h3 id="mutationTitle">Choose a hypothesis</h3></div><span id="surfaceTag" class="surface-tag">—</span></div>
+          <div class="behavior-diff">
+            <div class="diff-head"><span>BEHAVIOR DIFF</span><span>decision-level</span></div>
+            <div class="diff-block before"><span>BEFORE</span><pre id="beforeDiff">Select a hypothesis to inspect its behavior mutation.</pre></div>
+            <div class="diff-arrow">↓</div>
+            <div class="diff-block after"><span>AFTER</span><pre id="afterDiff">—</pre></div>
+          </div>
+          <div class="replay-metrics"><div><span>MEAN Δ</span><strong id="meanDelta">—</strong></div><div><span>REGRESSIONS</span><strong id="regressions">—</strong></div><div><span>RISK FLAGS</span><strong id="riskFlags">—</strong></div></div>
+          <div id="replayMatrix" class="replay-matrix empty"><span>REPLAY MATRIX</span><p>Fork the world and run replay to produce promotion evidence.</p></div>
+          <div class="gate"><div><span class="section-label">PROMOTION GATE</span><b id="gateText">WAITING FOR REPLAY</b></div><span id="gateLight" class="gate-light"></span></div>
+          <div class="actions"><button id="rollbackBtn" class="secondary-action" disabled>ROLLBACK</button><button id="promoteBtn" class="promote-action" disabled>PROMOTE CANDIDATE</button></div>
+          <p class="demo-note">Demo controls change browser state only. Git merge/revert wiring is the next integration step.</p>
+        </section>
+      </div>
+    </section>
+    <section class="manifesto">
+      <div><p class="kicker">THE DIFFERENCE</p><h2>Git shows what bytes changed.<br><em>EvoPR shows what the agent will do differently.</em></h2></div>
+      <div class="manifesto-grid">
+        <div><span>01</span><b>Attribute</b><p>Don’t turn every failure into a prompt edit. Compete causal explanations.</p></div>
+        <div><span>02</span><b>Intervene minimally</b><p>Change a Skill, policy, router, memory or tool contract—whichever actually failed.</p></div>
+        <div><span>03</span><b>Replay</b><p>Fixing the original failure is insufficient. Holdouts and regressions are first-class.</p></div>
+        <div><span>04</span><b>Stay reversible</b><p>Every promoted capability change carries provenance, scope and a rollback reference.</p></div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <footer><span>EvoPR / SkillFactory</span><span>Agents will learn. The question is whether you can review what they learned.</span><a href="https://github.com/hippoley/SkillFactory">GitHub ↗</a></footer>
+  <script>
+const __EVOPR_CASES__ = {
+  "cases": [
+    {
+      "id": "evo-tenant-scope-001",
+      "short_title": "PR #418 · Tenant scope before DB",
+      "failure_title": "The agent queried first and validated later.",
+      "failure_summary": "A coding agent constructed a database call while tenant_scope was still provisional. Human review blocked the PR and CI reproduced a cross-tenant regression.",
+      "decision_capsule": {
+        "goal": "Implement account lookup",
+        "world_state": "tenant_scope = provisional",
+        "candidates": "validate tenant · query DB · ask user",
+        "selected": "query_database",
+        "assumption": "tenant context was already trusted",
+        "uncertainty": "not surfaced"
+      },
+      "outcome_receipt": "Reviewer correction + deterministic regression. Moving validation before DB access turned the failing security case green.",
+      "evidence": [
+        {
+          "kind": "human_correction",
+          "confidence": 0.99,
+          "note": "Reviewer explicitly identified premature database access."
+        },
+        {
+          "kind": "deterministic_verifier",
+          "confidence": 1,
+          "note": "Cross-tenant regression reproduced before the fix."
+        },
+        {
+          "kind": "verified_fix",
+          "confidence": 1,
+          "note": "Regression disappeared after validation moved earlier."
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "H1",
+          "target_surface": "skill",
+          "uncertainty": 0.32,
+          "mechanism": "The coding skill lacks an explicit validation-before-query instruction."
+        },
+        {
+          "id": "H2",
+          "target_surface": "policy",
+          "uncertainty": 0.12,
+          "mechanism": "Execution policy allows DB access while tenant scope is provisional."
+        },
+        {
+          "id": "H3",
+          "target_surface": "router",
+          "uncertainty": 0.78,
+          "mechanism": "The router selected the wrong implementation workflow."
+        }
+      ],
+      "candidates": [
+        {
+          "hypothesis_id": "H1",
+          "surface": "skill",
+          "title": "Teach validation-before-query",
+          "behavior": {
+            "before": "selected_action = query_database\\nprecondition = implicit\\ndb_access = allowed",
+            "after": "selected_action = validate_tenant\\ninstruction = validate before data access\\ndb_access = then allowed"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "query_database",
+            "security regression"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "read skill constraint",
+            "validate_tenant",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.5,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "normal-12",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H2",
+          "surface": "policy",
+          "title": "Enforce tenant validation precondition",
+          "behavior": {
+            "before": "tenant_scope = provisional\\nselected_action = query_database\\ndb_access = allowed",
+            "after": "tenant_scope = provisional\\nselected_action = validate_tenant\\ndb_access = blocked_until(validated)"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "query_database",
+            "cross-tenant access"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "policy guard",
+            "validate_tenant",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.533,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "attack-07",
+              "suite": "security",
+              "baseline": 0.4,
+              "candidate": 1,
+              "delta": 0.6
+            },
+            {
+              "case_id": "normal-12",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H3",
+          "surface": "router",
+          "title": "Route tenant lookups through guarded workflow",
+          "behavior": {
+            "before": "route = generic_db_task\\nselected_action = query_database",
+            "after": "route = tenant_guarded_task\\nselected_action = query_database"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "generic router",
+            "query_database"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "guarded router",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "FAIL",
+          "mean_delta": 0.1,
+          "regressions": 1,
+          "risk_flags": [
+            "root cause survives"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.3,
+              "delta": 0.3
+            },
+            {
+              "case_id": "attack-07",
+              "suite": "security",
+              "baseline": 0.4,
+              "candidate": 0.2,
+              "delta": -0.2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "evo-correction-commit-002",
+      "short_title": "HomeAI · Mid-utterance correction",
+      "failure_title": "The old semantic proposal executed before the user finished correcting it.",
+      "failure_summary": "The user said “open the living-room window… halfway… no, the bedroom one.” The runtime committed the provisional living-room action before the target correction arrived.",
+      "decision_capsule": {
+        "goal": "Execute window control",
+        "world_state": "ASR partial · semantic proposal provisional",
+        "candidates": "execute · wait · clarify",
+        "selected": "execute living-room window",
+        "assumption": "target was stable enough",
+        "uncertainty": "high but ignored"
+      },
+      "outcome_receipt": "The user immediately corrected the target. The device action had already escaped the semantic gate and required compensation.",
+      "evidence": [
+        {
+          "kind": "human_correction",
+          "confidence": 1,
+          "note": "Explicit target correction invalidated the previous proposal."
+        },
+        {
+          "kind": "execution_trace",
+          "confidence": 1,
+          "note": "Device command timestamp preceded semantic finalization."
+        },
+        {
+          "kind": "compensating_action",
+          "confidence": 0.98,
+          "note": "Runtime had to undo or redirect an action that should never have committed."
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "H1",
+          "target_surface": "skill",
+          "uncertainty": 0.43,
+          "mechanism": "The language skill needs more target-correction examples."
+        },
+        {
+          "id": "H2",
+          "target_surface": "policy",
+          "uncertainty": 0.08,
+          "mechanism": "Commit gate treats provisional semantic state as executable."
+        },
+        {
+          "id": "H3",
+          "target_surface": "memory",
+          "uncertainty": 0.67,
+          "mechanism": "The previous target remains sticky in conversational memory."
+        }
+      ],
+      "candidates": [
+        {
+          "hypothesis_id": "H1",
+          "surface": "skill",
+          "title": "Add target-correction examples",
+          "behavior": {
+            "before": "partial target → likely execute",
+            "after": "partial target + correction cue → prefer wait"
+          },
+          "baseline_flow": [
+            "living-room",
+            "halfway",
+            "execute"
+          ],
+          "candidate_flow": [
+            "living-room",
+            "halfway",
+            "correction pattern",
+            "wait"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.3,
+          "regressions": 1,
+          "risk_flags": [
+            "latency increase"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.9,
+              "delta": 0.9
+            },
+            {
+              "case_id": "fast-command-02",
+              "suite": "latency",
+              "baseline": 1,
+              "candidate": 0.7,
+              "delta": -0.3
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H2",
+          "surface": "policy",
+          "title": "Require semantic stability before commit",
+          "behavior": {
+            "before": "semantic_state = provisional\\ncommit_allowed = true\\naction = living_room_window(50%)",
+            "after": "semantic_state = provisional\\ncommit_allowed = false\\naction = none until stable/final"
+          },
+          "baseline_flow": [
+            "ASR partial",
+            "proposal living-room",
+            "commit",
+            "target correction"
+          ],
+          "candidate_flow": [
+            "ASR partial",
+            "proposal living-room",
+            "commit gate blocks",
+            "target correction",
+            "proposal bedroom",
+            "commit"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.667,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "normal-final-04",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            },
+            {
+              "case_id": "interrupt-07",
+              "suite": "duplex",
+              "baseline": 0.2,
+              "candidate": 1,
+              "delta": 0.8
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H3",
+          "surface": "memory",
+          "title": "Expire provisional target on correction cue",
+          "behavior": {
+            "before": "memory.target = living-room",
+            "after": "correction cue → memory.target = null"
+          },
+          "baseline_flow": [
+            "target living-room",
+            "execute",
+            "correction"
+          ],
+          "candidate_flow": [
+            "target living-room",
+            "clear target",
+            "clarify"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "HOLD",
+          "mean_delta": 0.2,
+          "regressions": 1,
+          "risk_flags": [
+            "unnecessary clarification"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.6,
+              "delta": 0.6
+            },
+            {
+              "case_id": "normal-04",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 0.8,
+              "delta": -0.2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+const __nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+window.fetch = async function(url, options) {
+  const u = String(url);
+  if (u.endsWith("data/evolution_cases.json")) {
+    return new Response(JSON.stringify(__EVOPR_CASES__), {status: 200, headers: {"Content-Type":"application/json"}});
+  }
+  if (u.endsWith("data/skills.json")) {
+    return new Response(JSON.stringify({commit:"evopr-preview"}), {status: 200, headers: {"Content-Type":"application/json"}});
+  }
+  if (__nativeFetch) return __nativeFetch(url, options);
+  throw new Error("Network unavailable");
+};
+</script><script>const byId = id => document.getElementById(id);
+let cases = [], activeCase = null, activeHypothesis = null, replayDone = false, promoted = false;
+
+const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+const confidence = h => Math.round((1 - Number(h.uncertainty ?? .5)) * 100);
+
+function candidate() {
+  return activeCase?.candidates.find(c => c.hypothesis_id === activeHypothesis?.id) || null;
+}
+function packetState(label, mode="neutral") {
+  byId("packetStatus").textContent = label;
+  byId("packetStatus").className = "pill " + mode;
+}
+function toast(message) {
+  const el = byId("toast");
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+function renderCaseSelector() {
+  byId("caseSelect").innerHTML = cases.map(c => '<option value="' + esc(c.id) + '">' + esc(c.short_title) + '</option>').join("");
+}
+function renderHypotheses() {
+  byId("hypothesisList").innerHTML = activeCase.hypotheses.map(h =>
+    '<button class="hypothesis ' + (activeHypothesis?.id === h.id ? "active" : "") + '" data-id="' + esc(h.id) + '">' +
+      '<div class="hypothesis-top"><div><span class="hypothesis-id">' + esc(h.id) + '</span><span class="surface">' + esc(h.target_surface) + '</span></div><span class="confidence">' + confidence(h) + '%</span></div>' +
+      '<p>' + esc(h.mechanism) + '</p></button>'
+  ).join("");
+  document.querySelectorAll(".hypothesis").forEach(btn => btn.addEventListener("click", () => {
+    activeHypothesis = activeCase.hypotheses.find(h => h.id === btn.dataset.id);
+    replayDone = false; promoted = false;
+    renderHypotheses(); renderMutation(); resetReplay();
+    packetState("HYPOTHESIS SELECTED");
+  }));
+}
+function renderMutation() {
+  const c = candidate();
+  if (!c) return;
+  byId("mutationTitle").textContent = c.title;
+  byId("surfaceTag").textContent = c.surface.toUpperCase();
+  byId("beforeDiff").textContent = c.behavior.before;
+  byId("afterDiff").textContent = c.behavior.after;
+}
+function resetReplay() {
+  byId("worldFork").classList.add("hidden");
+  byId("meanDelta").textContent = "—";
+  byId("regressions").textContent = "—";
+  byId("riskFlags").textContent = "—";
+  byId("promoteBtn").disabled = true;
+  byId("rollbackBtn").disabled = true;
+  byId("gateText").textContent = "WAITING FOR REPLAY";
+  byId("gateLight").className = "gate-light";
+  byId("replayMatrix").className = "replay-matrix empty";
+  byId("replayMatrix").innerHTML = '<span>REPLAY MATRIX</span><p>Fork the world and run replay to produce promotion evidence.</p>';
+}
+function renderCase() {
+  activeHypothesis = [...activeCase.hypotheses].sort((a,b) => confidence(b) - confidence(a))[0];
+  replayDone = false; promoted = false;
+  byId("packetId").textContent = activeCase.id;
+  byId("failureTitle").textContent = activeCase.failure_title;
+  byId("failureSummary").textContent = activeCase.failure_summary;
+  byId("outcomeReceipt").textContent = activeCase.outcome_receipt;
+  byId("decisionCapsule").innerHTML = Object.entries(activeCase.decision_capsule).map(([k,v]) =>
+    '<div class="capsule-row"><span>' + esc(k.replaceAll("_"," ")) + '</span><span>' + esc(v) + '</span></div>'
+  ).join("");
+  byId("evidenceList").innerHTML = activeCase.evidence.map(e =>
+    '<div class="evidence"><div class="evidence-top"><b>' + esc(e.kind.replaceAll("_"," ")) + '</b><i>' + Math.round(e.confidence*100) + '% CONF</i></div><p>' + esc(e.note) + '</p></div>'
+  ).join("");
+  packetState("READY TO PROBE");
+  renderHypotheses(); renderMutation(); resetReplay();
+}
+function flow(target, steps, changed=false) {
+  byId(target).innerHTML = steps.map((step,i) => '<div class="flow-step ' + (changed && i===steps.length-2 ? "changed":"") + '">' + esc(step) + '</div>').join("");
+}
+function forkWorld() {
+  const c = candidate();
+  byId("worldFork").classList.remove("hidden");
+  byId("forkHypothesis").textContent = activeHypothesis.id + " · " + c.surface;
+  flow("baselineFlow", c.baseline_flow);
+  flow("candidateFlow", c.candidate_flow, true);
+  byId("baselineResult").textContent = c.baseline_result;
+  byId("baselineResult").className = "world-result bad";
+  byId("candidateResult").textContent = "NOT RUN";
+  byId("candidateResult").className = "world-result pending";
+  packetState("WORLD FORKED","running");
+}
+function runReplay() {
+  const c = candidate();
+  packetState("REPLAYING","running");
+  byId("replayBtn").disabled = true;
+  byId("candidateResult").textContent = "RUNNING…";
+  setTimeout(() => {
+    replayDone = true;
+    byId("replayBtn").disabled = false;
+    byId("candidateResult").textContent = c.candidate_result;
+    byId("candidateResult").className = "world-result " + (c.eligible ? "good":"bad");
+    byId("meanDelta").textContent = (c.mean_delta >= 0 ? "+" : "") + c.mean_delta.toFixed(3);
+    byId("regressions").textContent = c.regressions;
+    byId("riskFlags").textContent = c.risk_flags.length;
+    byId("replayMatrix").className = "replay-matrix";
+    byId("replayMatrix").innerHTML = '<span>REPLAY MATRIX</span><table class="replay-table"><thead><tr><th>CASE</th><th>SUITE</th><th>BASE</th><th>CAND</th><th>Δ</th></tr></thead><tbody>' +
+      c.replays.map(r => '<tr><td>' + esc(r.case_id) + '</td><td>' + esc(r.suite) + '</td><td>' + r.baseline.toFixed(1) + '</td><td>' + r.candidate.toFixed(1) + '</td><td class="' + (r.delta>=0?"delta-good":"") + '">' + (r.delta>=0?"+":"") + r.delta.toFixed(1) + '</td></tr>').join("") +
+      '</tbody></table>';
+    byId("gateText").textContent = c.eligible ? "ELIGIBLE FOR PROMOTION" : "HOLD / REJECT";
+    byId("gateLight").className = "gate-light " + (c.eligible ? "pass":"fail");
+    byId("promoteBtn").disabled = !c.eligible;
+    packetState(c.eligible ? "REPLAY PASSED":"REPLAY FAILED", c.eligible ? "pass":"running");
+    toast(c.eligible ? "Replay passed. Candidate can be promoted." : "Replay exposed a regression.");
+  }, 650);
+}
+function promote() {
+  if (!replayDone || !candidate()?.eligible) return;
+  promoted = true;
+  byId("promoteBtn").disabled = true;
+  byId("rollbackBtn").disabled = false;
+  byId("gateText").textContent = "PROMOTED · ROLLBACK READY";
+  packetState("PROMOTED","promoted");
+  toast("Capability promoted in demo state.");
+}
+function rollback() {
+  if (!promoted) return;
+  promoted = false;
+  byId("rollbackBtn").disabled = true;
+  byId("promoteBtn").disabled = false;
+  byId("gateText").textContent = "ROLLED BACK · CANDIDATE STILL VALID";
+  packetState("ROLLED BACK");
+  toast("Rolled back to previous capability.");
+}
+async function init() {
+  try {
+    const [payload, build] = await Promise.all([
+      fetch("data/evolution_cases.json").then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("data/skills.json").then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    cases = payload.cases;
+    if (build?.commit) byId("build").textContent = "BUILD " + build.commit;
+    renderCaseSelector();
+    activeCase = cases[0];
+    renderCase();
+  } catch (error) {
+    document.querySelector(".workspace").innerHTML = '<div style="padding:40px;color:#ff6b5f">Demo data unavailable: ' + esc(error) + '</div>';
+  }
+}
+
+byId("caseSelect").addEventListener("change", e => { activeCase = cases.find(c => c.id === e.target.value); renderCase(); });
+byId("forkBtn").addEventListener("click", forkWorld);
+byId("replayBtn").addEventListener("click", runReplay);
+byId("promoteBtn").addEventListener("click", promote);
+byId("rollbackBtn").addEventListener("click", rollback);
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !byId("worldFork").classList.contains("hidden")) runReplay();
+});
+init();
+</script>
+</body>
+</html>
