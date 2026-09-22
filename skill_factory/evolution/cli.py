@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import click
@@ -53,6 +55,28 @@ def build(packet_file: str, out_file: str) -> None:
     output = render_evolution_pr(packet)
     Path(out_file).write_text(output, encoding="utf-8")
     click.echo(f"Built {out_file}")
+
+
+@cli.command("demo")
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", default=8765, type=int, show_default=True)
+def demo(host: str, port: int) -> None:
+    """Serve the interactive EvoPR playground from site/."""
+    root = Path(__file__).resolve().parents[2]
+    site_dir = root / "site"
+    if not (site_dir / "index.html").exists():
+        raise click.ClickException("site/index.html not found; run from a SkillFactory checkout")
+
+    handler = partial(SimpleHTTPRequestHandler, directory=str(site_dir))
+    server = ThreadingHTTPServer((host, port), handler)
+    click.echo(f"EvoPR playground: http://{host}:{port}")
+    click.echo("Press Ctrl+C to stop.")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        click.echo("\nStopped.")
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":
