@@ -20,6 +20,7 @@ from skill_factory.evolution.models import (
     ProbeSpec,
     ReplayResult,
 )
+from skill_factory.evolution.probe_planner import plan_next_probes, render_probe_plan
 from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
 from skill_factory.evolution.report import render_evolution_pr
 from skill_factory.evolution.trace import compile_trace, load_trace
@@ -772,3 +773,111 @@ def test_evopr_evolve_refuses_automatic_selection_when_survivors_are_ambiguous(
     review = output.read_text(encoding="utf-8")
     assert "Multiple hypotheses survived" in review
     assert "Eligible for promotion." not in review
+
+
+def test_next_probe_planner_targets_unresolved_survivor_pair():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+
+    assert run.discriminated_surface is None
+    assert run.unresolved_pairs == (("policy", "skill"),)
+
+    suggestions = plan_next_probes(packet, run)
+    assert len(suggestions) == 1
+    suggestion = suggestions[0]
+    assert suggestion.left_surface == "policy"
+    assert suggestion.right_surface == "skill"
+    assert "execution precondition / commit gate" in suggestion.vary
+    assert "learned instruction / demonstrations" in suggestion.vary
+
+    rendered = render_probe_plan(suggestions)
+    assert "Separate policy from skill" in rendered
+    assert "experiment-design suggestion" in rendered
+    assert "not an executable test case" in rendered
+
+
+def test_next_probe_planner_returns_nothing_after_unique_discrimination():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+
+    assert run.discriminated_surface == "policy"
+    assert plan_next_probes(packet, run) == ()
+
+
+def test_evopr_evolve_writes_next_probe_plan_when_ambiguous(tmp_path):
+    output = tmp_path / "review.md"
+    packet_output = tmp_path / "packet.json"
+    probe_output = tmp_path / "next_probe.md"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/ambiguous_discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--out",
+            str(output),
+            "--packet-out",
+            str(packet_output),
+            "--probe-plan-out",
+            str(probe_output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "No automatic selection: multiple interventions survived" in result.output
+    assert "Next discriminating probe planned for: policy vs skill" in result.output
+
+    packet = json.loads(packet_output.read_text(encoding="utf-8"))
+    assert packet["selected_candidate_id"] is None
+    assert packet["metadata"]["discrimination_result"] == "ambiguous"
+
+    probe_text = probe_output.read_text(encoding="utf-8")
+    assert "Separate policy from skill" in probe_text
+    assert "execution precondition / commit gate" in probe_text
+    assert "learned instruction / demonstrations" in probe_text
+
+    review = output.read_text(encoding="utf-8")
+    assert "EvoPR Next Probe Plan" in review
+    assert "Eligible for promotion." not in review
+
+
+def test_discriminate_json_exposes_next_probe_suggestions_when_ambiguous(tmp_path):
+    output = tmp_path / "matrix.md"
+    payload = tmp_path / "matrix.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "discriminate",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/ambiguous_discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--out",
+            str(output),
+            "--json-out",
+            str(payload),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(payload.read_text(encoding="utf-8"))
+    assert raw["discriminated_surface"] is None
+    assert raw["survivors"] == ["policy", "skill"]
+    assert len(raw["next_probe_suggestions"]) == 1
+    assert raw["next_probe_suggestions"][0]["title"] == "Separate policy from skill"
