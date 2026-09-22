@@ -214,3 +214,25 @@ def test_frontend_contract_contains_required_interaction_targets():
 
     for handler in ("spliceWorld", "runProof", "acceptMutation", "rollback"):
         assert handler in js
+
+
+def test_build_can_attach_measured_replay_without_manual_json_copy(tmp_path):
+    output = tmp_path / "measured.md"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "build",
+            "examples/evolution_pr.json",
+            "--replay-manifest",
+            "examples/replay_suite.json",
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    rendered = output.read_text(encoding="utf-8")
+    assert "failure-418" in rendered
+    assert "cross-tenant-attack-07" in rendered
+    assert "normal-lookup-12" in rendered
+    assert "Eligible for promotion." in rendered
