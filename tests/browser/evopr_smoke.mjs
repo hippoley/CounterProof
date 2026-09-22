@@ -49,6 +49,18 @@ try {
   await page.locator("#rollbackBtn").click();
   await page.waitForFunction(() => document.querySelector("#verdictStamp")?.textContent === "ROLLED BACK");
 
+  // Ambiguous evidence must stay ambiguous and surface a next probe instead of a fake winner.
+  await page.locator('.case-ticket[data-case="evo-destructive-confirm-003"]').click();
+  await page.locator("#compareBtn").click();
+  await page.waitForSelector("#discriminationSection:not([hidden])");
+  await page.waitForFunction(() =>
+    document.querySelector("#discriminationStamp")?.textContent === "AMBIGUOUS"
+  );
+  const ambiguousText = await page.locator("#discriminationSection").textContent();
+  if (!ambiguousText.includes("Next probe") || !ambiguousText.includes("Separate policy from skill")) {
+    throw new Error("ambiguous comparison did not produce a next probe");
+  }
+
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
