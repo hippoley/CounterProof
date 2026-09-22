@@ -24,6 +24,7 @@ from .models import (
     ProbeSpec,
     ReplayResult,
 )
+from .probe_planner import plan_next_probes, render_probe_plan
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
@@ -157,6 +158,7 @@ def prove(
     surface: str | None,
     out_file: str,
     packet_out: str | None,
+    probe_plan_out: str | None,
 ) -> None:
     """Compile a trace, select one hypothesis, run replay, and render Behavior Proof."""
     trace = load_trace(Path(trace_file))
@@ -213,6 +215,7 @@ def prove(
 @click.option("--out", "out_file", default="EVOLUTION_REVIEW.md", show_default=True)
 @click.option("--matrix-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--packet-out", default=None, type=click.Path(dir_okay=False))
+@click.option("--probe-plan-out", default=None, type=click.Path(dir_okay=False))
 def evolve(
     trace_file: str,
     experiment_manifest: str,
@@ -285,11 +288,17 @@ def evolve(
             },
         )
 
+    suggestions = plan_next_probes(packet, run)
+    probe_plan = render_probe_plan(suggestions)
     review = render_evolution_pr(packet) + "\n\n" + matrix
+    if suggestions:
+        review += "\n\n" + probe_plan
     Path(out_file).write_text(review, encoding="utf-8")
 
     if matrix_out:
         Path(matrix_out).write_text(matrix, encoding="utf-8")
+    if probe_plan_out:
+        Path(probe_plan_out).write_text(probe_plan, encoding="utf-8")
     if packet_out:
         Path(packet_out).write_text(
             json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
@@ -311,6 +320,14 @@ def evolve(
             "No automatic selection: multiple interventions survived — "
             + ", ".join(item.surface for item in run.survivors)
         )
+        if suggestions:
+            click.echo(
+                "Next discriminating probe planned for: "
+                + "; ".join(
+                    f"{item.left_surface} vs {item.right_surface}"
+                    for item in suggestions
+                )
+            )
     else:
         click.echo(
             "No automatic selection: none of the tested interventions survived."
@@ -360,14 +377,18 @@ def discriminate(
         for hypothesis in packet.hypotheses
     }
     report = render_discrimination_markdown(run, mechanisms=mechanisms)
+    if suggestions := plan_next_probes(packet, run):
+        report += "\n\n" + render_probe_plan(suggestions)
     Path(out_file).write_text(report, encoding="utf-8")
 
+    suggestions = plan_next_probes(packet, run)
     payload = discrimination_to_dict(run)
     payload["source_trace_id"] = packet.metadata.get("source_trace_id", "")
     payload["tested_surfaces"] = list(selected_surfaces)
     payload["interpretation"] = (
         "relative support among tested interventions; not proof of unique causal truth"
     )
+    payload["next_probe_suggestions"] = [item.to_dict() for item in suggestions]
     if json_out:
         Path(json_out).write_text(
             json.dumps(payload, indent=2, ensure_ascii=False),
