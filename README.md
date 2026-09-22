@@ -1,243 +1,233 @@
-# 🧬 SkillFactory / EvoPR
+# EvoPR · SkillFactory
 
 <div align="center">
 
-## **Self-improving agents need code review too.**
+## **Your agent changed. Show the proof.**
 
-### Your agent can rewrite itself. Make it open a pull request first.
-
-**Evidence-backed · Replay-gated · Reversible · Git-native**
+**Behavior-change review for self-improving agents.**
 
 [![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
 
 ---
 
-Most self-improving agents can **change themselves**.
+Agents are getting better at changing prompts, skills, policies and tools.
 
-Far fewer can answer:
+The uncomfortable question is no longer:
 
-> **Why did this behavior change? What evidence supports it? What else regressed? How do I roll it back?**
+> Can the agent learn?
 
-**EvoPR** is the evolution layer inside SkillFactory.
+It is:
 
-It turns a real failure into a reviewable **Behavior PR**:
+> **What exactly changed, what evidence supports it, what regressed, and can I reject it before it becomes permanent?**
 
-~~~text
+EvoPR explores a Git-like review contract for agent behavior.
+
+```text
 failure
-   ↓
-Decision Capsule + Outcome Receipt
-   ↓
-competing causal hypotheses
-   ↓
-candidate behavior mutations
-   ↓
-replay + holdout
-   ↓
-Behavior Diff
-   ↓
-EVOLUTION PR
-   ↓
-promote / hold / rollback
-~~~
+  ↓
+evidence + decision context
+  ↓
+candidate mutation
+  ↓
+baseline / candidate replay
+  ↓
+Behavior Proof
+  ↓
+PROMOTE / HOLD / REJECT
+```
 
-Not another prompt optimizer.  
-Not another trajectory summarizer.  
-Not another pile of SKILL.md files.
+## What is real today
 
-**A change-control system for agent behavior.**
+This repository is an **early executable prototype**, not a finished self-evolving runtime.
+
+The following paths are exercised in CI:
+
+```text
+Evolution Packet                  TESTED
+Promotion gate                    TESTED
+Behavior PR Markdown renderer     TESTED
+evopr build                       TESTED
+command-based baseline replay     TESTED
+clean wheel install               TESTED
+interactive browser flow          TESTED UI / FIXTURE DATA
+```
+
+These are **not implemented yet**:
+
+```text
+automatic trace / PR ingestion
+automatic causal-hypothesis generation
+captured world-state forks
+automatic mutation application to every surface
+GitHub PR open / merge / revert automation
+shadow / canary rollout
+automatic runtime rollback
+```
+
+Run the truth table yourself:
+
+```bash
+evopr audit
+```
+
+EvoPR intentionally exposes its limitations instead of turning roadmap items into product claims.
 
 ---
 
-# ⚡ 30-second demo
+# 60-second run
 
-~~~bash
+```bash
 git clone -b feat/evopr-evolution-runtime https://github.com/hippoley/SkillFactory.git
 cd SkillFactory
 
 pip install -e .
 
+# 1. Build a review artifact from an explicit Evolution Packet
 evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
-cat EVOLUTION_PR.md
 
-# Launch the interactive frontend
+# 2. Execute REAL baseline/candidate commands
+evopr replay examples/replay_suite.json --out REPLAY_RESULTS.json
+
+# 3. Inspect capability status
+evopr audit
+
+# 4. Open the interactive Behavior Proof playground
 evopr demo
-# open http://127.0.0.1:8765
-~~~
+# http://127.0.0.1:8765
+```
 
-The current prototype generates a review artifact like this:
+The command replay is not a mocked UI animation. EvoPR launches the baseline and candidate processes, records return codes, duration and output, then produces measured replay evidence.
 
-~~~text
-EvoPR — evo-tenant-scope-001
-
-FAILURE
-Agent queried tenant data before validating tenant scope.
-
-CAUSAL HYPOTHESES
-h1  Skill instruction missing        uncertainty 0.32
-h2  Policy guard missing             uncertainty 0.12
-h3  Router mismatch                  uncertainty 0.78
-
-CANDIDATE MUTATIONS
-skill   Teach validation-before-query       +0.500
-policy  Enforce tenant validation guard     +0.533  ← selected
-
-BEHAVIOR DIFF
-
-BEFORE
-tenant_scope = provisional
-selected_action = query_database
-effect = DB call allowed
-
-AFTER
-tenant_scope = provisional
-selected_action = validate_tenant
-effect = DB call blocked
-
-REPLAY
-original failure       0.0 → 1.0
-security holdout       0.4 → 1.0
-normal lookup          1.0 → 1.0
-
-REGRESSIONS  0
-RISK FLAGS   0
-
-→ ELIGIBLE FOR PROMOTION
-~~~
-
-See the committed generated example: [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
+The current example intentionally uses a tiny deterministic fixture so the behavior is reproducible in CI. Your project can replace those commands with its own tests, evaluator, agent harness, simulator or workflow.
 
 ---
 
-# The killer primitive: **Behavior Diff**
+# The interface is not a dashboard
 
-Git tells you which bytes changed.
+The playground is designed as a **Behavior Proof Sheet**.
 
-**EvoPR tells you which decisions changed.**
+One case becomes one experiment:
 
-~~~diff
-- selected_action = query_database
-+ selected_action = validate_tenant
+```text
+INCIDENT
+   ↓
+CAUSE LENS
+   ↓
+MUTATION POINT
+  ↙         ↘
+recorded   candidate
+ world       world
+  ↘         ↙
+    PROOF
+     ↓
+ACCEPT / REJECT
+```
 
-- db_access = allowed
-+ db_access = blocked_until(tenant_scope == validated)
-~~~
+The main visual primitive is a **worldline split**.
 
-A normal code diff answers:
+Git answers:
 
-> What file changed?
+> Which bytes changed?
 
-A Behavior Diff answers:
+EvoPR asks:
 
-> **What will the agent do differently in the same world?**
+> **In the same case, where did behavior diverge?**
 
-That is the review surface self-evolving agents are missing.
-
----
-
-# Why trajectory → skill is not enough
-
-A failure does not automatically mean the prompt is wrong.
-
-The cause could live in:
-
-- a Skill
-- a system prompt
-- a deterministic policy
-- a router
-- memory
-- a tool contract
-- an eval gap
-
-So EvoPR does **not** start by asking:
-
-> “What lesson should I write into SKILL.md?”
-
-It asks:
-
-> **“What is the smallest behavior surface that actually caused the failure?”**
-
-~~~text
-one failure
-   │
-   ├── H1: missing Skill instruction
-   ├── H2: missing execution guard
-   ├── H3: wrong router decision
-   └── H4: stale memory
-              ↓
-       discriminating replay
-              ↓
-      falsify weak hypotheses
-              ↓
-      smallest valid mutation
-~~~
-
-The output may be a Skill.
-
-Or it may be a policy, router rule, memory contract, tool wrapper, or executable regression test.
+The browser interaction itself is exercised in headless Chromium in CI. The replay values shown in that browser demo are fixtures; real command replay lives in the CLI.
 
 ---
 
-# Five first-class objects
+# Real replay: smallest useful adapter
 
-## 1. Trace
+EvoPR v0.1 uses a deliberately boring integration contract: commands.
 
-What happened.
+```json
+{
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "suite": "regression",
+      "baseline": [
+        "python",
+        "my_eval.py",
+        "baseline",
+        "failure-418"
+      ],
+      "candidate": [
+        "python",
+        "my_eval.py",
+        "candidate",
+        "failure-418"
+      ]
+    }
+  ]
+}
+```
 
-Not just the final answer — the relevant execution path.
+Then:
 
-## 2. Decision Capsule
+```bash
+evopr replay replay_suite.json --out results.json
+```
 
-What the agent believed at the decision point:
+Exit code `0` is currently scored as pass (`1.0`), non-zero as fail (`0.0`). Timeout is classified as `infra_error`, not silently counted as a behavioral regression.
 
-~~~text
-goal
-world state
-candidate actions
-selected action
-assumptions
-uncertainty
-guards
-human edits
-~~~
+That means you can connect EvoPR to:
 
-This makes failure attribution more precise than “the trajectory failed”.
+- pytest
+- Playwright
+- a simulator
+- an agent benchmark
+- a shell workflow
+- a service integration test
+- your own evaluator executable
 
-## 3. Outcome Receipt
+without waiting for a framework-specific adapter.
 
-What happened **after** the decision reached the world.
+---
 
-Examples:
+# Promotion gate
 
-~~~text
-human correction
-verifier failure
-CI red → green
-undo
-retry
-reuse
-abandonment
-silence
-real-world success
-~~~
+The current default gate is intentionally inspectable:
 
-These signals are intentionally **not treated as equivalent**.
+```text
+at least one valid replay
+AND mean delta > 0
+AND regressions == 0
+AND risk_flags == []
+```
 
-Silence is not approval.  
-A retry is not the same as rejection.  
-An infrastructure failure is not a behavioral failure.
+A timeout / infrastructure error is excluded from behavioral regression counting.
 
-## 4. Evolution Artifact
+This gate is simple. It is **not** presented as a statistically sufficient rollout policy.
 
-The smallest persistent behavior change.
+---
 
-Supported mutation surfaces in the current object model:
+# Evolution Packet
 
-~~~text
+Today EvoPR expects an explicit packet rather than pretending it can already infer causality automatically.
+
+```json
+{
+  "packet_id": "evo-tenant-scope-001",
+  "agent": "coding-agent",
+  "failure_summary": "Agent queried tenant data too early.",
+  "decision_capsule": "...",
+  "outcome_receipt": "...",
+  "evidence": [],
+  "hypotheses": [],
+  "candidates": [],
+  "selected_candidate_id": "c-policy"
+}
+```
+
+The model supports candidate surfaces:
+
+```text
 skill
 prompt
 policy
@@ -245,410 +235,226 @@ router
 memory
 tool
 eval
-~~~
+```
 
-## 5. Executable Eval
+That means EvoPR can **describe and review** these mutation types today.
 
-Every accepted lesson should eventually become a regression case.
-
-> **No evidence, no promotion.**
+It does **not yet know how to automatically apply every one of them to an arbitrary live agent**. That distinction matters.
 
 ---
 
-# Architecture
+# Behavior PR
 
-~~~mermaid
-flowchart TD
-    A[Real task / PR / Agent run] --> B[Decision Capsule]
-    B --> C[Outcome Receipt]
-    C --> D[Evidence]
-    D --> E[Competing hypotheses]
-
-    E --> F1[Skill mutation]
-    E --> F2[Policy mutation]
-    E --> F3[Router mutation]
-    E --> F4[Memory mutation]
-    E --> F5[Tool mutation]
-    E --> F6[Eval mutation]
-
-    F1 --> G[Replay matrix]
-    F2 --> G
-    F3 --> G
-    F4 --> G
-    F5 --> G
-    F6 --> G
-
-    G --> H[Behavior Diff]
-    H --> I[Evolution PR]
-
-    I --> J{Gate}
-    J -->|promote| K[Capability update]
-    J -->|hold| L[More evidence]
-    J -->|reject| M[Discard]
-    K --> N[Next real task]
-    N --> A
-~~~
-
----
-
-# The Evolution Packet
-
-The current prototype consumes one explicit JSON packet.
-
-~~~json
-{
-  "packet_id": "evo-tenant-scope-001",
-  "agent": "coding-agent",
-  "failure_summary": "Agent queried tenant data too early.",
-
-  "decision_capsule": "...",
-  "outcome_receipt": "...",
-
-  "evidence": [
-    {
-      "source": "pr-review-418",
-      "kind": "human_correction",
-      "verdict": "negative",
-      "confidence": 0.99
-    }
-  ],
-
-  "hypotheses": [
-    {
-      "id": "h2",
-      "mechanism": "Missing execution policy guard.",
-      "target_surface": "policy",
-      "uncertainty": 0.12
-    }
-  ],
-
-  "candidates": [
-    {
-      "id": "c-policy",
-      "surface": "policy",
-      "title": "Enforce tenant validation precondition",
-      "rollback_ref": "policy:tenant-scope@previous",
-      "replay_results": []
-    }
-  ],
-
-  "selected_candidate_id": "c-policy"
-}
-~~~
-
-Then:
-
-~~~bash
+```bash
 evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
-~~~
+```
 
-The output is designed to be usable as a GitHub PR body, review artifact, CI report, or future GitHub App payload.
+The generated artifact contains:
 
----
+- failure summary
+- Decision Capsule
+- Outcome Receipt
+- competing hypotheses
+- candidate mutations
+- replay matrix
+- Behavior Diff
+- risk flags
+- activation scope
+- rollback reference
+- promotion result
 
-# Promotion gate
-
-The v0.1 prototype intentionally uses a conservative simple gate.
-
-A candidate is automatically marked promotable only when:
-
-~~~text
-has valid replay evidence
-AND mean replay delta > 0
-AND regressions == 0
-AND risk_flags == []
-~~~
-
-This is deliberately small and inspectable.
-
-Future versions can plug in stronger gates without changing the review contract.
+See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 
 ---
 
-# Evolution is bigger than “write a better Skill”
+# Capability truth table
 
-| Question | Trajectory distillation | EvoPR |
+| Capability | Status | What the status means |
 |---|---|---|
-| What failed? | trajectory outcome | decision + world outcome |
-| Why did it fail? | analyst/reflection | competing causal hypotheses |
-| What changes? | usually Skill text | smallest behavior surface |
-| Candidate surfaces | Skill | Skill / prompt / policy / router / memory / tool / eval |
-| Validation | task eval | replay + holdout + regression |
-| Review unit | file / Skill diff | **Behavior Diff** |
-| Deployment | replace artifact | promote / hold / rollback |
-| Provenance | optional | first-class |
-| Reversibility | external concern | part of the evolution contract |
+| Evolution Packet model | **TESTED** | Constructed and validated in unit tests |
+| Promotion gate | **TESTED** | Regression, risk and infra-error behavior are tested |
+| Behavior PR renderer | **TESTED** | CLI renders the real example in CI |
+| Command replay | **TESTED** | CI starts real baseline/candidate subprocesses |
+| Clean install | **TESTED** | CI builds a wheel, installs into a fresh venv, runs the CLI |
+| Multiple mutation surfaces | **PARTIAL** | Data contract exists; live mutation executors do not |
+| Evidence semantics | **PARTIAL** | Kind/verdict/confidence represented; calibrated weighting not implemented |
+| Rollback contract | **PARTIAL** | References are stored/rendered; runtime rollback is not implemented |
+| Interactive playground | **DEMO** | UI interaction tested; replay values inside the page are fixture data |
+| Automatic trace ingestion | **PLANNED** | Not implemented |
+| Automatic causal selector | **PLANNED** | Not implemented |
+| Captured counterfactual worlds | **PLANNED** | Not implemented |
+| Automatic GitHub change control | **PLANNED** | Not implemented |
+| Shadow / canary rollout | **PLANNED** | Not implemented |
 
-**The goal is not to make agents mutate more often.**
+The same table is available from the runtime:
 
-The goal is to make every mutation **explainable, testable, and reversible**.
+```bash
+evopr audit --json-output
+```
 
 ---
 
-# What works today
+# What CI actually proves
 
-This branch is an early but executable v0.1.
+Every pull request currently checks:
 
-### ✅ Implemented
+1. Python 3.10 / 3.11 / 3.12.
+2. Ruff.
+3. Unit and CLI tests.
+4. A measured baseline/candidate replay.
+5. The capability truth table.
+6. A wheel built from the repository and installed into a clean virtualenv.
+7. `evopr build` executed from outside the repository using that installed wheel.
+8. The browser JavaScript syntax.
+9. A Chromium interaction test that:
+   - opens the playground,
+   - chooses a bad hypothesis,
+   - proves it cannot be promoted,
+   - chooses the better fixture hypothesis,
+   - runs proof,
+   - accepts the mutation,
+   - rolls it back.
 
-- Evidence model with confidence and semantics
-- Decision Capsule + Outcome Receipt fields
-- Competing causal hypotheses
-- Multiple mutation surfaces
-- Replay result model
-- Regression counting
-- Promotion gate
-- Rollback reference
-- Activation scope
-- Behavior PR Markdown renderer
-- <code>evopr build</code> CLI
-- End-to-end CLI smoke test
-- Python 3.10 / 3.11 / 3.12 CI
-- Generated example output
+This does **not** prove that EvoPR can already ingest and evolve arbitrary third-party agents end to end.
 
-### 🚧 Next
+It proves the narrower capabilities above.
 
-- Automatic PR / review / CI ingestion
+---
+
+# Why this is deeper than trajectory → skill
+
+Trajectory distillation asks:
+
+> What lesson can I extract?
+
+EvoPR is moving toward:
+
+> **What was the failure mechanism, what is the smallest intervention, and what evidence earns deployment?**
+
+The target architecture is:
+
+```text
+REALITY
+  ↓
+Decision Capsule
+  ↓
+Outcome Receipt
+  ↓
+Evidence
+  ↓
+competing causal hypotheses
+  ↓
+minimal mutations
+  ↓
+real replay / holdout
+  ↓
+Behavior Proof
+  ↓
+review
+  ↓
+deployment policy
+```
+
+Only the bolded/tested subset in the capability table is available today.
+
+---
+
+# Roadmap
+
+## v0.1 — Evidence packet + real command replay
+
+Current branch.
+
+- explicit Evolution Packet
+- Behavior PR
+- deterministic command replay
+- conservative promotion gate
+- honest capability audit
+- worldline playground
+
+## v0.2 — Replay adapters
+
+Make replay richer without tying EvoPR to one agent stack:
+
+- Python callable adapter
+- HTTP/service adapter
+- pytest adapter
+- agent-harness adapter contract
+- structured scoring beyond exit code
+
+## v0.3 — Causal probes
+
 - Trace → Decision Capsule compiler
-- Hypothesis generator
-- Counterfactual world forks
-- Real replay harness
-- Hidden / OOD / security holdouts
-- Shadow deployment
-- Canary promotion
-- Automatic rollback
-- Capability split / merge / decay / retire
-- Codex / Claude Code / Copilot / OpenCode adapters
+- competing failure hypotheses
+- discriminating case generation
+- evidence-weight updates
 
-Nothing in the second list is presented as implemented yet.
+## v0.4 — Git-native evolution
 
----
-
-# Where this is going
-
-## v0.1 — Evolution Packet ✅
-
-~~~text
-evidence
-→ hypotheses
-→ candidate mutations
-→ replay results
-→ Behavior PR
-~~~
-
-## v0.2 — Replay Worlds
-
-Freeze the relevant world state and rerun candidate behaviors against controlled variations.
-
-~~~text
-same task
-same tools
-same world snapshot
-different capability mutation
-~~~
-
-Then create discriminating cases that answer:
-
-> “Was the Skill wrong, or was the execution policy wrong?”
-
-## v0.3 — Causal Selector
-
-Generate multiple failure mechanisms and actively choose replays that maximize information gain.
-
-~~~text
-failure
-→ H1 / H2 / H3
-→ discriminating probes
-→ eliminate hypotheses
-→ minimal intervention
-~~~
-
-## v0.4 — GitHub-native evolution
-
-~~~text
-PR review
-+ CI failure
-+ merged fix
-      ↓
-automatic Evolution Packet
-      ↓
-EvoPR opens a Behavior PR
-~~~
-
-Merge promotes the capability.
-
-Revert rolls it back.
+- ingest PR review + CI corrections
+- create Evolution Packet automatically
+- open Behavior PR
+- merge-to-promote
+- revert-to-rollback
 
 ## v0.5 — Online evolution
 
-~~~text
-candidate
-→ shadow
-→ canary
-→ promote
-          ↘ regression → rollback
-~~~
-
-## v1.0 — Verified Agent Evolution
-
-A portable evolution runtime where agents can improve from consequences **without silently rewriting their own behavior**.
+- shadow routing
+- canary traffic
+- capability lifecycle
+- automatic rollback policy
 
 ---
 
-# A GitHub-native future
+# Research question
 
-The end-state should feel boringly familiar:
+> **Can an agent change exactly the capability that caused a failure, demonstrate that the intervention improves behavior without unrelated regressions, and remain reviewable and reversible?**
 
-~~~text
-code changes        → Pull Request
-agent behavior      → Evolution PR
-database schema     → Migration
-model capability    → Capability Migration
-~~~
+EvoPR does not claim to have solved that question.
 
-That familiarity is the feature.
-
-Teams already know how to:
-
-- review
-- comment
-- approve
-- gate
-- merge
-- revert
-- audit
-
-EvoPR brings those mechanics to self-evolving agent behavior.
+It is building the testable machinery needed to answer it.
 
 ---
 
-# Design principles
+# Repository map
 
-### 1. Minimal intervention
-
-Do not rewrite the whole Agent when one guard is wrong.
-
-### 2. Causal humility
-
-A plausible explanation is still a hypothesis until replay supports it.
-
-### 3. Evidence semantics
-
-Human edits, deterministic verifiers, silence, retries, and infrastructure failures carry different meanings.
-
-### 4. Behavior before prose
-
-A beautiful SKILL.md is worthless if the behavior does not improve.
-
-### 5. Regression is a first-class outcome
-
-Fixing the original failure is not enough.
-
-### 6. Reversibility
-
-Every promoted mutation should know how to go back.
-
-### 7. Git is the registry
-
-Behavior evolution should leave an inspectable history instead of disappearing into an opaque memory store.
-
----
-
-# Repository layout
-
-~~~text
+```text
 skill_factory/
-├── evolution/
-│   ├── models.py       # Evidence, hypotheses, mutations, replay results
-│   ├── report.py       # Behavior PR renderer
-│   └── cli.py          # evopr build
-│
-├── generator/          # existing trajectory → Skill generator
-├── verifier/           # Skill static validation
-├── evaluator/          # evaluation primitives
-├── registry/           # existing Skill registry
-└── web/                # existing review UI
+└── evolution/
+    ├── models.py
+    ├── replay.py
+    ├── report.py
+    ├── capabilities.py
+    └── cli.py
 
 examples/
-├── evolution_pr.json   # input packet
-└── EVOLUTION_PR.md     # generated review artifact
+├── evolution_pr.json
+├── EVOLUTION_PR.md
+├── replay_suite.json
+└── replay/
+    └── tenant_policy.py
+
+site/
+├── index.html
+├── app.js
+├── styles.css
+└── data/
+    ├── evolution_cases.json
+    └── capabilities.json
 
 tests/
-└── unit/
-    └── test_evolution_report.py
-~~~
-
-The original SkillFactory remains useful.
-
-EvoPR moves it one level up:
-
-~~~text
-SkillFactory v0
-trajectory → Skill
-
-EvoPR
-experience → causal hypothesis → smallest capability change → proof → promotion
-~~~
-
----
-
-# Try it
-
-~~~bash
-git clone -b feat/evopr-evolution-runtime https://github.com/hippoley/SkillFactory.git
-cd SkillFactory
-pip install -e .
-
-evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
-~~~
-
-Then open <code>EVOLUTION_PR.md</code> and review the agent change as if it were code.\n\nFor the interactive playground:\n\n~~~bash\nevopr demo\n~~~\n\nOpen <code>http://127.0.0.1:8765</code>. The frontend lives in <code>site/</code> and exercises hypothesis selection, World Fork, replay, Behavior Diff, promotion, and rollback state.
-
----
-
-# The research question
-
-> **Can an agent identify exactly which capability caused a failure, change only that capability, prove the change is better, avoid unrelated regressions, and remain reversible?**
-
-That is the project.
-
----
-
-# Contributing
-
-The most useful contributions right now are concrete failure traces that can become executable evolution cases:
-
-- coding-agent review corrections
-- CI failures followed by a confirmed fix
-- tool-selection mistakes
-- router mistakes
-- stale-memory failures
-- premature execution
-- safety guard failures
-- cases where a “fix” helped one task but hurt another
-
-If you have one, open an issue with:
-
-~~~text
-1. what the agent saw
-2. what it decided
-3. what happened
-4. how it was corrected
-5. how we can verify the correction
-~~~
-
----
-
-# License
-
-Apache-2.0.
+├── unit/
+│   └── test_evolution_report.py
+└── browser/
+    └── evopr_smoke.mjs
+```
 
 ---
 
 <div align="center">
 
-### **Agents will learn. The question is whether you can review what they learned.**
+### **Claim nothing you can’t replay.**
 
-**EvoPR — pull requests for agent behavior.**
+EvoPR · Behavior proof for self-changing agents.
 
 </div>
