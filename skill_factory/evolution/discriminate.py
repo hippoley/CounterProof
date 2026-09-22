@@ -40,8 +40,21 @@ class VariantEvidence:
         return sum(1 for item in self.valid_replays if item.verdict == "fail")
 
     @property
+    def infra_error_count(self) -> int:
+        return sum(1 for item in self.replays if item.verdict == "infra_error")
+
+    @property
+    def signature(self) -> tuple[str, ...]:
+        return tuple(
+            "I"
+            if item.verdict == "infra_error"
+            else ("P" if item.candidate_score >= 1.0 else "F")
+            for item in self.replays
+        )
+
+    @property
     def status(self) -> str:
-        if not self.valid_replays:
+        if not self.valid_replays or self.infra_error_count:
             return "inconclusive"
         if self.failure_count or self.regression_count:
             return "falsified"
@@ -62,6 +75,32 @@ class DiscriminationRun:
     def discriminated_surface(self) -> str | None:
         survivors = self.survivors
         return survivors[0].surface if len(survivors) == 1 else None
+
+    @property
+    def diagnostic_cases(self) -> tuple[str, ...]:
+        if not self.variants:
+            return ()
+        case_ids = [item.case_id for item in self.variants[0].replays]
+        diagnostic: list[str] = []
+        for index, case_id in enumerate(case_ids):
+            outcomes = {
+                item.signature[index]
+                for item in self.variants
+                if index < len(item.signature)
+            }
+            if len(outcomes) > 1:
+                diagnostic.append(case_id)
+        return tuple(diagnostic)
+
+    @property
+    def unresolved_pairs(self) -> tuple[tuple[str, str], ...]:
+        pairs: list[tuple[str, str]] = []
+        survivors = self.survivors
+        for left_index, left in enumerate(survivors):
+            for right in survivors[left_index + 1 :]:
+                if left.signature == right.signature:
+                    pairs.append((left.surface, right.surface))
+        return tuple(pairs)
 
 
 def run_discrimination_manifest(
@@ -178,6 +217,8 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
                 "mean_delta": item.mean_delta,
                 "regressions": item.regression_count,
                 "failures": item.failure_count,
+                "infra_errors": item.infra_error_count,
+                "signature": list(item.signature),
                 "replays": [
                     {
                         "case_id": replay.case_id,
@@ -193,6 +234,8 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
             }
             for item in run.variants
         ],
+        "diagnostic_cases": list(run.diagnostic_cases),
+        "unresolved_pairs": [list(pair) for pair in run.unresolved_pairs],
     }
 
 
@@ -236,6 +279,27 @@ def render_discrimination_markdown(
                     f"{replay.verdict} ({replay.baseline_score:.1f}->{replay.candidate_score:.1f})"
                 )
         lines.append(f"| {item.surface} | " + " | ".join(cells) + " |")
+
+    lines.extend(["", "## Diagnostic power", ""])
+    if run.diagnostic_cases:
+        lines.append(
+            "Cases that separate at least two candidate behavior signatures: "
+            + ", ".join(f"**{case_id}**" for case_id in run.diagnostic_cases)
+            + "."
+        )
+    else:
+        lines.append(
+            "No case currently separates the tested candidate signatures."
+        )
+    if run.unresolved_pairs:
+        lines.append("")
+        lines.append(
+            "Unresolved survivor pairs with identical signatures: "
+            + ", ".join(
+                f"**{left} vs {right}**" for left, right in run.unresolved_pairs
+            )
+            + ". Add a case where those interventions predict different behavior."
+        )
 
     lines.extend(["", "## Interpretation", ""])
     if run.discriminated_surface:
