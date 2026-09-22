@@ -7,7 +7,6 @@
 [![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![PyPI](https://img.shields.io/badge/pypi-skill--factory-orange.svg)](https://pypi.org/project/skill-factory/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
@@ -101,12 +100,17 @@ docs/
 
 ## Quick Start
 
+PyPI release is still on the roadmap. Install the current code from source so the commands below match the repository you are reading.
+
 ```bash
-# Install
-pip install skill-factory
+git clone https://github.com/hippoley/SkillFactory.git
+cd SkillFactory
+pip install -e .
 
 # Generate a skill from a real task trajectory
-skill-factory generate --trajectory trajectory.json --output skills/
+# Add .[llm] when using OpenAI or Anthropic providers.
+pip install -e ".[llm]"
+skill-factory generate trajectory.json --provider openai --output skills/
 
 # Validate a skill (static checks)
 skill-factory validate skills/my-skill/
@@ -119,6 +123,10 @@ skill-factory registry list
 skill-factory registry add skills/my-skill/
 skill-factory registry search "smart-home"
 skill-factory registry remove my-skill
+
+# Optional review UI
+pip install -e ".[web]"
+skill-factory serve
 ```
 
 ---
@@ -203,10 +211,10 @@ A skill passes if: `pass_rate_delta > 0` AND no safety violations AND `token_del
 - [x] Trigger evaluator (should / should-not trigger)
 - [x] A/B eval runner
 - [x] Example skill: `thing-model-condition-template`
-- [ ] `skill-factory generate` — LLM-powered skill synthesis from trajectories
+- [x] `skill-factory generate` — LLM-powered skill synthesis from trajectories
 - [ ] LLM judge integration (OpenAI / Anthropic)
 - [ ] Red team / safety scanner (promptfoo integration)
-- [ ] Web UI for skill review (approve / reject / diff)
+- [x] Web UI for skill review (FastAPI review surface)
 - [ ] More example skills (energy, multi-sensor, safety interlock)
 - [ ] PyPI release
 
