@@ -32,6 +32,41 @@ jobs:
       - name: Run tests
         run: pytest --cov=skill_factory --cov-report=term-missing
 
+      - name: Run measured EvoPR replay
+        run: |
+          evopr replay examples/replay_suite.json --out /tmp/replay-results.json
+          cat /tmp/replay-results.json
+
+      - name: Audit capability truth table
+        run: evopr audit
+
+  clean-install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel from repository
+        run: |
+          python -m pip install --upgrade pip
+          pip wheel . --wheel-dir /tmp/evopr-wheel
+
+      - name: Install wheel into clean virtualenv
+        run: |
+          python -m venv /tmp/evopr-clean
+          /tmp/evopr-clean/bin/pip install /tmp/evopr-wheel/skill_factory-*.whl
+          /tmp/evopr-clean/bin/evopr --help
+          /tmp/evopr-clean/bin/evopr audit --json-output
+
+      - name: Run packaged CLI against external packet
+        run: |
+          cd /tmp
+          /tmp/evopr-clean/bin/evopr build "$GITHUB_WORKSPACE/examples/evolution_pr.json" --out /tmp/EVOLUTION_PR.md
+          grep -q "Eligible for promotion" /tmp/EVOLUTION_PR.md
+
   validate-example-skills:
     runs-on: ubuntu-latest
     steps:
