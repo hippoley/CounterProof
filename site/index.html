@@ -3,78 +3,151 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="EvoPR — review agent behavior changes before they become permanent.">
-  <title>EvoPR · Pull requests for agent behavior</title>
+  <meta name="description" content="EvoPR Behavior Proof — test agent mutations against the same world before promotion.">
+  <title>EvoPR · Behavior Proof</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="https://github.com/hippoley/SkillFactory"><span class="mark">E</span><span>EvoPR</span><i>/ SkillFactory</i></a>
-    <div class="topmeta"><span class="live-dot"></span><span>INTERACTIVE DEMO</span><span class="divider"></span><span id="build">BUILD —</span><a href="https://github.com/hippoley/SkillFactory/pull/2">PR #2 ↗</a></div>
+  <header class="mast">
+    <a class="wordmark" href="https://github.com/hippoley/SkillFactory">EVOPR</a>
+    <div class="mast-center">BEHAVIOR PROOF / 001</div>
+    <div class="mast-right"><span id="build">experimental branch</span><a href="https://github.com/hippoley/SkillFactory/pull/2">source ↗</a></div>
   </header>
+
   <main>
-    <section class="hero">
-      <p class="kicker">VERIFIED AGENT EVOLUTION</p>
-      <h1>Your agent can rewrite itself.<br><em>Make it open a pull request first.</em></h1>
-      <p class="hero-copy">Inspect the failure, challenge the causal hypothesis, replay the same world, then promote only the smallest behavior change that survives evidence.</p>
-      <div class="hero-line"><span>TRACE</span><b>→</b><span>CAUSE</span><b>→</b><span>FORK</span><b>→</b><span>BEHAVIOR DIFF</span><b>→</b><span>PROMOTE / ROLLBACK</span></div>
-    </section>
-    <section class="workspace">
-      <div class="workspace-head">
-        <div><p class="micro">ACTIVE EVOLUTION PACKET</p><select id="caseSelect" aria-label="Choose evolution case"></select></div>
-        <div class="packet-health"><span id="packetStatus" class="pill neutral">READY TO PROBE</span><span id="packetId" class="mono">—</span></div>
+    <section class="opening">
+      <div class="opening-index">01—</div>
+      <div>
+        <p class="overline">A REVIEW SURFACE FOR SELF-CHANGING AGENTS</p>
+        <h1>Don’t review the prompt.<br><em>Review the changed behavior.</em></h1>
+        <p class="opening-copy">One failure. Several possible causes. Change one thing, replay the same test, and keep only what survives.</p>
       </div>
-      <div class="triage-grid">
-        <section class="pane failure-pane">
-          <div class="pane-title"><span>01</span><div><b>Reality</b><small>What actually happened</small></div></div>
-          <div class="failure-card"><span class="label danger">FAILURE</span><h2 id="failureTitle">—</h2><p id="failureSummary">—</p></div>
-          <div class="capsule"><div class="section-label">DECISION CAPSULE</div><div id="decisionCapsule" class="capsule-body"></div></div>
-          <div class="section-label receipt-label">OUTCOME RECEIPT</div><div id="outcomeReceipt" class="receipt"></div>
-          <div class="section-label evidence-label">EVIDENCE</div><div id="evidenceList" class="evidence-list"></div>
-        </section>
-        <section class="pane probe-pane">
-          <div class="pane-title"><span>02</span><div><b>Causal Probe</b><small>Challenge the explanation</small></div></div>
-          <div class="probe-instruction"><span class="pulse"></span><p>Select the mechanism you think caused the failure. EvoPR will fork the recorded world and test its mutation.</p></div>
-          <div id="hypothesisList" class="hypothesis-list"></div>
-          <button id="forkBtn" class="primary-action"><span>FORK WORLD</span><small>same task · same state · one capability changed</small></button>
-          <div id="worldFork" class="world-fork hidden">
-            <div class="fork-head"><span>COUNTERFACTUAL REPLAY</span><span id="forkHypothesis" class="mono">—</span></div>
-            <div class="worlds">
-              <div class="world baseline"><div class="world-top"><span>BASELINE</span><i>recorded</i></div><div id="baselineFlow" class="flow"></div><div id="baselineResult" class="world-result bad">FAIL</div></div>
-              <div class="world candidate"><div class="world-top"><span>CANDIDATE</span><i>mutation</i></div><div id="candidateFlow" class="flow"></div><div id="candidateResult" class="world-result pending">NOT RUN</div></div>
+    </section>
+
+    <nav id="caseReel" class="case-reel" aria-label="Evolution cases"></nav>
+
+    <article class="proof-sheet">
+      <div class="sheet-number" id="sheetNumber">EVO—001</div>
+
+      <section class="incident">
+        <div class="margin-title">INCIDENT</div>
+        <div class="incident-main">
+          <p id="caseEyebrow" class="case-eyebrow">RECORDED FAILURE</p>
+          <h2 id="failureTitle">Loading case…</h2>
+          <p id="failureSummary" class="incident-summary"></p>
+          <button id="evidenceToggle" class="text-action" type="button" aria-expanded="false">show evidence + decision capsule ↓</button>
+          <div id="evidenceDrawer" class="evidence-drawer" hidden>
+            <div class="drawer-grid">
+              <div>
+                <h3>Decision capsule</h3>
+                <dl id="decisionCapsule"></dl>
+              </div>
+              <div>
+                <h3>Outcome receipt</h3>
+                <p id="outcomeReceipt"></p>
+                <h3 class="evidence-heading">Evidence</h3>
+                <div id="evidenceList" class="evidence-list"></div>
+              </div>
             </div>
-            <button id="replayBtn" class="replay-action">RUN REPLAY <span>⌘↵</span></button>
           </div>
-        </section>
-        <section class="pane diff-pane">
-          <div class="pane-title"><span>03</span><div><b>Behavior PR</b><small>Review what changes in the same world</small></div></div>
-          <div class="selected-mutation"><div><span class="section-label">SELECTED MUTATION</span><h3 id="mutationTitle">Choose a hypothesis</h3></div><span id="surfaceTag" class="surface-tag">—</span></div>
-          <div class="behavior-diff">
-            <div class="diff-head"><span>BEHAVIOR DIFF</span><span>decision-level</span></div>
-            <div class="diff-block before"><span>BEFORE</span><pre id="beforeDiff">Select a hypothesis to inspect its behavior mutation.</pre></div>
-            <div class="diff-arrow">↓</div>
-            <div class="diff-block after"><span>AFTER</span><pre id="afterDiff">—</pre></div>
+        </div>
+      </section>
+
+      <section class="cause-step">
+        <div class="margin-title">CAUSE LENS</div>
+        <div>
+          <div class="instruction-row">
+            <p>Pick the explanation worth testing. Confidence is not truth; it only sets the first probe.</p>
+            <span id="selectedConfidence" class="confidence-readout">—</span>
           </div>
-          <div class="replay-metrics"><div><span>MEAN Δ</span><strong id="meanDelta">—</strong></div><div><span>REGRESSIONS</span><strong id="regressions">—</strong></div><div><span>RISK FLAGS</span><strong id="riskFlags">—</strong></div></div>
-          <div id="replayMatrix" class="replay-matrix empty"><span>REPLAY MATRIX</span><p>Fork the world and run replay to produce promotion evidence.</p></div>
-          <div class="gate"><div><span class="section-label">PROMOTION GATE</span><b id="gateText">WAITING FOR REPLAY</b></div><span id="gateLight" class="gate-light"></span></div>
-          <div class="actions"><button id="rollbackBtn" class="secondary-action" disabled>ROLLBACK</button><button id="promoteBtn" class="promote-action" disabled>PROMOTE CANDIDATE</button></div>
-          <p class="demo-note">Demo controls change browser state only. Git merge/revert wiring is the next integration step.</p>
-        </section>
-      </div>
-    </section>
-    <section class="manifesto">
-      <div><p class="kicker">THE DIFFERENCE</p><h2>Git shows what bytes changed.<br><em>EvoPR shows what the agent will do differently.</em></h2></div>
-      <div class="manifesto-grid">
-        <div><span>01</span><b>Attribute</b><p>Don’t turn every failure into a prompt edit. Compete causal explanations.</p></div>
-        <div><span>02</span><b>Intervene minimally</b><p>Change a Skill, policy, router, memory or tool contract—whichever actually failed.</p></div>
-        <div><span>03</span><b>Replay</b><p>Fixing the original failure is insufficient. Holdouts and regressions are first-class.</p></div>
-        <div><span>04</span><b>Stay reversible</b><p>Every promoted capability change carries provenance, scope and a rollback reference.</p></div>
+          <div id="hypothesisLenses" class="hypothesis-lenses"></div>
+          <button id="spliceBtn" class="splice-button" type="button">
+            <span>TEST THIS CAUSE</span>
+            <small>fork the same case with one mutation</small>
+          </button>
+        </div>
+      </section>
+
+      <section id="worldlineSection" class="worldline-section muted-stage">
+        <div class="margin-title">WORLDLINE</div>
+        <div class="worldline-main">
+          <div class="worldline-caption">
+            <div><span class="legend-line base"></span> recorded world</div>
+            <div><span class="legend-line candidate"></span> candidate world</div>
+            <span id="surfaceLabel" class="surface-label">select a cause</span>
+          </div>
+          <div class="world-canvas">
+            <svg id="worldSvg" viewBox="0 0 1000 360" role="img" aria-label="Baseline and candidate behavior worldlines"></svg>
+          </div>
+          <div class="run-proof-row">
+            <div id="mutationNote" class="mutation-note">Choose a cause above to prepare a mutation.</div>
+            <button id="runProofBtn" class="proof-button" type="button" disabled>RUN PROOF →</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="proofResult" class="result-section" hidden>
+        <div class="margin-title">PROOF</div>
+        <div>
+          <div class="proof-header">
+            <div>
+              <p class="overline">MEASURED RESULT</p>
+              <h2 id="mutationTitle">Mutation</h2>
+            </div>
+            <div id="verdictStamp" class="verdict-stamp">UNPROVEN</div>
+          </div>
+
+          <div class="behavior-score">
+            <div class="score-column">
+              <span>BEFORE</span>
+              <pre id="beforeDiff"></pre>
+            </div>
+            <div class="score-mark">→</div>
+            <div class="score-column after">
+              <span>AFTER</span>
+              <pre id="afterDiff"></pre>
+            </div>
+          </div>
+
+          <div class="measure-line">
+            <div><span>mean Δ</span><b id="meanDelta">—</b></div>
+            <div><span>regressions</span><b id="regressions">—</b></div>
+            <div><span>risk flags</span><b id="riskFlags">—</b></div>
+            <div><span>rollback ref</span><b id="rollbackRef">local-demo</b></div>
+          </div>
+
+          <div id="replayReceipts" class="replay-receipts"></div>
+
+          <div class="decision-strip">
+            <p id="gateExplanation">Run the proof to evaluate the mutation.</p>
+            <div class="decision-actions">
+              <button id="rejectBtn" class="outline-button" type="button">REJECT</button>
+              <button id="promoteBtn" class="accept-button" type="button" disabled>ACCEPT MUTATION</button>
+              <button id="rollbackBtn" class="outline-button" type="button" hidden>ROLL BACK</button>
+            </div>
+          </div>
+          <p class="truth-note">This browser playground visualizes fixture results. Real command replay is available in the CLI via <code>evopr replay</code>; automatic world snapshots and live rollout are not implemented yet.</p>
+        </div>
+      </section>
+    </article>
+
+    <section class="capability-truth">
+      <div class="opening-index">02—</div>
+      <div>
+        <p class="overline">CAPABILITY TRUTH TABLE</p>
+        <h2>What is real today,<br>and what is still a research target.</h2>
+        <div id="capabilityGrid" class="capability-grid"></div>
       </div>
     </section>
   </main>
-  <div id="toast" class="toast"></div>
-  <footer><span>EvoPR / SkillFactory</span><span>Agents will learn. The question is whether you can review what they learned.</span><a href="https://github.com/hippoley/SkillFactory">GitHub ↗</a></footer>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <footer>
+    <span>EVOPR / SKILLFACTORY</span>
+    <span>Agents will learn. The question is whether you can review what they learned.</span>
+  </footer>
+
   <script src="app.js"></script>
 </body>
 </html>
