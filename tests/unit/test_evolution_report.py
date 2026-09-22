@@ -1255,3 +1255,22 @@ def test_evopr_evolve_writes_probe_scaffold_for_ambiguous_case(tmp_path):
     assert len(scaffold["cases"]) == 2
     assert scaffold["cases"][0]["variants"]["policy"]["expect"] == "pass"
     assert scaffold["cases"][1]["variants"]["skill"]["expect"] == "pass"
+
+
+def test_ready_scaffold_still_rejects_unconfigured_adapter_placeholder(tmp_path):
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, run))
+    scaffold["status"] = "ready"
+    path = tmp_path / "ready_but_unconfigured.json"
+    path.write_text(
+        json.dumps(scaffold, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="adapter placeholder has not been replaced"):
+        run_discrimination_manifest(path, surfaces=("policy", "skill"))
