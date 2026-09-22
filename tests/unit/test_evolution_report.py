@@ -15,6 +15,7 @@ from skill_factory.evolution.models import (
 )
 from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
 from skill_factory.evolution.report import render_evolution_pr
+from skill_factory.evolution.trace import compile_trace, load_trace
 
 
 def test_candidate_promotes_only_without_regression_or_risk():
@@ -177,7 +178,9 @@ def test_capability_audit_is_explicit_about_unimplemented_features():
 
     assert by_id["command-replay"]["status"] == "tested"
     assert by_id["playground"]["status"] == "demo"
-    assert by_id["causal-selector"]["status"] == "planned"
+    assert by_id["trace-ingestion"]["status"] == "tested"
+    assert by_id["one-command-proof"]["status"] == "tested"
+    assert by_id["causal-selector"]["status"] == "partial"
     assert by_id["online-rollout"]["status"] == "planned"
 
 
@@ -187,7 +190,8 @@ def test_evopr_audit_cli_reports_truth_table():
     assert result.exit_code == 0, result.output
     assert "[TESTED ] Deterministic baseline/candidate command replay" in result.output
     assert "[DEMO   ] Interactive causal playground" in result.output
-    assert "[PLANNED] Automatic causal hypothesis generation and falsification" in result.output
+    assert "[TESTED ] Generic JSON / JSONL trace ingestion" in result.output
+    assert "[PARTIAL] Heuristic causal hypothesis proposals" in result.output
 
 
 def test_committed_capability_json_matches_runtime_manifest():
@@ -322,3 +326,157 @@ def test_replay_case_cwd_cannot_escape_declared_root(tmp_path):
 
     with pytest.raises(ValueError, match="escapes declared root"):
         run_replay_manifest(manifest)
+
+
+def test_trace_compiler_extracts_tenant_failure_without_manual_packet():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+
+    assert packet.packet_id == "evo-tenant-scope-418"
+    assert packet.failure_summary == (
+        "Agent queried tenant data before validating tenant scope."
+    )
+    assert len(packet.evidence) == 2
+    assert packet.hypotheses[0].target_surface == "policy"
+    assert packet.hypotheses[0].uncertainty <= 0.05
+    assert packet.candidates[0].surface == "policy"
+    assert packet.metadata["compiler"] == "trace-heuristic-v0.1"
+    assert packet.selected_candidate_id is None
+
+
+def test_trace_compiler_generalizes_to_homeai_mid_utterance_correction():
+    trace = load_trace(Path("examples/traces/homeai_correction.json"))
+    packet = compile_trace(trace)
+
+    surfaces = [hypothesis.target_surface for hypothesis in packet.hypotheses]
+    assert surfaces[0] == "policy"
+    assert "skill" in surfaces
+    assert "memory" in surfaces
+    assert "不对，卧室那个" in packet.outcome_receipt
+    assert "semantic_state" in packet.decision_capsule
+
+
+def test_jsonl_trace_loader_supports_stream_exports(tmp_path):
+    trace_file = tmp_path / "trace.jsonl"
+    trace_file.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "trace_meta",
+                        "trace_id": "stream-1",
+                        "agent": "stream-agent",
+                        "task": "stream task",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "decision",
+                        "goal": "act",
+                        "world_state": {"state": "provisional"},
+                        "selected_action": "execute",
+                        "guards": {"ready": False},
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "human_correction",
+                        "text": "wait until final",
+                        "surface_hint": "policy",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    trace = load_trace(trace_file)
+    packet = compile_trace(trace)
+    assert trace["trace_id"] == "stream-1"
+    assert packet.hypotheses[0].target_surface == "policy"
+
+
+def test_evopr_ingest_cli_builds_packet_from_raw_trace(tmp_path):
+    output = tmp_path / "packet.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "ingest",
+            "examples/traces/tenant_failure.json",
+            "--surface",
+            "policy",
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(output.read_text(encoding="utf-8"))
+    assert raw["selected_candidate_id"] == "C1"
+    assert raw["metadata"]["source_trace_id"] == "tenant-scope-418"
+    assert raw["hypotheses"][0]["target_surface"] == "policy"
+
+
+def test_evopr_prove_runs_trace_to_measured_behavior_proof(tmp_path):
+    output = tmp_path / "proof.md"
+    packet_output = tmp_path / "packet.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "prove",
+            "examples/traces/tenant_failure.json",
+            "--replay-manifest",
+            "examples/replay_suite.json",
+            "--surface",
+            "policy",
+            "--packet-out",
+            str(packet_output),
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    rendered = output.read_text(encoding="utf-8")
+    measured = json.loads(packet_output.read_text(encoding="utf-8"))
+
+    assert "## Provenance" in rendered
+    assert "selection mode:** explicit-surface" in rendered
+    assert "failure-418" in rendered
+    assert "Eligible for promotion." in rendered
+    selected = next(
+        candidate
+        for candidate in measured["candidates"]
+        if candidate["id"] == measured["selected_candidate_id"]
+    )
+    assert len(selected["replay_results"]) == 3
+    assert all(item["verdict"] == "pass" for item in selected["replay_results"])
+
+
+def test_report_rejects_explicit_failed_replay_even_without_score_regression():
+    candidate = CandidateMutation(
+        id="c-fail",
+        surface="policy",
+        title="failed replay",
+        hypothesis_id="h1",
+        behavior_diff="before -> after",
+        replay_results=(ReplayResult("case", "holdout", "fail", 0.0, 0.8),),
+    )
+    packet = EvolutionPacket(
+        packet_id="evo-fail",
+        agent="agent",
+        failure_summary="failure",
+        decision_capsule="capsule",
+        outcome_receipt="receipt",
+        hypotheses=(
+            Hypothesis(
+                id="h1",
+                mechanism="mechanism",
+                target_surface="policy",
+            ),
+        ),
+        candidates=(candidate,),
+    )
+
+    rendered = render_evolution_pr(packet)
+    assert "**REJECT**" in rendered
