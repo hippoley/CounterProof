@@ -5,7 +5,15 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 EvidenceVerdict = Literal["positive", "negative", "ambiguous"]
-MutationSurface = Literal["skill", "prompt", "policy", "router", "memory", "tool", "eval"]
+MutationSurface = Literal[
+    "skill",
+    "prompt",
+    "policy",
+    "router",
+    "memory",
+    "tool",
+    "eval",
+]
 ReplayVerdict = Literal["pass", "fail", "infra_error"]
 
 
@@ -65,23 +73,34 @@ class CandidateMutation:
 
     @property
     def valid_replays(self) -> tuple[ReplayResult, ...]:
-        return tuple(r for r in self.replay_results if r.verdict != "infra_error")
+        return tuple(
+            replay for replay in self.replay_results if replay.verdict != "infra_error"
+        )
 
     @property
     def mean_delta(self) -> float:
         valid = self.valid_replays
         if not valid:
             return 0.0
-        return sum(r.delta for r in valid) / len(valid)
+        return sum(replay.delta for replay in valid) / len(valid)
 
     @property
     def regression_count(self) -> int:
-        return sum(1 for r in self.valid_replays if r.candidate_score < r.baseline_score)
+        return sum(
+            1
+            for replay in self.valid_replays
+            if replay.candidate_score < replay.baseline_score
+        )
 
     @property
     def eligible_for_promotion(self) -> bool:
         valid = self.valid_replays
-        return bool(valid) and self.mean_delta > 0 and self.regression_count == 0 and not self.risk_flags
+        return (
+            bool(valid)
+            and self.mean_delta > 0
+            and self.regression_count == 0
+            and not self.risk_flags
+        )
 
 
 @dataclass(frozen=True)
@@ -101,6 +120,10 @@ class EvolutionPacket:
         if self.selected_candidate_id is None:
             return None
         return next(
-            (candidate for candidate in self.candidates if candidate.id == self.selected_candidate_id),
+            (
+                candidate
+                for candidate in self.candidates
+                if candidate.id == self.selected_candidate_id
+            ),
             None,
         )
