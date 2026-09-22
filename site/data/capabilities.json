@@ -107,6 +107,20 @@
       "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
     },
     {
+      "id": "probe-adapter",
+      "name": "Reusable env-driven Probe Adapter protocol",
+      "status": "tested",
+      "evidence": "A single adapter argv can execute baseline and multiple intervention variants using EVOPR_CASE_ID, EVOPR_VARIANT and EVOPR_CASE_JSON across many cases.",
+      "limitation": "Projects still need to implement an adapter that maps those inputs into their own agent or simulator."
+    },
+    {
+      "id": "probe-scaffold",
+      "name": "Guarded draft experiment scaffold generation",
+      "status": "tested",
+      "evidence": "Ambiguous survivor pairs can be compiled into crossed two-case experiment scaffolds with pre-registered predictions and a shared adapter placeholder.",
+      "limitation": "Generated scaffolds are intentionally status=draft and cannot execute until a human or adapter reviews the assumptions and marks them ready."
+    },
+    {
       "id": "next-probe-planner",
       "name": "Next discriminating probe planning for ambiguous survivors",
       "status": "tested",
@@ -157,7 +171,7 @@
     }
   ],
   "summary": {
-    "tested": 13,
+    "tested": 15,
     "partial": 4,
     "demo": 1,
     "planned": 4
