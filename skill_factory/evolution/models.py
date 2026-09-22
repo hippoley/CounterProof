@@ -45,6 +45,16 @@ class Hypothesis:
 
 
 @dataclass(frozen=True)
+class ProbeSpec:
+    id: str
+    hypothesis_id: str
+    intervention: str
+    expected_if_true: str
+    falsifier: str
+    holdout: str = ""
+
+
+@dataclass(frozen=True)
 class ReplayResult:
     case_id: str
     suite: str
@@ -125,12 +135,18 @@ class EvolutionPacket:
     outcome_receipt: str
     evidence: tuple[Evidence, ...] = ()
     hypotheses: tuple[Hypothesis, ...] = ()
+    probes: tuple[ProbeSpec, ...] = ()
     candidates: tuple[CandidateMutation, ...] = ()
     selected_candidate_id: str | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         hypothesis_ids = {hypothesis.id for hypothesis in self.hypotheses}
+        for probe in self.probes:
+            if probe.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    f"probe {probe.id} references unknown hypothesis {probe.hypothesis_id}"
+                )
         for candidate in self.candidates:
             if candidate.hypothesis_id not in hypothesis_ids:
                 raise ValueError(
