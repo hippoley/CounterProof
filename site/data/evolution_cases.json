@@ -1,0 +1,385 @@
+{
+  "cases": [
+    {
+      "id": "evo-tenant-scope-001",
+      "short_title": "PR #418 · Tenant scope before DB",
+      "failure_title": "The agent queried first and validated later.",
+      "failure_summary": "A coding agent constructed a database call while tenant_scope was still provisional. Human review blocked the PR and CI reproduced a cross-tenant regression.",
+      "decision_capsule": {
+        "goal": "Implement account lookup",
+        "world_state": "tenant_scope = provisional",
+        "candidates": "validate tenant · query DB · ask user",
+        "selected": "query_database",
+        "assumption": "tenant context was already trusted",
+        "uncertainty": "not surfaced"
+      },
+      "outcome_receipt": "Reviewer correction + deterministic regression. Moving validation before DB access turned the failing security case green.",
+      "evidence": [
+        {
+          "kind": "human_correction",
+          "confidence": 0.99,
+          "note": "Reviewer explicitly identified premature database access."
+        },
+        {
+          "kind": "deterministic_verifier",
+          "confidence": 1,
+          "note": "Cross-tenant regression reproduced before the fix."
+        },
+        {
+          "kind": "verified_fix",
+          "confidence": 1,
+          "note": "Regression disappeared after validation moved earlier."
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "H1",
+          "target_surface": "skill",
+          "uncertainty": 0.32,
+          "mechanism": "The coding skill lacks an explicit validation-before-query instruction."
+        },
+        {
+          "id": "H2",
+          "target_surface": "policy",
+          "uncertainty": 0.12,
+          "mechanism": "Execution policy allows DB access while tenant scope is provisional."
+        },
+        {
+          "id": "H3",
+          "target_surface": "router",
+          "uncertainty": 0.78,
+          "mechanism": "The router selected the wrong implementation workflow."
+        }
+      ],
+      "candidates": [
+        {
+          "hypothesis_id": "H1",
+          "surface": "skill",
+          "title": "Teach validation-before-query",
+          "behavior": {
+            "before": "selected_action = query_database\\nprecondition = implicit\\ndb_access = allowed",
+            "after": "selected_action = validate_tenant\\ninstruction = validate before data access\\ndb_access = then allowed"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "query_database",
+            "security regression"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "read skill constraint",
+            "validate_tenant",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.5,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "normal-12",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H2",
+          "surface": "policy",
+          "title": "Enforce tenant validation precondition",
+          "behavior": {
+            "before": "tenant_scope = provisional\\nselected_action = query_database\\ndb_access = allowed",
+            "after": "tenant_scope = provisional\\nselected_action = validate_tenant\\ndb_access = blocked_until(validated)"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "query_database",
+            "cross-tenant access"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "policy guard",
+            "validate_tenant",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.533,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "attack-07",
+              "suite": "security",
+              "baseline": 0.4,
+              "candidate": 1,
+              "delta": 0.6
+            },
+            {
+              "case_id": "normal-12",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H3",
+          "surface": "router",
+          "title": "Route tenant lookups through guarded workflow",
+          "behavior": {
+            "before": "route = generic_db_task\\nselected_action = query_database",
+            "after": "route = tenant_guarded_task\\nselected_action = query_database"
+          },
+          "baseline_flow": [
+            "tenant provisional",
+            "generic router",
+            "query_database"
+          ],
+          "candidate_flow": [
+            "tenant provisional",
+            "guarded router",
+            "query_database"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "FAIL",
+          "mean_delta": 0.1,
+          "regressions": 1,
+          "risk_flags": [
+            "root cause survives"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "failure-418",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.3,
+              "delta": 0.3
+            },
+            {
+              "case_id": "attack-07",
+              "suite": "security",
+              "baseline": 0.4,
+              "candidate": 0.2,
+              "delta": -0.2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "evo-correction-commit-002",
+      "short_title": "HomeAI · Mid-utterance correction",
+      "failure_title": "The old semantic proposal executed before the user finished correcting it.",
+      "failure_summary": "The user said “open the living-room window… halfway… no, the bedroom one.” The runtime committed the provisional living-room action before the target correction arrived.",
+      "decision_capsule": {
+        "goal": "Execute window control",
+        "world_state": "ASR partial · semantic proposal provisional",
+        "candidates": "execute · wait · clarify",
+        "selected": "execute living-room window",
+        "assumption": "target was stable enough",
+        "uncertainty": "high but ignored"
+      },
+      "outcome_receipt": "The user immediately corrected the target. The device action had already escaped the semantic gate and required compensation.",
+      "evidence": [
+        {
+          "kind": "human_correction",
+          "confidence": 1,
+          "note": "Explicit target correction invalidated the previous proposal."
+        },
+        {
+          "kind": "execution_trace",
+          "confidence": 1,
+          "note": "Device command timestamp preceded semantic finalization."
+        },
+        {
+          "kind": "compensating_action",
+          "confidence": 0.98,
+          "note": "Runtime had to undo or redirect an action that should never have committed."
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "H1",
+          "target_surface": "skill",
+          "uncertainty": 0.43,
+          "mechanism": "The language skill needs more target-correction examples."
+        },
+        {
+          "id": "H2",
+          "target_surface": "policy",
+          "uncertainty": 0.08,
+          "mechanism": "Commit gate treats provisional semantic state as executable."
+        },
+        {
+          "id": "H3",
+          "target_surface": "memory",
+          "uncertainty": 0.67,
+          "mechanism": "The previous target remains sticky in conversational memory."
+        }
+      ],
+      "candidates": [
+        {
+          "hypothesis_id": "H1",
+          "surface": "skill",
+          "title": "Add target-correction examples",
+          "behavior": {
+            "before": "partial target → likely execute",
+            "after": "partial target + correction cue → prefer wait"
+          },
+          "baseline_flow": [
+            "living-room",
+            "halfway",
+            "execute"
+          ],
+          "candidate_flow": [
+            "living-room",
+            "halfway",
+            "correction pattern",
+            "wait"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.3,
+          "regressions": 1,
+          "risk_flags": [
+            "latency increase"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.9,
+              "delta": 0.9
+            },
+            {
+              "case_id": "fast-command-02",
+              "suite": "latency",
+              "baseline": 1,
+              "candidate": 0.7,
+              "delta": -0.3
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H2",
+          "surface": "policy",
+          "title": "Require semantic stability before commit",
+          "behavior": {
+            "before": "semantic_state = provisional\\ncommit_allowed = true\\naction = living_room_window(50%)",
+            "after": "semantic_state = provisional\\ncommit_allowed = false\\naction = none until stable/final"
+          },
+          "baseline_flow": [
+            "ASR partial",
+            "proposal living-room",
+            "commit",
+            "target correction"
+          ],
+          "candidate_flow": [
+            "ASR partial",
+            "proposal living-room",
+            "commit gate blocks",
+            "target correction",
+            "proposal bedroom",
+            "commit"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "PASS",
+          "mean_delta": 0.667,
+          "regressions": 0,
+          "risk_flags": [],
+          "eligible": true,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "case_id": "normal-final-04",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 1,
+              "delta": 0
+            },
+            {
+              "case_id": "interrupt-07",
+              "suite": "duplex",
+              "baseline": 0.2,
+              "candidate": 1,
+              "delta": 0.8
+            }
+          ]
+        },
+        {
+          "hypothesis_id": "H3",
+          "surface": "memory",
+          "title": "Expire provisional target on correction cue",
+          "behavior": {
+            "before": "memory.target = living-room",
+            "after": "correction cue → memory.target = null"
+          },
+          "baseline_flow": [
+            "target living-room",
+            "execute",
+            "correction"
+          ],
+          "candidate_flow": [
+            "target living-room",
+            "clear target",
+            "clarify"
+          ],
+          "baseline_result": "FAIL",
+          "candidate_result": "HOLD",
+          "mean_delta": 0.2,
+          "regressions": 1,
+          "risk_flags": [
+            "unnecessary clarification"
+          ],
+          "eligible": false,
+          "replays": [
+            {
+              "case_id": "correction-01",
+              "suite": "regression",
+              "baseline": 0,
+              "candidate": 0.6,
+              "delta": 0.6
+            },
+            {
+              "case_id": "normal-04",
+              "suite": "holdout",
+              "baseline": 1,
+              "candidate": 0.8,
+              "delta": -0.2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
