@@ -924,6 +924,8 @@ def test_surviving_runtime_variant_with_wrong_preregistered_prediction_is_not_se
     assert variant.prediction_mismatch_count == 1
     assert run.survivors == (variant,)
     assert run.eligible_survivors == ()
+    assert run.prediction_blocked_survivors == (variant,)
+    assert run.selection_state == "prediction-blocked"
     assert run.discriminated_surface is None
 
 
@@ -953,6 +955,7 @@ def test_discrimination_payload_exposes_preregistered_prediction_evidence():
     by_surface = {item["surface"]: item for item in payload["variants"]}
 
     assert payload["has_preregistered_predictions"] is True
+    assert payload["selection_state"] == "unique-survivor"
     assert payload["eligible_survivors"] == ["policy"]
     assert by_surface["policy"]["prediction_status"] == "supported"
     assert by_surface["skill"]["prediction_status"] == "contradicted"
@@ -1075,3 +1078,58 @@ def test_verify_receipt_cli_rejects_changed_trace(tmp_path):
     )
     assert verify.exit_code != 0
     assert "trace hash mismatch" in verify.output
+
+
+def test_evopr_evolve_reports_prediction_blocked_instead_of_ambiguous(tmp_path):
+    manifest = tmp_path / "prediction_blocked.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "root": ".",
+                "cases": [
+                    {
+                        "case_id": "failure",
+                        "baseline": ["python", "-c", "raise SystemExit(1)"],
+                        "variants": {
+                            "policy": {
+                                "argv": ["python", "-c", "raise SystemExit(0)"],
+                                "expect": "fail",
+                            }
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    packet_out = tmp_path / "packet.json"
+    review_out = tmp_path / "review.md"
+
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            str(manifest),
+            "--surface",
+            "policy",
+            "--out",
+            str(review_out),
+            "--packet-out",
+            str(packet_out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "blocked by their pre-registered prediction contract" in result.output
+    assert "multiple eligible interventions survived" not in result.output
+
+    packet = json.loads(packet_out.read_text(encoding="utf-8"))
+    assert packet["selected_candidate_id"] is None
+    assert packet["metadata"]["discrimination_result"] == "prediction-blocked"
+    assert packet["metadata"]["prediction_blocked_survivors"] == "policy"
+
+    review = review_out.read_text(encoding="utf-8")
+    assert "were blocked from selection" in review
+    assert "AMBIGUOUS" not in review
