@@ -81,8 +81,62 @@ function renderCase() {
   byId("evidenceDrawer").hidden = true;
   byId("evidenceToggle").setAttribute("aria-expanded", "false");
   byId("evidenceToggle").textContent = "show evidence + decision capsule ↓";
+  byId("discriminationSection").hidden = true;
+  byId("discriminationStamp").textContent = "UNRUN";
+  byId("discriminationStamp").className = "verdict-stamp";
   resetProof();
   updateSelectedMutation();
+}
+
+
+function renderDiscrimination() {
+  const data = activeCase.discrimination;
+  const section = byId("discriminationSection");
+  if (!data) {
+    toast("No discrimination fixture is available for this case.");
+    return;
+  }
+
+  const caseHeader = '<div class="disc-head">same case matrix · ' +
+    data.cases.map(caseId => esc(caseId)).join(' · ') + '</div>';
+
+  const rows = data.variants.map(variant => {
+    const cells = variant.signature.map((mark, index) => {
+      const cls = mark === "P" ? "pass" : mark === "F" ? "fail" : "missing";
+      const word = mark === "P" ? "PASS" : mark === "F" ? "FAIL" : "MISSING";
+      return '<div class="disc-cell ' + cls + '"><span>' +
+        esc(data.cases[index] || ("case-" + index)) +
+        '</span><b>' + word + '</b></div>';
+    }).join("");
+    return '<div class="disc-row">' +
+      '<div class="disc-surface">' + esc(variant.surface) + '</div>' +
+      '<div class="disc-signature">' + cells + '</div>' +
+      '<div class="disc-status ' + esc(variant.status) + '">' +
+        esc(variant.status) + '</div></div>';
+  }).join("");
+
+  byId("discriminationMatrix").innerHTML =
+    caseHeader + rows +
+    '<div class="diagnostic-note">diagnostic cases → <b>' +
+    data.diagnostic_cases.map(caseId => esc(caseId)).join(", ") +
+    '</b></div>';
+
+  if (data.unique_survivor) {
+    byId("discriminationStamp").textContent =
+      data.unique_survivor.toUpperCase() + " SURVIVES";
+    byId("discriminationStamp").className = "verdict-stamp pass";
+    byId("discriminationNote").textContent =
+      "Only " + data.unique_survivor +
+      " survives this fixture matrix. That is relative support among tested interventions, not unique causal proof. Real multi-variant execution is available via evopr discriminate / evopr evolve.";
+  } else {
+    byId("discriminationStamp").textContent = "AMBIGUOUS";
+    byId("discriminationStamp").className = "verdict-stamp";
+    byId("discriminationNote").textContent =
+      "More than one intervention remains compatible with the current fixture. Add a case where their predicted behavior differs.";
+  }
+
+  section.hidden = false;
+  section.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 function svgEl(name, attrs = {}) {
@@ -263,6 +317,7 @@ byId("evidenceToggle").addEventListener("click", () => {
   byId("evidenceToggle").textContent = expanded ? "hide evidence + decision capsule ↑" : "show evidence + decision capsule ↓";
 });
 byId("spliceBtn").addEventListener("click", spliceWorld);
+byId("compareBtn").addEventListener("click", renderDiscrimination);
 byId("runProofBtn").addEventListener("click", runProof);
 byId("promoteBtn").addEventListener("click", acceptMutation);
 byId("rollbackBtn").addEventListener("click", rollback);
