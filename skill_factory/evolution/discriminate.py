@@ -196,16 +196,21 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
     }
 
 
-def render_discrimination_markdown(run: DiscriminationRun) -> str:
+def render_discrimination_markdown(
+    run: DiscriminationRun,
+    *,
+    mechanisms: dict[str, str] | None = None,
+) -> str:
     lines = [
         "# EvoPR Discrimination Matrix",
         "",
-        "| Surface | Status | Mean delta | Regressions | Failures |",
-        "|---|---|---:|---:|---:|",
+        "| Surface | Hypothesis | Status | Mean delta | Regressions | Failures |",
+        "|---|---|---|---:|---:|---:|",
     ]
     for item in run.variants:
+        mechanism = (mechanisms or {}).get(item.surface, "not supplied")
         lines.append(
-            f"| {item.surface} | **{item.status.upper()}** | "
+            f"| {item.surface} | {mechanism} | **{item.status.upper()}** | "
             f"{item.mean_delta:+.3f} | {item.regression_count} | {item.failure_count} |"
         )
 
