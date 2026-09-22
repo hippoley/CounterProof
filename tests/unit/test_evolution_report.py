@@ -298,3 +298,27 @@ def test_packet_rejects_missing_selected_candidate():
             candidates=(),
             selected_candidate_id="missing",
         )
+
+
+def test_replay_case_cwd_cannot_escape_declared_root(tmp_path):
+    manifest = tmp_path / "suite.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "root": ".",
+                "cases": [
+                    {
+                        "case_id": "escape",
+                        "suite": "security",
+                        "cwd": "..",
+                        "baseline": ["python", "-c", "raise SystemExit(0)"],
+                        "candidate": ["python", "-c", "raise SystemExit(0)"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="escapes declared root"):
+        run_replay_manifest(manifest)
