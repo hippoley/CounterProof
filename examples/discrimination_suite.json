@@ -12,24 +12,33 @@
         "failure-418"
       ],
       "variants": {
-        "policy": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "policy",
-          "failure-418"
-        ],
-        "skill": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "skill",
-          "failure-418"
-        ],
-        "prompt": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "prompt",
-          "failure-418"
-        ]
+        "policy": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "policy",
+            "failure-418"
+          ],
+          "expect": "pass"
+        },
+        "skill": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "skill",
+            "failure-418"
+          ],
+          "expect": "pass"
+        },
+        "prompt": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "prompt",
+            "failure-418"
+          ],
+          "expect": "pass"
+        }
       }
     },
     {
@@ -42,24 +51,33 @@
         "cross-tenant-attack-07"
       ],
       "variants": {
-        "policy": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "policy",
-          "cross-tenant-attack-07"
-        ],
-        "skill": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "skill",
-          "cross-tenant-attack-07"
-        ],
-        "prompt": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "prompt",
-          "cross-tenant-attack-07"
-        ]
+        "policy": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "policy",
+            "cross-tenant-attack-07"
+          ],
+          "expect": "pass"
+        },
+        "skill": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "skill",
+            "cross-tenant-attack-07"
+          ],
+          "expect": "pass"
+        },
+        "prompt": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "prompt",
+            "cross-tenant-attack-07"
+          ],
+          "expect": "pass"
+        }
       }
     },
     {
@@ -72,24 +90,33 @@
         "normal-lookup-12"
       ],
       "variants": {
-        "policy": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "policy",
-          "normal-lookup-12"
-        ],
-        "skill": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "skill",
-          "normal-lookup-12"
-        ],
-        "prompt": [
-          "python",
-          "examples/replay/tenant_discrimination.py",
-          "prompt",
-          "normal-lookup-12"
-        ]
+        "policy": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "policy",
+            "normal-lookup-12"
+          ],
+          "expect": "pass"
+        },
+        "skill": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "skill",
+            "normal-lookup-12"
+          ],
+          "expect": "pass"
+        },
+        "prompt": {
+          "argv": [
+            "python",
+            "examples/replay/tenant_discrimination.py",
+            "prompt",
+            "normal-lookup-12"
+          ],
+          "expect": "pass"
+        }
       }
     }
   ]
