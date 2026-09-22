@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 from click.testing import CliRunner
@@ -187,3 +188,29 @@ def test_evopr_audit_cli_reports_truth_table():
     assert "[TESTED ] Deterministic baseline/candidate command replay" in result.output
     assert "[DEMO   ] Interactive causal playground" in result.output
     assert "[PLANNED] Automatic causal hypothesis generation and falsification" in result.output
+
+
+def test_committed_capability_json_matches_runtime_manifest():
+    committed = json.loads(Path("site/data/capabilities.json").read_text(encoding="utf-8"))
+    assert committed == capability_report()
+
+
+def test_frontend_contract_contains_required_interaction_targets():
+    html = Path("site/index.html").read_text(encoding="utf-8")
+    js = Path("site/app.js").read_text(encoding="utf-8")
+
+    for element_id in (
+        "caseReel",
+        "hypothesisLenses",
+        "spliceBtn",
+        "worldSvg",
+        "runProofBtn",
+        "proofResult",
+        "promoteBtn",
+        "rollbackBtn",
+        "capabilityGrid",
+    ):
+        assert f'id="{element_id}"' in html
+
+    for handler in ("spliceWorld", "runProof", "acceptMutation", "rollback"):
+        assert handler in js
