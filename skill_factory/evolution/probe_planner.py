@@ -170,3 +170,76 @@ def render_probe_plan(
         ]
     )
     return "\n".join(lines)
+
+
+
+def build_probe_scaffold(
+    packet: EvolutionPacket,
+    suggestions: tuple[ProbeSuggestion, ...],
+) -> dict[str, object]:
+    """Build a non-executable draft experiment manifest from next-probe suggestions."""
+    cases: list[dict[str, object]] = []
+    for index, suggestion in enumerate(suggestions, start=1):
+        pair = f"{suggestion.left_surface}-vs-{suggestion.right_surface}"
+        common = {
+            "keep_fixed": suggestion.keep_fixed,
+            "vary": suggestion.vary,
+            "falsification_rule": suggestion.falsification_rule,
+            "requires_review": True,
+        }
+        cases.append(
+            {
+                "case_id": f"probe-{pair}-{index}-left",
+                "suite": "discriminating-probe",
+                "payload": {
+                    **common,
+                    "design": "isolate-left-lever",
+                    "focus_surface": suggestion.left_surface,
+                    "rival_surface": suggestion.right_surface,
+                    "focus_prediction": suggestion.left_prediction,
+                    "rival_prediction": suggestion.right_prediction,
+                },
+                "variants": {
+                    suggestion.left_surface: {"expect": "pass"},
+                    suggestion.right_surface: {"expect": "fail"},
+                },
+            }
+        )
+        cases.append(
+            {
+                "case_id": f"probe-{pair}-{index}-right",
+                "suite": "discriminating-probe",
+                "payload": {
+                    **common,
+                    "design": "isolate-right-lever",
+                    "focus_surface": suggestion.right_surface,
+                    "rival_surface": suggestion.left_surface,
+                    "focus_prediction": suggestion.right_prediction,
+                    "rival_prediction": suggestion.left_prediction,
+                },
+                "variants": {
+                    suggestion.left_surface: {"expect": "fail"},
+                    suggestion.right_surface: {"expect": "pass"},
+                },
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "status": "draft" if suggestions else "not-needed",
+        "root": ".",
+        "adapter": ["TODO_REPLACE_WITH_ADAPTER"],
+        "source_trace_id": packet.metadata.get("source_trace_id", ""),
+        "review_required": bool(suggestions),
+        "notes": [
+            (
+                "Predictions in this scaffold are experimental discriminators, not facts. "
+                "Review the intervention design and adapter before changing status to ready."
+            ),
+            (
+                "The adapter will receive EVOPR_CASE_ID, EVOPR_VARIANT and "
+                "EVOPR_CASE_JSON."
+            ),
+        ],
+        "cases": cases,
+    }
