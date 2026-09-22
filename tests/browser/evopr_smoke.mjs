@@ -10,6 +10,21 @@ try {
   const title = await page.locator("#failureTitle").textContent();
   if (!title || title.includes("Loading")) throw new Error("case did not initialize");
 
+  // Compare all causes first. The fixture matrix should identify one survivor
+  // while explicitly treating the result as relative evidence.
+  await page.locator("#compareBtn").click();
+  await page.waitForSelector("#discriminationSection:not([hidden])");
+  await page.waitForFunction(() =>
+    document.querySelector("#discriminationStamp")?.textContent === "POLICY SURVIVES"
+  );
+  const discriminationText = await page.locator("#discriminationSection").textContent();
+  if (!discriminationText.includes("relative support")) {
+    throw new Error("discrimination UI overstates causal certainty");
+  }
+  if (!discriminationText.includes("cross-tenant-attack-07")) {
+    throw new Error("diagnostic discrimination case is missing");
+  }
+
   // Prove a bad hypothesis is rejected by fixture evidence.
   await page.locator('.lens[data-hypothesis="H3"]').click();
   await page.locator("#spliceBtn").click();
@@ -37,7 +52,11 @@ try {
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
-  if (!pageText.includes("planned") || !pageText.includes("Command replay")) {
+  if (
+    !pageText.includes("planned") ||
+    !pageText.includes("Command replay") ||
+    !pageText.includes("Active discrimination")
+  ) {
     throw new Error("capability truth table is missing");
   }
 
