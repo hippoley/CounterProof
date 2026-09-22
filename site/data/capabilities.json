@@ -66,17 +66,31 @@
     },
     {
       "id": "trace-ingestion",
-      "name": "Automatic PR / review / CI / agent-trace ingestion",
-      "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "Users must currently prepare an Evolution Packet or replay manifest explicitly."
+      "name": "Generic JSON / JSONL trace ingestion",
+      "status": "tested",
+      "evidence": "CI compiles raw decision/outcome traces into Evolution Packets with evidence and provenance.",
+      "limitation": "Live GitHub, agent-framework, and observability adapters are not implemented yet."
+    },
+    {
+      "id": "one-command-proof",
+      "name": "Trace -> measured replay -> Behavior Proof",
+      "status": "tested",
+      "evidence": "The prove CLI compiles a trace, selects a candidate, executes real replay commands, and renders the report.",
+      "limitation": "Selection is heuristic unless the user explicitly supplies a mutation surface."
     },
     {
       "id": "causal-selector",
-      "name": "Automatic causal hypothesis generation and falsification",
+      "name": "Heuristic causal hypothesis proposals",
+      "status": "partial",
+      "evidence": "Deterministic rules rank candidate mutation surfaces from trace state, corrections, guards, and explicit hints.",
+      "limitation": "This is not learned causal inference and does not prove a unique root cause."
+    },
+    {
+      "id": "external-source-ingestion",
+      "name": "Live PR / review / CI / framework trace adapters",
       "status": "planned",
       "evidence": "Roadmap only.",
-      "limitation": "Current hypotheses are supplied by the user/example data."
+      "limitation": "Current ingestion starts from exported JSON or JSONL traces."
     },
     {
       "id": "world-fork",
@@ -101,9 +115,9 @@
     }
   ],
   "summary": {
-    "tested": 5,
-    "partial": 3,
+    "tested": 7,
+    "partial": 4,
     "demo": 1,
-    "planned": 5
+    "planned": 4
   }
 }
