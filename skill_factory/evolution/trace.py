@@ -10,7 +10,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
-from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis
+from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ProbeSpec
 
 NEGATIVE_TYPES = {
     "human_correction",
@@ -278,6 +278,68 @@ def _surface_scores(
     return scores
 
 
+
+def _probe_spec(
+    probe_id: str,
+    hypothesis_id: str,
+    surface: str,
+    mechanism: str,
+) -> ProbeSpec:
+    contracts = {
+        "policy": (
+            "Change only the execution precondition / commit gate.",
+            "The original failure disappears while normal cases keep passing.",
+            "The failure still occurs with the guard changed, or unrelated cases regress.",
+            "Replay at least one normal fast-path case to detect over-blocking.",
+        ),
+        "skill": (
+            "Change only the learned instruction or example set.",
+            "Interpretation improves before execution without changing deterministic policy.",
+            "The same wrong action survives despite the instruction change.",
+            "Replay paraphrases and unaffected intents to detect overfitting.",
+        ),
+        "prompt": (
+            "Change only the governing prompt instruction.",
+            "The decision changes in the failing case without tool or policy changes.",
+            "The failure survives or unrelated tasks become less reliable.",
+            "Replay unrelated tasks that share the same system prompt.",
+        ),
+        "router": (
+            "Change only the route / workflow selection.",
+            "The case reaches the workflow containing the needed guard and passes.",
+            "The same failure occurs after rerouting, showing the route was not causal.",
+            "Replay cases that should remain on the original route.",
+        ),
+        "memory": (
+            "Change only context retention / invalidation behavior.",
+            "Removing stale context changes the failing decision while preserving fresh context.",
+            "The failure survives with memory cleared or normal multi-turn behavior degrades.",
+            "Replay both stale-context and legitimate carry-over cases.",
+        ),
+        "tool": (
+            "Change only the tool contract, wrapper, or validation layer.",
+            "The external call becomes valid without changing upstream intent selection.",
+            "The failure survives before the tool boundary or another valid tool call breaks.",
+            "Replay valid tool calls and malformed inputs.",
+        ),
+        "eval": (
+            "Add only an executable regression check for the observed failure.",
+            "The pre-fix behavior fails and the corrected behavior passes deterministically.",
+            "The new check cannot distinguish baseline from candidate.",
+            "Run the new case with nearby negative and positive controls.",
+        ),
+    }
+    intervention, expected, falsifier, holdout = contracts[surface]
+    return ProbeSpec(
+        id=probe_id,
+        hypothesis_id=hypothesis_id,
+        intervention=intervention,
+        expected_if_true=expected,
+        falsifier=f"{falsifier} Hypothesis: {mechanism}",
+        holdout=holdout,
+    )
+
+
 def _candidate_diff(surface: str, decision: dict[str, Any], mechanism: str) -> str:
     selected = _format_value(decision.get("selected_action", "unknown"))
     before = f"BEFORE\nselected_action = {selected}"
@@ -312,6 +374,7 @@ def compile_trace(trace: dict[str, Any]) -> EvolutionPacket:
     ranked = ranked[:4]
 
     hypotheses: list[Hypothesis] = []
+    probes: list[ProbeSpec] = []
     candidates: list[CandidateMutation] = []
     for index, (surface, score, sources, mechanism) in enumerate(ranked, start=1):
         hypothesis_id = f"H{index}"
@@ -324,6 +387,14 @@ def compile_trace(trace: dict[str, Any]) -> EvolutionPacket:
                 target_surface=surface,
                 evidence_for=tuple(sources),
                 uncertainty=uncertainty,
+            )
+        )
+        probes.append(
+            _probe_spec(
+                probe_id=f"P{index}",
+                hypothesis_id=hypothesis_id,
+                surface=surface,
+                mechanism=mechanism,
             )
         )
         candidates.append(
@@ -348,6 +419,7 @@ def compile_trace(trace: dict[str, Any]) -> EvolutionPacket:
         outcome_receipt=_outcome_receipt(events, decision_index),
         evidence=evidence,
         hypotheses=tuple(hypotheses),
+        probes=tuple(probes),
         candidates=tuple(candidates),
         metadata={
             "source_trace_id": trace_id,
