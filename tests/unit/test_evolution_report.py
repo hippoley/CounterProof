@@ -9,6 +9,7 @@ from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.discriminate import (
     DiscriminationRun,
     VariantEvidence,
+    discrimination_to_dict,
     render_discrimination_markdown,
     run_discrimination_manifest,
 )
@@ -943,8 +944,6 @@ def test_ambiguous_preregistered_survivors_stay_ambiguous():
 
 
 def test_discrimination_payload_exposes_preregistered_prediction_evidence():
-    from skill_factory.evolution.discriminate import discrimination_to_dict
-
     run = run_discrimination_manifest(
         Path("examples/discrimination_suite.json"),
         surfaces=("policy", "skill", "prompt"),
