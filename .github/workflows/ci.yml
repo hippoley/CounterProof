@@ -67,6 +67,22 @@ jobs:
           /tmp/evopr-clean/bin/evopr build "$GITHUB_WORKSPACE/examples/evolution_pr.json" --out /tmp/EVOLUTION_PR.md
           grep -q "Eligible for promotion" /tmp/EVOLUTION_PR.md
 
+      - name: Run packaged trace-to-proof workflow
+        run: |
+          cd /tmp
+          /tmp/evopr-clean/bin/evopr ingest \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --surface policy \
+            --out /tmp/EVOLUTION_PACKET.json
+          grep -q '"selected_candidate_id": "C1"' /tmp/EVOLUTION_PACKET.json
+          /tmp/evopr-clean/bin/evopr prove \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --replay-manifest "$GITHUB_WORKSPACE/examples/replay_suite.json" \
+            --surface policy \
+            --out /tmp/TRACE_PROOF.md
+          grep -q "Discriminating probes" /tmp/TRACE_PROOF.md
+          grep -q "Eligible for promotion" /tmp/TRACE_PROOF.md
+
       - name: Serve packaged interactive demo
         run: |
           test -f /tmp/evopr-clean/share/skill-factory/site/index.html
