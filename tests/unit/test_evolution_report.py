@@ -236,3 +236,65 @@ def test_build_can_attach_measured_replay_without_manual_json_copy(tmp_path):
     assert "cross-tenant-attack-07" in rendered
     assert "normal-lookup-12" in rendered
     assert "Eligible for promotion." in rendered
+
+
+def test_explicit_replay_failure_blocks_promotion_even_with_positive_score_delta():
+    candidate = CandidateMutation(
+        id="c-fail",
+        surface="policy",
+        title="bad candidate",
+        hypothesis_id="h1",
+        behavior_diff="before -> after",
+        replay_results=(
+            ReplayResult("case", "regression", "fail", 0.0, 0.8),
+        ),
+    )
+    assert candidate.mean_delta == 0.8
+    assert candidate.failure_count == 1
+    assert candidate.eligible_for_promotion is False
+
+
+def test_replay_scores_must_be_normalized():
+    with pytest.raises(ValueError):
+        ReplayResult("case", "regression", "pass", 0.0, 1.2)
+
+
+def test_packet_rejects_dangling_hypothesis_reference():
+    with pytest.raises(ValueError):
+        EvolutionPacket(
+            packet_id="broken",
+            agent="agent",
+            failure_summary="failure",
+            decision_capsule="capsule",
+            outcome_receipt="receipt",
+            hypotheses=(),
+            candidates=(
+                CandidateMutation(
+                    id="c1",
+                    surface="policy",
+                    title="guard",
+                    hypothesis_id="missing",
+                    behavior_diff="before -> after",
+                ),
+            ),
+        )
+
+
+def test_packet_rejects_missing_selected_candidate():
+    with pytest.raises(ValueError):
+        EvolutionPacket(
+            packet_id="broken",
+            agent="agent",
+            failure_summary="failure",
+            decision_capsule="capsule",
+            outcome_receipt="receipt",
+            hypotheses=(
+                Hypothesis(
+                    id="h1",
+                    mechanism="mechanism",
+                    target_surface="policy",
+                ),
+            ),
+            candidates=(),
+            selected_candidate_id="missing",
+        )
