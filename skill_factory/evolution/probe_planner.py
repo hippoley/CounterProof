@@ -162,8 +162,10 @@ def render_probe_plan(
         )
     lines.extend(
         [
-            "> This is an experiment-design suggestion, not an executable test case. "
-            "A human or adapter must instantiate it in the target environment.",
+            (
+                "> This is an experiment-design suggestion, not an executable test case. "
+                "A human or adapter must instantiate it in the target environment."
+            ),
             "",
         ]
     )
