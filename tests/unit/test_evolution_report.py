@@ -775,7 +775,9 @@ def test_evopr_evolve_refuses_automatic_selection_when_survivors_are_ambiguous(
     packet = json.loads(packet_output.read_text(encoding="utf-8"))
     assert packet["selected_candidate_id"] is None
     assert packet["metadata"]["discrimination_result"] == "ambiguous"
-    assert packet["metadata"]["survivors"] == "policy,skill"
+    assert packet["metadata"]["runtime_survivors"] == "policy,skill"
+    assert packet["metadata"]["eligible_survivors"] == "policy,skill"
+    assert packet["metadata"]["prediction_blocked_survivors"] == ""
     review = output.read_text(encoding="utf-8")
     assert "Multiple hypotheses survived" in review
     assert "Eligible for promotion." not in review
