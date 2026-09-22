@@ -38,12 +38,12 @@ class ExecutedReplay:
     candidate: CommandOutcome
 
 
-def _declared_root(manifest_dir: Path, relative: str) -> Path:
+def resolve_declared_root(manifest_dir: Path, relative: str) -> Path:
     """Resolve the user-declared replay root relative to the manifest."""
     return (manifest_dir.resolve() / relative).resolve()
 
 
-def _safe_cwd(root: Path, relative: str) -> Path:
+def safe_cwd(root: Path, relative: str) -> Path:
     """Resolve a case cwd while preventing escape from the declared replay root."""
     root = root.resolve()
     cwd = (root / relative).resolve()
@@ -52,7 +52,7 @@ def _safe_cwd(root: Path, relative: str) -> Path:
     return cwd
 
 
-def _run(
+def run_command(
     argv: list[str],
     *,
     cwd: Path,
@@ -101,24 +101,24 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
     """Execute all baseline/candidate command pairs in a replay manifest."""
     path = path.resolve()
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    root = _declared_root(path.parent, str(raw.get("root", ".")))
+    root = resolve_declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
     results: list[ExecutedReplay] = []
 
     for case in raw.get("cases", []):
         case_id = str(case["case_id"])
         suite = str(case.get("suite", "replay"))
-        cwd = _safe_cwd(root, str(case.get("cwd", ".")))
+        cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
         env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
 
-        baseline = _run(
+        baseline = run_command(
             list(case["baseline"]),
             cwd=cwd,
             timeout_seconds=timeout,
             env=env,
         )
-        candidate = _run(
+        candidate = run_command(
             list(case["candidate"]),
             cwd=cwd,
             timeout_seconds=timeout,
