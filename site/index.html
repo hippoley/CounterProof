@@ -61,10 +61,31 @@
             <span id="selectedConfidence" class="confidence-readout">—</span>
           </div>
           <div id="hypothesisLenses" class="hypothesis-lenses"></div>
-          <button id="spliceBtn" class="splice-button" type="button">
-            <span>TEST THIS CAUSE</span>
-            <small>fork the same case with one mutation</small>
-          </button>
+          <div class="cause-actions">
+            <button id="spliceBtn" class="splice-button" type="button">
+              <span>TEST THIS CAUSE</span>
+              <small>fork the same case with one mutation</small>
+            </button>
+            <button id="compareBtn" class="compare-button" type="button">
+              <span>COMPARE ALL CAUSES</span>
+              <small>run the same fixture matrix across every candidate</small>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="discriminationSection" class="discrimination-section" hidden>
+        <div class="margin-title">COMPARE</div>
+        <div>
+          <div class="proof-header">
+            <div>
+              <p class="overline">ACTIVE DISCRIMINATION</p>
+              <h2>Which intervention survives the same cases?</h2>
+            </div>
+            <div id="discriminationStamp" class="verdict-stamp">UNRUN</div>
+          </div>
+          <div id="discriminationMatrix" class="discrimination-matrix"></div>
+          <p id="discriminationNote" class="truth-note"></p>
         </div>
       </section>
 
