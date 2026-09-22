@@ -623,3 +623,152 @@ def test_discrimination_rejects_unavailable_surface():
             Path("examples/discrimination_suite.json"),
             surfaces=("router",),
         )
+
+
+def test_missing_variant_case_is_inconclusive_not_survived(tmp_path):
+    manifest = tmp_path / "partial.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "root": ".",
+                "cases": [
+                    {
+                        "case_id": "failure",
+                        "baseline": ["python", "-c", "raise SystemExit(1)"],
+                        "variants": {
+                            "policy": ["python", "-c", "raise SystemExit(0)"],
+                        },
+                    },
+                    {
+                        "case_id": "holdout",
+                        "baseline": ["python", "-c", "raise SystemExit(0)"],
+                        "variants": {
+                            "skill": ["python", "-c", "raise SystemExit(0)"],
+                        },
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    run = run_discrimination_manifest(manifest, surfaces=("policy",))
+    policy = run.variants[0]
+    assert policy.infra_error_count == 1
+    assert policy.status == "inconclusive"
+    assert run.discriminated_surface is None
+
+
+def test_diagnostic_case_identifies_where_candidate_signatures_split():
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+
+    assert run.diagnostic_cases == ("cross-tenant-attack-07",)
+    by_surface = {item.surface: item.signature for item in run.variants}
+    assert by_surface["policy"] == ("P", "P", "P")
+    assert by_surface["skill"] == ("P", "F", "P")
+    assert by_surface["prompt"] == ("P", "F", "P")
+
+
+def test_evopr_evolve_selects_only_unique_survivor_and_attaches_replays(tmp_path):
+    output = tmp_path / "review.md"
+    packet_output = tmp_path / "packet.json"
+    matrix_output = tmp_path / "matrix.md"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(output),
+            "--packet-out",
+            str(packet_output),
+            "--matrix-out",
+            str(matrix_output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Unique survivor: policy" in result.output
+    packet = json.loads(packet_output.read_text(encoding="utf-8"))
+    assert packet["selected_candidate_id"] == "C1"
+    assert packet["metadata"]["selection_mode"] == "active-discrimination"
+    assert packet["metadata"]["discrimination_result"] == "unique-survivor:policy"
+    selected = next(
+        item
+        for item in packet["candidates"]
+        if item["id"] == packet["selected_candidate_id"]
+    )
+    assert len(selected["replay_results"]) == 3
+    review = output.read_text(encoding="utf-8")
+    assert "Eligible for promotion." in review
+    assert "EvoPR Discrimination Matrix" in review
+    assert "cross-tenant-attack-07" in matrix_output.read_text(encoding="utf-8")
+
+
+def test_evopr_evolve_refuses_automatic_selection_when_survivors_are_ambiguous(
+    tmp_path,
+):
+    fixture = tmp_path / "ambiguous.py"
+    fixture.write_text(
+        "import sys\nraise SystemExit(0 if sys.argv[1] != 'baseline' else 1)\n",
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "ambiguous.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "root": ".",
+                "cases": [
+                    {
+                        "case_id": "failure",
+                        "baseline": ["python", str(fixture), "baseline"],
+                        "variants": {
+                            "policy": ["python", str(fixture), "policy"],
+                            "skill": ["python", str(fixture), "skill"],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "review.md"
+    packet_output = tmp_path / "packet.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            str(manifest),
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--out",
+            str(output),
+            "--packet-out",
+            str(packet_output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "No automatic selection: multiple interventions survived" in result.output
+    packet = json.loads(packet_output.read_text(encoding="utf-8"))
+    assert packet["selected_candidate_id"] is None
+    assert packet["metadata"]["discrimination_result"] == "ambiguous"
+    assert packet["metadata"]["survivors"] == "policy,skill"
+    review = output.read_text(encoding="utf-8")
+    assert "Multiple hypotheses survived" in review
+    assert "Eligible for promotion." not in review
