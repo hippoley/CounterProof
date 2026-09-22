@@ -88,3 +88,35 @@ jobs:
             echo "Validating $skill_dir ..."
             skill-factory validate "$skill_dir"
           done
+
+
+  frontend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Check frontend JavaScript syntax
+        run: node --check site/app.js
+
+      - name: Serve EvoPR playground
+        run: |
+          python3 -m http.server 8765 --directory site >/tmp/evopr-http.log 2>&1 &
+          echo $! >/tmp/evopr-http.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:8765/ >/dev/null && exit 0
+            sleep 0.5
+          done
+          cat /tmp/evopr-http.log
+          exit 1
+
+      - name: Exercise worldline proof interaction in Chromium
+        run: node tests/browser/evopr_smoke.mjs
