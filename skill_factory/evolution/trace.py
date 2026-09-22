@@ -54,7 +54,7 @@ def load_trace(path: Path) -> dict[str, Any]:
 
     raw = json.loads(text)
     if not isinstance(raw, dict):
-        raise ValueError("trace JSON must be an object")
+        raise TypeError("trace JSON must be an object")
     if not isinstance(raw.get("events"), list) or not raw["events"]:
         raise ValueError("trace requires a non-empty events list")
     return raw
@@ -212,14 +212,19 @@ def _surface_scores(
                 f"Explicit trace evidence points to the {hint} surface.",
             )
 
-    if any(token in world_text + guards_text for token in ("provisional", "unvalidated", "false")):
-        if any(token in selected for token in ("execute", "query", "call", "write", "send", "open")):
-            bump(
-                "policy",
-                0.72,
-                "decision",
-                "Execution proceeded while a precondition or semantic state was still provisional.",
-            )
+    if (
+        any(token in world_text + guards_text for token in ("provisional", "unvalidated", "false"))
+        and any(
+            token in selected
+            for token in ("execute", "query", "call", "write", "send", "open")
+        )
+    ):
+        bump(
+            "policy",
+            0.72,
+            "decision",
+            "Execution proceeded while a precondition or semantic state was still provisional.",
+        )
 
     if any(token in trace_text for token in ("wrong route", "router", "workflow mismatch", "misroute")):
         bump(
