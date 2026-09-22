@@ -1,8 +1,6 @@
 """Machine-readable truth table for EvoPR capabilities."""
 from __future__ import annotations
 
-from typing import Any
-
 
 CAPABILITIES: tuple[dict[str, str], ...] = (
     {
@@ -99,7 +97,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
 )
 
 
-def capability_report() -> dict[str, Any]:
+def capability_report() -> dict[str, object]:
     counts: dict[str, int] = {}
     for item in CAPABILITIES:
         counts[item["status"]] = counts.get(item["status"], 0) + 1
