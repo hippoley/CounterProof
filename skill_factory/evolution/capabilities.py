@@ -25,6 +25,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically.",
     },
     {
+        "id": "packaged-install",
+        "name": "Clean wheel install and packaged playground",
+        "status": "tested",
+        "evidence": "CI builds a wheel, installs it in a fresh virtualenv, runs the CLI, and serves the packaged frontend.",
+        "limitation": "This proves packaging and startup, not compatibility with every third-party agent stack.",
+    },
+    {
         "id": "command-replay",
         "name": "Deterministic baseline/candidate command replay",
         "status": "tested",
