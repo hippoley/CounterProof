@@ -60,6 +60,23 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
             f"{hypothesis.mechanism} | {hypothesis.uncertainty:.2f} |"
         )
 
+    if packet.probes:
+        lines.extend(
+            [
+                "",
+                "## 3b. Discriminating probes",
+                "",
+                "| Probe | Hypothesis | Intervention | Supports if | Falsified if | Holdout |",
+                "|---|---|---|---|---|---|",
+            ]
+        )
+        for probe in packet.probes:
+            lines.append(
+                f"| {probe.id} | {probe.hypothesis_id} | {probe.intervention} | "
+                f"{probe.expected_if_true} | {probe.falsifier} | "
+                f"{probe.holdout or 'not-set'} |"
+            )
+
     lines.extend(
         [
             "",
