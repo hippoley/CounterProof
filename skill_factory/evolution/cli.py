@@ -14,6 +14,7 @@ from .capabilities import capability_report
 from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ReplayResult
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
+from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
 
 
 def _packet_from_json(raw: dict) -> EvolutionPacket:
@@ -44,6 +45,20 @@ def _packet_from_json(raw: dict) -> EvolutionPacket:
     )
 
 
+def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> EvolutionPacket:
+    if packet.selected_candidate_id is None:
+        raise click.ClickException("replay requires a selected candidate")
+    executed = run_replay_manifest(Path(replay_manifest))
+    measured = tuple(item.result for item in executed)
+    candidates = tuple(
+        replace(candidate, replay_results=measured)
+        if candidate.id == packet.selected_candidate_id
+        else candidate
+        for candidate in packet.candidates
+    )
+    return replace(packet, candidates=candidates)
+
+
 @click.group()
 def cli() -> None:
     """EvoPR: pull requests for agent behavior."""
@@ -64,22 +79,106 @@ def build(packet_file: str, out_file: str, replay_manifest: str | None) -> None:
     packet = _packet_from_json(raw)
 
     if replay_manifest:
-        if packet.selected_candidate_id is None:
-            raise click.ClickException(
-                "--replay-manifest requires selected_candidate_id in the packet"
-            )
-        executed = run_replay_manifest(Path(replay_manifest))
-        measured = tuple(item.result for item in executed)
-        candidates = tuple(
-            replace(candidate, replay_results=measured)
-            if candidate.id == packet.selected_candidate_id
-            else candidate
-            for candidate in packet.candidates
-        )
-        packet = replace(packet, candidates=candidates)
+        packet = _attach_measured_replay(packet, replay_manifest)
 
     output = render_evolution_pr(packet)
     Path(out_file).write_text(output, encoding="utf-8")
+    click.echo(f"Built {out_file}")
+
+
+@cli.command("ingest")
+@click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--out", "out_file", default="EVOLUTION_PACKET.json", show_default=True)
+@click.option(
+    "--surface",
+    type=click.Choice(["skill", "prompt", "policy", "router", "memory", "tool", "eval"]),
+    default=None,
+    help="Optionally select one generated candidate surface for later replay.",
+)
+def ingest(trace_file: str, out_file: str, surface: str | None) -> None:
+    """Compile a raw JSON/JSONL agent trace into an Evolution Packet."""
+    trace = load_trace(Path(trace_file))
+    packet = compile_trace(trace)
+    if surface is not None:
+        try:
+            packet = select_candidate(packet, surface=surface)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+
+    Path(out_file).write_text(
+        json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    click.echo(
+        f"Compiled {trace.get('trace_id', Path(trace_file).stem)} -> "
+        f"{len(packet.evidence)} evidence items, "
+        f"{len(packet.hypotheses)} hypotheses, "
+        f"{len(packet.candidates)} candidates."
+    )
+    if packet.selected_candidate_id:
+        click.echo(f"Selected {packet.selected_candidate_id} for surface {surface}.")
+    else:
+        click.echo("No candidate selected; hypotheses remain proposals until you choose one to test.")
+    click.echo(f"Wrote {out_file}")
+
+
+@cli.command("prove")
+@click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--replay-manifest",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+@click.option(
+    "--surface",
+    type=click.Choice(["skill", "prompt", "policy", "router", "memory", "tool", "eval"]),
+    default=None,
+    help="Candidate surface to test. Omit to test the top heuristic hypothesis.",
+)
+@click.option("--out", "out_file", default="EVOLUTION_PR.md", show_default=True)
+@click.option("--packet-out", default=None, type=click.Path(dir_okay=False))
+def prove(
+    trace_file: str,
+    replay_manifest: str,
+    surface: str | None,
+    out_file: str,
+    packet_out: str | None,
+) -> None:
+    """Compile a trace, select one hypothesis, run replay, and render Behavior Proof."""
+    trace = load_trace(Path(trace_file))
+    packet = compile_trace(trace)
+    try:
+        packet = select_candidate(packet, surface=surface)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    selection_mode = "explicit-surface" if surface else "heuristic-top-ranked"
+    packet = replace(
+        packet,
+        metadata={
+            **packet.metadata,
+            "selection_mode": selection_mode,
+        },
+    )
+    packet = _attach_measured_replay(packet, replay_manifest)
+
+    Path(out_file).write_text(render_evolution_pr(packet), encoding="utf-8")
+    if packet_out:
+        Path(packet_out).write_text(
+            json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    selected = packet.selected_candidate()
+    click.echo(
+        f"Proved {packet.packet_id} using {selection_mode}; "
+        f"candidate={selected.id if selected else 'none'}."
+    )
+    if surface is None:
+        click.echo(
+            "Note: top-ranked attribution is heuristic. Replay validates the tested mutation, "
+            "not unique causal truth."
+        )
     click.echo(f"Built {out_file}")
 
 
