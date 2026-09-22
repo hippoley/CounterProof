@@ -5,6 +5,12 @@ import pytest
 from click.testing import CliRunner
 
 from skill_factory.evolution.capabilities import capability_report
+from skill_factory.evolution.discriminate import (
+    DiscriminationRun,
+    VariantEvidence,
+    render_discrimination_markdown,
+    run_discrimination_manifest,
+)
 from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.models import (
     CandidateMutation,
@@ -505,4 +511,115 @@ def test_packet_rejects_probe_for_unknown_hypothesis():
                     falsifier="failure survives",
                 ),
             ),
+        )
+
+
+def test_active_discrimination_finds_only_policy_survivor():
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+
+    by_surface = {item.surface: item for item in run.variants}
+    assert run.discriminated_surface == "policy"
+    assert by_surface["policy"].status == "survived"
+    assert by_surface["policy"].failure_count == 0
+    assert by_surface["skill"].status == "falsified"
+    assert by_surface["prompt"].status == "falsified"
+    assert by_surface["skill"].failure_count == 1
+    assert by_surface["prompt"].failure_count == 1
+
+
+def test_discrimination_report_never_claims_unique_causal_truth():
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    rendered = render_discrimination_markdown(
+        run,
+        mechanisms={
+            "policy": "commit gate missing",
+            "skill": "instruction missing",
+            "prompt": "prompt underspecified",
+        },
+    )
+
+    assert "Only **policy** survived" in rendered
+    assert "does not establish unique causal truth" in rendered
+    assert "cross-tenant-attack-07" in rendered
+
+
+def test_discrimination_keeps_multiple_survivors_ambiguous():
+    perfect = (
+        ReplayResult("failure", "regression", "pass", 0.0, 1.0),
+        ReplayResult("normal", "holdout", "pass", 1.0, 1.0),
+    )
+    run = DiscriminationRun(
+        variants=(
+            VariantEvidence(surface="policy", replays=perfect, outcomes=()),
+            VariantEvidence(surface="skill", replays=perfect, outcomes=()),
+        )
+    )
+
+    assert run.discriminated_surface is None
+    assert {item.surface for item in run.survivors} == {"policy", "skill"}
+    rendered = render_discrimination_markdown(run)
+    assert "Multiple hypotheses survived" in rendered
+    assert "add a case where their predicted behaviors differ" in rendered
+
+
+def test_discrimination_can_reject_the_entire_candidate_set():
+    failed = (
+        ReplayResult("failure", "regression", "fail", 0.0, 0.0),
+    )
+    run = DiscriminationRun(
+        variants=(
+            VariantEvidence(surface="policy", replays=failed, outcomes=()),
+            VariantEvidence(surface="skill", replays=failed, outcomes=()),
+        )
+    )
+
+    assert run.discriminated_surface is None
+    assert run.survivors == ()
+    assert "No tested hypothesis survived" in render_discrimination_markdown(run)
+
+
+def test_evopr_discriminate_cli_runs_same_cases_across_surfaces(tmp_path):
+    output = tmp_path / "matrix.md"
+    payload = tmp_path / "matrix.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "discriminate",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(output),
+            "--json-out",
+            str(payload),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "discriminated 'policy'" in result.output
+    assert "not unique causal proof" in result.output
+    raw = json.loads(payload.read_text(encoding="utf-8"))
+    assert raw["discriminated_surface"] == "policy"
+    assert raw["survivors"] == ["policy"]
+    assert raw["source_trace_id"] == "tenant-scope-418"
+    assert "Only **policy** survived" in output.read_text(encoding="utf-8")
+
+
+def test_discrimination_rejects_unavailable_surface():
+    with pytest.raises(ValueError, match="unavailable"):
+        run_discrimination_manifest(
+            Path("examples/discrimination_suite.json"),
+            surfaces=("router",),
         )
