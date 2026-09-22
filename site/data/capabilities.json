@@ -93,6 +93,13 @@
       "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
     },
     {
+      "id": "active-evolve",
+      "name": "Trace -> multi-intervention discrimination -> guarded selection",
+      "status": "tested",
+      "evidence": "The evolve CLI compiles a raw trace, runs competing executable interventions on the same cases, selects only a unique survivor, and leaves ambiguous runs unselected.",
+      "limitation": "Candidate interventions still need executable commands supplied by the experiment manifest."
+    },
+    {
       "id": "causal-selector",
       "name": "Heuristic causal hypothesis proposals",
       "status": "partial",
@@ -129,7 +136,7 @@
     }
   ],
   "summary": {
-    "tested": 9,
+    "tested": 10,
     "partial": 4,
     "demo": 1,
     "planned": 4
