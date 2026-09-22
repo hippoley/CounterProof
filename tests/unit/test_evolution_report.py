@@ -21,7 +21,11 @@ from skill_factory.evolution.models import (
     ProbeSpec,
     ReplayResult,
 )
-from skill_factory.evolution.probe_planner import plan_next_probes, render_probe_plan
+from skill_factory.evolution.probe_planner import (
+    build_probe_scaffold,
+    plan_next_probes,
+    render_probe_plan,
+)
 from skill_factory.evolution.receipt import file_sha256
 from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
 from skill_factory.evolution.report import render_evolution_pr
@@ -1178,3 +1182,76 @@ def test_discrimination_manifest_refuses_draft_execution(tmp_path):
 
     with pytest.raises(ValueError, match="status is 'draft'"):
         run_discrimination_manifest(manifest, surfaces=("policy",))
+
+
+def test_probe_scaffold_crosses_predictions_and_stays_draft():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    suggestions = plan_next_probes(packet, run)
+    scaffold = build_probe_scaffold(packet, suggestions)
+
+    assert scaffold["status"] == "draft"
+    assert scaffold["review_required"] is True
+    assert scaffold["adapter"] == ["TODO_REPLACE_WITH_ADAPTER"]
+    assert len(scaffold["cases"]) == 2
+
+    left_case, right_case = scaffold["cases"]
+    assert left_case["payload"]["design"] == "isolate-left-lever"
+    assert left_case["variants"]["policy"]["expect"] == "pass"
+    assert left_case["variants"]["skill"]["expect"] == "fail"
+
+    assert right_case["payload"]["design"] == "isolate-right-lever"
+    assert right_case["variants"]["policy"]["expect"] == "fail"
+    assert right_case["variants"]["skill"]["expect"] == "pass"
+
+
+def test_generated_probe_scaffold_cannot_execute_until_reviewed(tmp_path):
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, run))
+    path = tmp_path / "draft_probe.json"
+    path.write_text(
+        json.dumps(scaffold, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="status is 'draft'"):
+        run_discrimination_manifest(path, surfaces=("policy", "skill"))
+
+
+def test_evopr_evolve_writes_probe_scaffold_for_ambiguous_case(tmp_path):
+    review = tmp_path / "review.md"
+    scaffold_out = tmp_path / "next_experiment.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/ambiguous_discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--out",
+            str(review),
+            "--probe-scaffold-out",
+            str(scaffold_out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    scaffold = json.loads(scaffold_out.read_text(encoding="utf-8"))
+    assert scaffold["status"] == "draft"
+    assert scaffold["source_trace_id"] == "tenant-scope-418"
+    assert len(scaffold["cases"]) == 2
+    assert scaffold["cases"][0]["variants"]["policy"]["expect"] == "pass"
+    assert scaffold["cases"][1]["variants"]["skill"]["expect"] == "pass"
