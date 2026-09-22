@@ -186,7 +186,51 @@
             }
           ]
         }
-      ]
+      ],
+      "discrimination": {
+        "cases": [
+          "failure-418",
+          "cross-tenant-attack-07",
+          "normal-lookup-12"
+        ],
+        "variants": [
+          {
+            "surface": "skill",
+            "hypothesis_id": "H1",
+            "signature": [
+              "P",
+              "F",
+              "P"
+            ],
+            "status": "falsified"
+          },
+          {
+            "surface": "policy",
+            "hypothesis_id": "H2",
+            "signature": [
+              "P",
+              "P",
+              "P"
+            ],
+            "status": "survived"
+          },
+          {
+            "surface": "router",
+            "hypothesis_id": "H3",
+            "signature": [
+              "F",
+              "F",
+              "P"
+            ],
+            "status": "falsified"
+          }
+        ],
+        "unique_survivor": "policy",
+        "diagnostic_cases": [
+          "failure-418",
+          "cross-tenant-attack-07"
+        ]
+      }
     },
     {
       "id": "evo-correction-commit-002",
@@ -379,7 +423,51 @@
             }
           ]
         }
-      ]
+      ],
+      "discrimination": {
+        "cases": [
+          "correction-01",
+          "interrupt-07",
+          "normal-final-04"
+        ],
+        "variants": [
+          {
+            "surface": "skill",
+            "hypothesis_id": "H1",
+            "signature": [
+              "P",
+              "F",
+              "P"
+            ],
+            "status": "falsified"
+          },
+          {
+            "surface": "policy",
+            "hypothesis_id": "H2",
+            "signature": [
+              "P",
+              "P",
+              "P"
+            ],
+            "status": "survived"
+          },
+          {
+            "surface": "memory",
+            "hypothesis_id": "H3",
+            "signature": [
+              "P",
+              "F",
+              "F"
+            ],
+            "status": "falsified"
+          }
+        ],
+        "unique_survivor": "policy",
+        "diagnostic_cases": [
+          "interrupt-07",
+          "normal-final-04"
+        ]
+      }
     }
   ]
 }
