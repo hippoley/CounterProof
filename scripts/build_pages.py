@@ -8,6 +8,7 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from skill_factory.evolution.capabilities import capability_report
 from skill_factory.loader import load_skill
 from skill_factory.verifier.static_check import verify_skill
 
@@ -70,8 +71,7 @@ def main() -> None:
     data = DIST / "data"
     data.mkdir(exist_ok=True)
     (data / "skills.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    (DIST / ".nojekyll").touch()
-
+    (data / "capabilities.json").write_text(\n        json.dumps(capability_report(), ensure_ascii=False, indent=2),\n        encoding="utf-8",\n    )\n    (DIST / ".nojekyll").touch()\n
 
 if __name__ == "__main__":
     main()
