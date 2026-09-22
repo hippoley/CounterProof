@@ -25,6 +25,7 @@ from .models import (
     ReplayResult,
 )
 from .probe_planner import plan_next_probes, render_probe_plan
+from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
@@ -215,6 +216,7 @@ def prove(
 @click.option("--matrix-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--packet-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--probe-plan-out", default=None, type=click.Path(dir_okay=False))
+@click.option("--receipt-out", default=None, type=click.Path(dir_okay=False))
 def evolve(
     trace_file: str,
     experiment_manifest: str,
@@ -223,6 +225,7 @@ def evolve(
     matrix_out: str | None,
     packet_out: str | None,
     probe_plan_out: str | None,
+    receipt_out: str | None,
 ) -> None:
     """Actively discriminate hypotheses and select only a unique surviving mutation."""
     trace = load_trace(Path(trace_file))
@@ -249,6 +252,8 @@ def evolve(
         "selection_mode": "active-discrimination",
         "tested_surfaces": ",".join(selected_surfaces),
         "diagnostic_cases": ",".join(run.diagnostic_cases),
+        "trace_sha256": file_sha256(Path(trace_file)),
+        "experiment_sha256": file_sha256(Path(experiment_manifest)),
     }
 
     if run.discriminated_surface:
@@ -304,6 +309,14 @@ def evolve(
             json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+    if receipt_out:
+        receipt = build_proof_receipt(
+            trace_path=Path(trace_file),
+            experiment_path=Path(experiment_manifest),
+            packet=packet,
+            run=run,
+        )
+        write_receipt(Path(receipt_out), receipt)
 
     if run.discriminated_surface:
         selected = packet.selected_candidate()
@@ -384,6 +397,8 @@ def discriminate(
     suggestions = plan_next_probes(packet, run)
     payload = discrimination_to_dict(run)
     payload["source_trace_id"] = packet.metadata.get("source_trace_id", "")
+    payload["trace_sha256"] = file_sha256(Path(trace_file))
+    payload["experiment_sha256"] = file_sha256(Path(experiment_manifest))
     payload["tested_surfaces"] = list(selected_surfaces)
     payload["interpretation"] = (
         "relative support among tested interventions; not proof of unique causal truth"
@@ -422,6 +437,37 @@ def replay(manifest_file: str, out_file: str) -> None:
     passed = sum(case["verdict"] == "pass" for case in payload["cases"])
     click.echo(f"Executed {len(payload['cases'])} replay cases; {passed} candidate passes.")
     click.echo(f"Wrote {out_file}")
+
+
+@cli.command("verify-receipt")
+@click.argument("receipt_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--trace", "trace_file", default=None, type=click.Path(dir_okay=False))
+@click.option(
+    "--experiment-manifest",
+    default=None,
+    type=click.Path(dir_okay=False),
+)
+def verify_receipt(
+    receipt_file: str,
+    trace_file: str | None,
+    experiment_manifest: str | None,
+) -> None:
+    """Verify that a Behavior Proof still points to unchanged source inputs."""
+    receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
+    errors = verify_proof_receipt(
+        receipt,
+        trace_path=Path(trace_file) if trace_file else None,
+        experiment_path=(
+            Path(experiment_manifest)
+            if experiment_manifest
+            else None
+        ),
+    )
+    if errors:
+        raise click.ClickException("; ".join(errors))
+    click.echo(
+        "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
+    )
 
 
 @cli.command("audit")
