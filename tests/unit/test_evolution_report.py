@@ -771,7 +771,7 @@ def test_evopr_evolve_refuses_automatic_selection_when_survivors_are_ambiguous(
     )
 
     assert result.exit_code == 0, result.output
-    assert "No automatic selection: multiple interventions survived" in result.output
+    assert "No automatic selection: multiple eligible interventions survived" in result.output
     packet = json.loads(packet_output.read_text(encoding="utf-8"))
     assert packet["selected_candidate_id"] is None
     assert packet["metadata"]["discrimination_result"] == "ambiguous"
@@ -843,7 +843,7 @@ def test_evopr_evolve_writes_next_probe_plan_when_ambiguous(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    assert "No automatic selection: multiple interventions survived" in result.output
+    assert "No automatic selection: multiple eligible interventions survived" in result.output
     assert "Next discriminating probe planned for: policy vs skill" in result.output
 
     packet = json.loads(packet_output.read_text(encoding="utf-8"))
