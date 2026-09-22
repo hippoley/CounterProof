@@ -196,6 +196,128 @@ def prove(
     click.echo(f"Built {out_file}")
 
 
+@cli.command("evolve")
+@click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--experiment-manifest",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+@click.option(
+    "--surface",
+    "surfaces",
+    multiple=True,
+    type=click.Choice(["skill", "prompt", "policy", "router", "memory", "tool", "eval"]),
+    help="Mutation surfaces to compare. Repeat the flag. Defaults to compiled trace candidates.",
+)
+@click.option("--out", "out_file", default="EVOLUTION_REVIEW.md", show_default=True)
+@click.option("--matrix-out", default=None, type=click.Path(dir_okay=False))
+@click.option("--packet-out", default=None, type=click.Path(dir_okay=False))
+def evolve(
+    trace_file: str,
+    experiment_manifest: str,
+    surfaces: tuple[str, ...],
+    out_file: str,
+    matrix_out: str | None,
+    packet_out: str | None,
+) -> None:
+    """Actively discriminate hypotheses and select only a unique surviving mutation."""
+    trace = load_trace(Path(trace_file))
+    packet = compile_trace(trace)
+    compiled_surfaces = tuple(dict.fromkeys(candidate.surface for candidate in packet.candidates))
+    selected_surfaces = surfaces or compiled_surfaces
+
+    try:
+        run = run_discrimination_manifest(
+            Path(experiment_manifest),
+            surfaces=selected_surfaces,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    mechanisms = {
+        hypothesis.target_surface: hypothesis.mechanism
+        for hypothesis in packet.hypotheses
+    }
+    matrix = render_discrimination_markdown(run, mechanisms=mechanisms)
+
+    metadata = {
+        **packet.metadata,
+        "selection_mode": "active-discrimination",
+        "tested_surfaces": ",".join(selected_surfaces),
+        "diagnostic_cases": ",".join(run.diagnostic_cases),
+    }
+
+    if run.discriminated_surface:
+        survivor = next(
+            item for item in run.variants
+            if item.surface == run.discriminated_surface
+        )
+        selected = next(
+            candidate for candidate in packet.candidates
+            if candidate.surface == run.discriminated_surface
+        )
+        candidates = tuple(
+            replace(candidate, replay_results=survivor.replays)
+            if candidate.id == selected.id
+            else candidate
+            for candidate in packet.candidates
+        )
+        packet = replace(
+            packet,
+            candidates=candidates,
+            selected_candidate_id=selected.id,
+            metadata={
+                **metadata,
+                "discrimination_result": (
+                    f"unique-survivor:{run.discriminated_surface}"
+                ),
+            },
+        )
+    else:
+        result = "ambiguous" if run.survivors else "no-survivor"
+        packet = replace(
+            packet,
+            metadata={
+                **metadata,
+                "discrimination_result": result,
+                "survivors": ",".join(item.surface for item in run.survivors),
+            },
+        )
+
+    review = render_evolution_pr(packet) + "\n\n" + matrix
+    Path(out_file).write_text(review, encoding="utf-8")
+
+    if matrix_out:
+        Path(matrix_out).write_text(matrix, encoding="utf-8")
+    if packet_out:
+        Path(packet_out).write_text(
+            json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    if run.discriminated_surface:
+        selected = packet.selected_candidate()
+        click.echo(
+            f"Unique survivor: {run.discriminated_surface}; "
+            f"selected candidate={selected.id if selected else 'none'}."
+        )
+        click.echo(
+            "Selection is relative to the tested intervention matrix, not proof of "
+            "unique causal truth."
+        )
+    elif run.survivors:
+        click.echo(
+            "No automatic selection: multiple interventions survived — "
+            + ", ".join(item.surface for item in run.survivors)
+        )
+    else:
+        click.echo(
+            "No automatic selection: none of the tested interventions survived."
+        )
+    click.echo(f"Built {out_file}")
+
+
 @cli.command("discriminate")
 @click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
 @click.option(
