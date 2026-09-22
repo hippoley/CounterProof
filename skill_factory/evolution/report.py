@@ -17,12 +17,13 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
     lines: list[str] = [
         f"# EvoPR — {packet.packet_id}",
         "",
-        "> Your agent can rewrite itself. Make it open a pull request first.",
+        "> Your agent changed. Show the proof.",
         "",
         f"**Agent:** {packet.agent}",
         f"**Failure:** {packet.failure_summary}",
         "",
     ]
+
     if packet.metadata:
         lines.extend(
             [
@@ -36,21 +37,23 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
                 "",
             ]
         )
+
     lines.extend(
         [
-        "## 1. Decision Capsule",
-        "",
-        packet.decision_capsule,
-        "",
-        "## 2. Outcome Receipt",
-        "",
-        packet.outcome_receipt,
-        "",
-        "## 3. Causal hypotheses",
-        "",
-        "| ID | Target | Mechanism | Uncertainty |",
-        "|---|---|---|---:|",
-    ]
+            "## 1. Decision Capsule",
+            "",
+            packet.decision_capsule,
+            "",
+            "## 2. Outcome Receipt",
+            "",
+            packet.outcome_receipt,
+            "",
+            "## 3. Causal hypotheses",
+            "",
+            "| ID | Target | Mechanism | Uncertainty |",
+            "|---|---|---|---:|",
+        ]
+    )
     for hypothesis in packet.hypotheses:
         lines.append(
             f"| {hypothesis.id} | {hypothesis.target_surface} | "
@@ -62,8 +65,8 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
             "",
             "## 4. Candidate mutations",
             "",
-            "| Candidate | Surface | Mean delta | Regressions | Risk | Gate |",
-            "|---|---|---:|---:|---|---|",
+            "| Candidate | Surface | Mean delta | Regressions | Failures | Risk | Gate |",
+            "|---|---|---:|---:|---:|---|---|",
         ]
     )
     for candidate in packet.candidates:
@@ -71,7 +74,7 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
         lines.append(
             f"| {candidate.id}: {candidate.title} | {candidate.surface} | "
             f"{candidate.mean_delta:+.3f} | {candidate.regression_count} | "
-            f"{risks} | **{_status(candidate)}** |"
+            f"{candidate.failure_count} | {risks} | **{_status(candidate)}** |"
         )
 
     if selected is not None:
@@ -118,19 +121,23 @@ def render_evolution_pr(packet: EvolutionPacket) -> str:
             "## 6. Evidence semantics",
             "",
             (
-                "Verified outcomes, human corrections, undo, retry, silence, and "
-                "infrastructure failure are not treated as equivalent signals. "
-                "Infrastructure failures do not count as behavior failures."
+                "Human corrections, verifier outcomes, retries, undo, silence, and "
+                "infrastructure failures are not equivalent signals. Infrastructure "
+                "failures are excluded from behavioral regression counting."
             ),
             "",
-            "## 7. Lifecycle",
+            "## 7. Target lifecycle (roadmap)",
             "",
             (
-                "observe -> attribute -> mutate -> counterfactual replay -> holdout -> "
+                "observe -> attribute -> mutate -> controlled replay -> holdout -> "
                 "shadow/canary -> promote or rollback"
+            ),
+            "",
+            (
+                "Only the stages marked as tested by evopr audit should be treated as "
+                "implemented runtime behavior."
             ),
             "",
         ]
     )
-    lines[-4] = "## 7. Target lifecycle (roadmap)"
     return "\n".join(lines)
