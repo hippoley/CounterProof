@@ -133,7 +133,6 @@ def run_discrimination_manifest(
             "requested discrimination surfaces are unavailable: " + ", ".join(missing)
         )
 
-    baseline_by_case: dict[str, CommandOutcome] = {}
     variant_results: dict[str, list[ReplayResult]] = {
         surface: [] for surface in selected
     }
@@ -154,7 +153,6 @@ def run_discrimination_manifest(
             timeout_seconds=timeout,
             env={**common_env, "EVOPR_VARIANT": "baseline"},
         )
-        baseline_by_case[case_id] = baseline
 
         for surface in selected:
             variants = case["variants"]
