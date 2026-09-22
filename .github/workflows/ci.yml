@@ -69,6 +69,8 @@ jobs:
 
       - name: Serve packaged interactive demo
         run: |
+          test -f /tmp/evopr-clean/share/skill-factory/site/index.html
+          cd /tmp
           /tmp/evopr-clean/bin/evopr demo --port 8877 >/tmp/evopr-demo.log 2>&1 &
           echo $! >/tmp/evopr-demo.pid
           for i in {1..20}; do
