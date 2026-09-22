@@ -37,3 +37,14 @@ target-version = "py310"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+
+[tool.setuptools.data-files]
+"share/skill-factory/site" = [
+    "site/index.html",
+    "site/app.js",
+    "site/styles.css",
+]
+"share/skill-factory/site/data" = [
+    "site/data/evolution_cases.json",
+    "site/data/capabilities.json",
+]
