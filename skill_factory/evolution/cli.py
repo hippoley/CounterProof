@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -93,10 +94,13 @@ def audit(json_output: bool) -> None:
 @click.option("--port", default=8765, type=int, show_default=True)
 def demo(host: str, port: int) -> None:
     """Serve the interactive EvoPR playground from site/."""
-    root = Path(__file__).resolve().parents[2]
-    site_dir = root / "site"
+    checkout_site = Path(__file__).resolve().parents[2] / "site"
+    installed_site = Path(sys.prefix) / "share" / "skill-factory" / "site"
+    site_dir = checkout_site if (checkout_site / "index.html").exists() else installed_site
     if not (site_dir / "index.html").exists():
-        raise click.ClickException("site/index.html not found; run from a SkillFactory checkout")
+        raise click.ClickException(
+            "EvoPR playground assets were not found in the checkout or installed wheel"
+        )
 
     handler = partial(SimpleHTTPRequestHandler, directory=str(site_dir))
     server = ThreadingHTTPServer((host, port), handler)
