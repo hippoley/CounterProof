@@ -15,6 +15,7 @@ class VariantEvidence:
     surface: str
     replays: tuple[ReplayResult, ...]
     outcomes: tuple[CommandOutcome, ...]
+    predictions: tuple[str | None, ...] = ()
 
     @property
     def valid_replays(self) -> tuple[ReplayResult, ...]:
@@ -53,6 +54,40 @@ class VariantEvidence:
         )
 
     @property
+    def expected_signature(self) -> tuple[str, ...]:
+        return tuple(
+            "P" if prediction == "pass" else ("F" if prediction == "fail" else "?")
+            for prediction in self.predictions
+        )
+
+    @property
+    def prediction_coverage(self) -> int:
+        return sum(prediction is not None for prediction in self.predictions)
+
+    @property
+    def prediction_mismatch_count(self) -> int:
+        mismatches = 0
+        for replay, prediction in zip(self.replays, self.predictions, strict=False):
+            if prediction is None or replay.verdict == "infra_error":
+                continue
+            actual = "pass" if replay.candidate_score >= 1.0 else "fail"
+            if actual != prediction:
+                mismatches += 1
+        return mismatches
+
+    @property
+    def prediction_status(self) -> str:
+        if not self.predictions or self.prediction_coverage == 0:
+            return "unregistered"
+        if self.prediction_mismatch_count:
+            return "contradicted"
+        if self.prediction_coverage < len(self.replays):
+            return "partial"
+        if self.infra_error_count:
+            return "inconclusive"
+        return "supported"
+
+    @property
     def status(self) -> str:
         if not self.valid_replays or self.infra_error_count:
             return "inconclusive"
@@ -72,8 +107,21 @@ class DiscriminationRun:
         return tuple(item for item in self.variants if item.status == "survived")
 
     @property
-    def discriminated_surface(self) -> str | None:
+    def has_preregistered_predictions(self) -> bool:
+        return any(item.prediction_coverage > 0 for item in self.variants)
+
+    @property
+    def eligible_survivors(self) -> tuple[VariantEvidence, ...]:
         survivors = self.survivors
+        if not self.has_preregistered_predictions:
+            return survivors
+        return tuple(
+            item for item in survivors if item.prediction_status == "supported"
+        )
+
+    @property
+    def discriminated_surface(self) -> str | None:
+        survivors = self.eligible_survivors
         return survivors[0].surface if len(survivors) == 1 else None
 
     @property
@@ -93,9 +141,26 @@ class DiscriminationRun:
         return tuple(diagnostic)
 
     @property
+    def preregistered_diagnostic_cases(self) -> tuple[str, ...]:
+        if not self.variants:
+            return ()
+        case_ids = [item.case_id for item in self.variants[0].replays]
+        diagnostic: list[str] = []
+        for index, case_id in enumerate(case_ids):
+            expected = {
+                item.expected_signature[index]
+                for item in self.variants
+                if index < len(item.expected_signature)
+                and item.expected_signature[index] != "?"
+            }
+            if len(expected) > 1:
+                diagnostic.append(case_id)
+        return tuple(diagnostic)
+
+    @property
     def unresolved_pairs(self) -> tuple[tuple[str, str], ...]:
         pairs: list[tuple[str, str]] = []
-        survivors = self.survivors
+        survivors = self.eligible_survivors
         for left_index, left in enumerate(survivors):
             for right in survivors[left_index + 1 :]:
                 if left.signature == right.signature:
@@ -139,6 +204,9 @@ def run_discrimination_manifest(
     variant_outcomes: dict[str, list[CommandOutcome]] = {
         surface: [] for surface in selected
     }
+    variant_predictions: dict[str, list[str | None]] = {
+        surface: [] for surface in selected
+    }
 
     for case in cases:
         case_id = str(case["case_id"])
@@ -157,6 +225,7 @@ def run_discrimination_manifest(
         for surface in selected:
             variants = case["variants"]
             if surface not in variants:
+                variant_predictions[surface].append(None)
                 result = ReplayResult(
                     case_id=case_id,
                     suite=suite,
@@ -168,8 +237,26 @@ def run_discrimination_manifest(
                 variant_results[surface].append(result)
                 continue
 
+            variant_spec = variants[surface]
+            if isinstance(variant_spec, list):
+                argv = list(variant_spec)
+                expectation = None
+            elif isinstance(variant_spec, dict):
+                argv = list(variant_spec["argv"])
+                expectation = variant_spec.get("expect")
+                if expectation not in {None, "pass", "fail"}:
+                    raise ValueError(
+                        f"invalid expectation for {surface!r} in case {case_id!r}: "
+                        f"{expectation!r}"
+                    )
+            else:
+                raise TypeError(
+                    f"variant {surface!r} in case {case_id!r} must be argv or object"
+                )
+
+            variant_predictions[surface].append(expectation)
             outcome = run_command(
-                list(variants[surface]),
+                argv,
                 cwd=cwd,
                 timeout_seconds=timeout,
                 env={**common_env, "EVOPR_VARIANT": surface},
@@ -198,6 +285,7 @@ def run_discrimination_manifest(
             surface=surface,
             replays=tuple(variant_results[surface]),
             outcomes=tuple(variant_outcomes[surface]),
+            predictions=tuple(variant_predictions[surface]),
         )
         for surface in selected
     )
@@ -208,6 +296,8 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
     return {
         "discriminated_surface": run.discriminated_surface,
         "survivors": [item.surface for item in run.survivors],
+        "eligible_survivors": [item.surface for item in run.eligible_survivors],
+        "has_preregistered_predictions": run.has_preregistered_predictions,
         "variants": [
             {
                 "surface": item.surface,
@@ -217,6 +307,10 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
                 "failures": item.failure_count,
                 "infra_errors": item.infra_error_count,
                 "signature": list(item.signature),
+                "expected_signature": list(item.expected_signature),
+                "prediction_status": item.prediction_status,
+                "prediction_coverage": item.prediction_coverage,
+                "prediction_mismatches": item.prediction_mismatch_count,
                 "replays": [
                     {
                         "case_id": replay.case_id,
@@ -233,6 +327,7 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
             for item in run.variants
         ],
         "diagnostic_cases": list(run.diagnostic_cases),
+        "preregistered_diagnostic_cases": list(run.preregistered_diagnostic_cases),
         "unresolved_pairs": [list(pair) for pair in run.unresolved_pairs],
     }
 
@@ -245,14 +340,15 @@ def render_discrimination_markdown(
     lines = [
         "# EvoPR Discrimination Matrix",
         "",
-        "| Surface | Hypothesis | Status | Mean delta | Regressions | Failures |",
-        "|---|---|---|---:|---:|---:|",
+        "| Surface | Hypothesis | Runtime | Prediction | Mean delta | Regressions | Failures |",
+        "|---|---|---|---|---:|---:|---:|",
     ]
     for item in run.variants:
         mechanism = (mechanisms or {}).get(item.surface, "not supplied")
         lines.append(
             f"| {item.surface} | {mechanism} | **{item.status.upper()}** | "
-            f"{item.mean_delta:+.3f} | {item.regression_count} | {item.failure_count} |"
+            f"**{item.prediction_status.upper()}** | {item.mean_delta:+.3f} | "
+            f"{item.regression_count} | {item.failure_count} |"
         )
 
     lines.extend(["", "## Case matrix", ""])
@@ -277,6 +373,28 @@ def render_discrimination_markdown(
                     f"{replay.verdict} ({replay.baseline_score:.1f}->{replay.candidate_score:.1f})"
                 )
         lines.append(f"| {item.surface} | " + " | ".join(cells) + " |")
+
+    lines.extend(["", "## Prediction registration", ""])
+    if run.has_preregistered_predictions:
+        lines.append(
+            "Intervention outcomes were pre-registered where the manifest supplied "
+            "an expected PASS/FAIL result. Selection requires a surviving intervention "
+            "to have fully supported registered predictions."
+        )
+        if run.preregistered_diagnostic_cases:
+            lines.append("")
+            lines.append(
+                "Cases with different pre-registered predictions: "
+                + ", ".join(
+                    f"**{case_id}**" for case_id in run.preregistered_diagnostic_cases
+                )
+                + "."
+            )
+    else:
+        lines.append(
+            "No pre-registered predictions were supplied. Runtime comparison is still "
+            "useful, but causal interpretation has weaker protection against post-hoc stories."
+        )
 
     lines.extend(["", "## Diagnostic power", ""])
     if run.diagnostic_cases:
@@ -306,8 +424,8 @@ def render_discrimination_markdown(
             "This supports that hypothesis relative to the tested alternatives; it does not "
             "establish unique causal truth outside this probe set."
         )
-    elif len(run.survivors) > 1:
-        labels = ", ".join(item.surface for item in run.survivors)
+    elif len(run.eligible_survivors) > 1:
+        labels = ", ".join(item.surface for item in run.eligible_survivors)
         lines.append(
             f"Multiple hypotheses survived: **{labels}**. The current cases do not "
             "discriminate between them; add a case where their predicted behaviors differ."
