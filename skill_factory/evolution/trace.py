@@ -234,7 +234,7 @@ def _surface_scores(
             "The trace indicates the wrong route or workflow was selected.",
         )
 
-    if any(token in memory_text + trace_text for token in ("stale", "previous target", "old target", "sticky")):
+    if any(token in memory_text + trace_text for token in ("stale", "previous target", "previous_target", "old target", "old_target", "sticky")):
         bump(
             "memory",
             0.68,
