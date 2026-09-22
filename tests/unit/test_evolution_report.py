@@ -5,13 +5,13 @@ import pytest
 from click.testing import CliRunner
 
 from skill_factory.evolution.capabilities import capability_report
+from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.discriminate import (
     DiscriminationRun,
     VariantEvidence,
     render_discrimination_markdown,
     run_discrimination_manifest,
 )
-from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.models import (
     CandidateMutation,
     Evidence,
