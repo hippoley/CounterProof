@@ -13,6 +13,46 @@
 
 ---
 
+## 🧬 EvoPR — Pull Requests for Agent Behavior
+
+> **Your agent can rewrite itself. Make it open a pull request first.**
+
+SkillFactory is growing beyond trajectory → SKILL.md distillation. **EvoPR** turns a real failure
+into competing causal hypotheses, proposes the smallest behavior mutation across Skill / Policy /
+Router / Memory / Tool, replays the change, and emits a reviewable **Behavior PR** with a rollback
+reference.
+
+~~~text
+failure
+  ↓
+Decision Capsule + Outcome Receipt
+  ↓
+causal hypotheses
+  ↓
+minimal behavior mutations
+  ↓
+counterfactual replay + holdout
+  ↓
+Behavior Diff
+  ↓
+EVOLUTION PR
+  ↓
+shadow / canary
+  ↓
+merge or rollback
+~~~
+
+Try the first prototype:
+
+~~~bash
+pip install -e .
+evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
+~~~
+
+See [docs/EVOPR.md](docs/EVOPR.md) for the Verified Agent Evolution architecture.
+
+---
+
 Skill Factory is an open-source framework for **creating, evaluating, and managing Agent Skills** — reusable, versioned capability packages that make AI agents smarter over time.
 
 Instead of writing skills from scratch, Skill Factory **extracts them from real task trajectories**, failure logs, human corrections, and execution feedback — then validates every skill with deterministic verifiers and A/B evals before it enters the registry.
