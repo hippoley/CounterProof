@@ -63,6 +63,10 @@ pip install -e .
 
 evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
 cat EVOLUTION_PR.md
+
+# Launch the interactive frontend
+evopr demo
+# open http://127.0.0.1:8765
 ~~~
 
 The current prototype generates a review artifact like this:
@@ -598,7 +602,7 @@ pip install -e .
 evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
 ~~~
 
-Then open <code>EVOLUTION_PR.md</code> and review the agent change as if it were code.
+Then open <code>EVOLUTION_PR.md</code> and review the agent change as if it were code.\n\nFor the interactive playground:\n\n~~~bash\nevopr demo\n~~~\n\nOpen <code>http://127.0.0.1:8765</code>. The frontend lives in <code>site/</code> and exercises hypothesis selection, World Fork, replay, Behavior Diff, promotion, and rollback state.
 
 ---
 
