@@ -24,7 +24,7 @@ from .models import (
     ProbeSpec,
     ReplayResult,
 )
-from .probe_planner import plan_next_probes, render_probe_plan
+from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
@@ -216,6 +216,7 @@ def prove(
 @click.option("--matrix-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--packet-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--probe-plan-out", default=None, type=click.Path(dir_okay=False))
+@click.option("--probe-scaffold-out", default=None, type=click.Path(dir_okay=False))
 @click.option("--receipt-out", default=None, type=click.Path(dir_okay=False))
 def evolve(
     trace_file: str,
@@ -225,6 +226,7 @@ def evolve(
     matrix_out: str | None,
     packet_out: str | None,
     probe_plan_out: str | None,
+    probe_scaffold_out: str | None,
     receipt_out: str | None,
 ) -> None:
     """Actively discriminate hypotheses and select only a unique surviving mutation."""
@@ -311,6 +313,12 @@ def evolve(
         Path(matrix_out).write_text(matrix, encoding="utf-8")
     if probe_plan_out:
         Path(probe_plan_out).write_text(probe_plan, encoding="utf-8")
+    if probe_scaffold_out:
+        scaffold = build_probe_scaffold(packet, suggestions)
+        Path(probe_scaffold_out).write_text(
+            json.dumps(scaffold, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
     if packet_out:
         Path(packet_out).write_text(
             json.dumps(packet_to_dict(packet), indent=2, ensure_ascii=False),
