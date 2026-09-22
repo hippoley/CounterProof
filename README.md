@@ -60,6 +60,7 @@ Trace → Evolution Packet          TESTED
 Probe Contracts                   TESTED
 Active multi-intervention compare TESTED
 Trace → discriminate → selection  TESTED
+Ambiguity → Next Probe Plan       TESTED
 Trace → replay → Behavior Proof   TESTED
 Promotion gate                    TESTED
 Behavior PR Markdown renderer     TESTED
@@ -278,6 +279,69 @@ A missing variant, timeout, or infrastructure error makes that intervention **in
 
 ---
 
+# When the evidence is ambiguous
+
+EvoPR does not force a winner when two interventions produce the same behavior signature.
+
+Example:
+
+```text
+                    failure      normal holdout
+policy                 PASS            PASS
+skill                  PASS            PASS
+```
+
+This is not enough evidence to choose between them.
+
+Run:
+
+```bash
+evopr evolve examples/traces/tenant_failure.json \
+  --experiment-manifest examples/ambiguous_discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --out AMBIGUOUS_REVIEW.md \
+  --packet-out AMBIGUOUS_PACKET.json \
+  --probe-plan-out NEXT_PROBE.md
+```
+
+EvoPR leaves:
+
+```json
+{
+  "selected_candidate_id": null,
+  "metadata": {
+    "discrimination_result": "ambiguous"
+  }
+}
+```
+
+and generates a **Next Probe Plan**.
+
+For `policy vs skill`, the plan says roughly:
+
+```text
+KEEP FIXED
+the recorded failure context and unrelated runtime surfaces
+
+VARY INDEPENDENTLY
+1. execution precondition / commit gate
+2. learned instruction / demonstrations
+
+POLICY PREDICTS
+the hard guard alone changes whether the action may commit
+
+SKILL PREDICTS
+interpretation changes before execution even with policy unchanged
+
+FALSIFY
+if an isolated lever changes but its predicted behavior does not
+```
+
+This is automatic **experiment design**, not automatic domain test generation. A human or adapter still has to instantiate the proposed probe in the target environment.
+
+---
+
 # Real replay: smallest useful adapter
 
 EvoPR v0.1 uses a deliberately boring integration contract: commands.
@@ -420,6 +484,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Command replay | **TESTED** | Real baseline/candidate subprocesses execute in CI |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
 | Behavior PR renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
 | Clean install | **TESTED** | Wheel installs in a new venv and the CLI + packaged UI run outside the checkout |
 | Multiple mutation surfaces | **PARTIAL** | Data/review contract exists; generic live mutation executors do not |
@@ -428,7 +493,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Runtime rollback | **PARTIAL** | Rollback references exist; no general rollback executor |
 | Interactive playground | **DEMO** | Browser behavior is tested; displayed outcome matrix is fixture data |
 | Live GitHub / agent-framework adapters | **PLANNED** | No automatic external trace ingestion yet |
-| Automatic intervention / test synthesis | **PLANNED** | Experiment commands and discriminating cases are still supplied by users |
+| Automatic executable probe synthesis | **PLANNED** | Next Probe Plans exist, but adapters still must instantiate executable domain cases |
 | Captured counterfactual worlds | **PLANNED** | No arbitrary world snapshot / restore |
 | GitHub merge-to-promote / revert automation | **PLANNED** | Not wired yet |
 | Shadow / canary rollout | **PLANNED** | Not implemented |
@@ -536,7 +601,9 @@ Make replay richer without tying EvoPR to one agent stack:
 
 - automatic intervention construction
 - automatic discriminating-case generation
+- executable Probe Plan adapters
 - pairwise information-gain probe selection
+- automatic discriminating-case instantiation
 - calibrated evidence-weight updates
 
 ## v0.4 — Git-native evolution
@@ -574,6 +641,7 @@ skill_factory/
     ├── models.py
     ├── replay.py
     ├── discriminate.py
+    ├── probe_planner.py
     ├── trace.py
     ├── report.py
     ├── capabilities.py
@@ -584,6 +652,7 @@ examples/
 ├── EVOLUTION_PR.md
 ├── replay_suite.json
 ├── discrimination_suite.json
+├── ambiguous_discrimination_suite.json
 ├── traces/
 │   ├── tenant_failure.json
 │   └── homeai_correction.json
