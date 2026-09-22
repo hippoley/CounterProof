@@ -24,6 +24,7 @@ web = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
 
 [project.scripts]
 skill-factory = "skill_factory.cli.main:cli"
+evopr = "skill_factory.evolution.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
