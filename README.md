@@ -58,6 +58,7 @@ The following paths are exercised in CI:
 generic JSON / JSONL trace ingest TESTED
 Trace → Evolution Packet          TESTED
 Probe Contracts                   TESTED
+Pre-registered predictions       TESTED
 Active multi-intervention compare TESTED
 Trace → discriminate → selection  TESTED
 Ambiguity → Next Probe Plan       TESTED
@@ -236,7 +237,7 @@ a nearby case that must remain unchanged
 
 # Active discrimination
 
-The key difference from a single trajectory-to-skill pass is that EvoPR can compare **several explanations under the same cases**.
+The key difference from a single trajectory-to-skill pass is that EvoPR can compare **several explanations under the same cases** and register their expected outcomes **before** execution.
 
 ```bash
 evopr discriminate examples/traces/tenant_failure.json \
@@ -255,9 +256,18 @@ An experiment manifest supplies one baseline command and multiple intervention c
   "case_id": "cross-tenant-attack-07",
   "baseline": ["python", "eval.py", "baseline", "cross-tenant-attack-07"],
   "variants": {
-    "policy": ["python", "eval.py", "policy", "cross-tenant-attack-07"],
-    "skill": ["python", "eval.py", "skill", "cross-tenant-attack-07"],
-    "prompt": ["python", "eval.py", "prompt", "cross-tenant-attack-07"]
+    "policy": {
+      "argv": ["python", "eval.py", "policy", "cross-tenant-attack-07"],
+      "expect": "pass"
+    },
+    "skill": {
+      "argv": ["python", "eval.py", "skill", "cross-tenant-attack-07"],
+      "expect": "pass"
+    },
+    "prompt": {
+      "argv": ["python", "eval.py", "prompt", "cross-tenant-attack-07"],
+      "expect": "pass"
+    }
   }
 }
 ```
@@ -276,6 +286,38 @@ The security holdout is therefore a **diagnostic case**: it separates the policy
 If two surviving variants have identical signatures, EvoPR reports the pair as unresolved and asks for a new case where their predictions differ. It does not manufacture a winner.
 
 A missing variant, timeout, or infrastructure error makes that intervention **inconclusive**, not silently promotable.
+
+---
+
+## Why pre-register predictions?
+
+Without a prediction contract, it is easy to run an intervention first and invent the explanation afterward.
+
+EvoPR therefore tracks two different judgments:
+
+```text
+RUNTIME STATUS
+survived / falsified / inconclusive
+
+PREDICTION STATUS
+supported / contradicted / partial / unregistered
+```
+
+Example:
+
+```text
+policy expected  PASS PASS PASS
+policy observed  PASS PASS PASS
+→ prediction supported
+
+skill expected   PASS PASS PASS
+skill observed   PASS FAIL PASS
+→ prediction contradicted
+```
+
+If any experiment uses pre-registered predictions, automatic selection requires the surviving candidate to have a fully **supported** prediction contract. A runtime PASS is not enough when the hypothesis predicted something else.
+
+This still does not prove unique causality. It prevents one common failure mode: **post-hoc storytelling**.
 
 ---
 
@@ -482,6 +524,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Generic JSON / JSONL trace ingestion | **TESTED** | Raw traces compile into evidence-backed packets |
 | Probe Contracts | **TESTED** | Each heuristic hypothesis gets intervention/support/falsifier/holdout guidance |
 | Command replay | **TESTED** | Real baseline/candidate subprocesses execute in CI |
+| Pre-registered predictions | **TESTED** | Expected PASS/FAIL outcomes are recorded before execution; contradicted predictions can block selection |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
 | Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
