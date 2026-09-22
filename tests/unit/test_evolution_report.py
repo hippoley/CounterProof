@@ -1133,3 +1133,48 @@ def test_evopr_evolve_reports_prediction_blocked_instead_of_ambiguous(tmp_path):
     review = review_out.read_text(encoding="utf-8")
     assert "were blocked from selection" in review
     assert "AMBIGUOUS" not in review
+
+
+def test_env_probe_adapter_matches_command_matrix_behavior():
+    run = run_discrimination_manifest(
+        Path("examples/adapter_discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    by_surface = {item.surface: item for item in run.variants}
+
+    assert run.discriminated_surface == "policy"
+    assert by_surface["policy"].signature == ("P", "P", "P")
+    assert by_surface["policy"].prediction_status == "supported"
+    assert by_surface["skill"].signature == ("P", "F", "P")
+    assert by_surface["skill"].prediction_status == "contradicted"
+    assert by_surface["prompt"].signature == ("P", "F", "P")
+
+    first_outcome = by_surface["policy"].outcomes[0]
+    payload = json.loads(first_outcome.stdout)
+    assert payload["case_id"] == "failure-418"
+    assert payload["variant"] == "policy"
+    assert payload["payload"] == {"attack": False, "normal": False}
+
+
+def test_discrimination_manifest_refuses_draft_execution(tmp_path):
+    manifest = tmp_path / "draft.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "status": "draft",
+                "adapter": ["python", "-c", "raise SystemExit(0)"],
+                "cases": [
+                    {
+                        "case_id": "draft-case",
+                        "variants": {
+                            "policy": {"expect": "pass"}
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="status is 'draft'"):
+        run_discrimination_manifest(manifest, surfaces=("policy",))
