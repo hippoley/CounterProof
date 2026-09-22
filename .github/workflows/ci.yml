@@ -113,6 +113,22 @@ jobs:
           grep -q "Eligible for promotion" /tmp/EVOLUTION_REVIEW.md
           grep -q "EvoPR Discrimination Matrix" /tmp/EVOLUTION_REVIEW.md
 
+      - name: Run packaged ambiguity to next-probe workflow
+        run: |
+          cd /tmp
+          /tmp/evopr-clean/bin/evopr evolve \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/ambiguous_discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --out /tmp/AMBIGUOUS_REVIEW.md \
+            --packet-out /tmp/AMBIGUOUS_PACKET.json \
+            --probe-plan-out /tmp/NEXT_PROBE.md
+          grep -q '"selected_candidate_id": null' /tmp/AMBIGUOUS_PACKET.json
+          grep -q '"discrimination_result": "ambiguous"' /tmp/AMBIGUOUS_PACKET.json
+          grep -q "Separate policy from skill" /tmp/NEXT_PROBE.md
+          grep -q "EvoPR Next Probe Plan" /tmp/AMBIGUOUS_REVIEW.md
+
       - name: Serve packaged interactive demo
         run: |
           test -f /tmp/evopr-clean/share/skill-factory/site/index.html
