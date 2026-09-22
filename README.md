@@ -62,6 +62,7 @@ Pre-registered predictions       TESTED
 Active multi-intervention compare TESTED
 Trace → discriminate → selection  TESTED
 Ambiguity → Next Probe Plan       TESTED
+Proof Receipt + drift detection   TESTED
 Trace → replay → Behavior Proof   TESTED
 Promotion gate                    TESTED
 Behavior PR Markdown renderer     TESTED
@@ -289,7 +290,58 @@ A missing variant, timeout, or infrastructure error makes that intervention **in
 
 ---
 
-## Why pre-register predictions?
+## Proof Receipts: evidence should expire when inputs drift
+
+A Behavior Proof should not stay trustworthy after its source inputs silently change.
+
+Add:
+
+```bash
+evopr evolve examples/traces/tenant_failure.json \
+  --experiment-manifest examples/discrimination_suite.json \
+  --surface policy \
+  --surface skill \
+  --surface prompt \
+  --out EVOLUTION_REVIEW.md \
+  --receipt-out PROOF_RECEIPT.json
+```
+
+The receipt fingerprints:
+
+```text
+trace SHA256
+experiment-manifest SHA256
+tested surfaces
+observed behavior signatures
+pre-registered expected signatures
+prediction status
+runtime status
+eligible survivors
+selected candidate
+diagnostic cases
+```
+
+Later:
+
+```bash
+evopr verify-receipt PROOF_RECEIPT.json
+```
+
+If either source file changed, verification fails.
+
+You can also verify the same receipt against files moved to a different path:
+
+```bash
+evopr verify-receipt PROOF_RECEIPT.json \
+  --trace ./exported/trace.json \
+  --experiment-manifest ./exported/experiment.json
+```
+
+The current receipt fingerprints source artifacts. It does **not** yet fingerprint a full container image, dependency lock, model version or external service state.
+
+---
+
+# Why pre-register predictions?
 
 Without a prediction contract, it is easy to run an intervention first and invent the explanation afterward.
 
@@ -529,6 +581,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
 | Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
 | Behavior PR renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
+| Proof Receipt | **TESTED** | Trace + experiment hashes and observed/expected signatures can be stored and later verified for drift |
 | Clean install | **TESTED** | Wheel installs in a new venv and the CLI + packaged UI run outside the checkout |
 | Multiple mutation surfaces | **PARTIAL** | Data/review contract exists; generic live mutation executors do not |
 | Heuristic causal proposals | **PARTIAL** | Deterministic ranking exists; it is not learned or unique causal inference |
@@ -563,6 +616,7 @@ Every pull request checks:
    - `evopr prove`
    - `evopr discriminate`
    - `evopr evolve`
+   - `evopr verify-receipt`
    - `evopr demo`
 7. Chromium opens the playground and exercises:
    - Compare All Causes,
@@ -685,6 +739,7 @@ skill_factory/
     ├── replay.py
     ├── discriminate.py
     ├── probe_planner.py
+    ├── receipt.py
     ├── trace.py
     ├── report.py
     ├── capabilities.py
