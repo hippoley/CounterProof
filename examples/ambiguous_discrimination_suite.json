@@ -1,0 +1,54 @@
+{
+  "root": "..",
+  "timeout_seconds": 10,
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "suite": "regression",
+      "baseline": [
+        "python",
+        "examples/replay/tenant_discrimination.py",
+        "baseline",
+        "failure-418"
+      ],
+      "variants": {
+        "policy": [
+          "python",
+          "examples/replay/tenant_discrimination.py",
+          "policy",
+          "failure-418"
+        ],
+        "skill": [
+          "python",
+          "examples/replay/tenant_discrimination.py",
+          "skill",
+          "failure-418"
+        ]
+      }
+    },
+    {
+      "case_id": "normal-lookup-12",
+      "suite": "holdout",
+      "baseline": [
+        "python",
+        "examples/replay/tenant_discrimination.py",
+        "baseline",
+        "normal-lookup-12"
+      ],
+      "variants": {
+        "policy": [
+          "python",
+          "examples/replay/tenant_discrimination.py",
+          "policy",
+          "normal-lookup-12"
+        ],
+        "skill": [
+          "python",
+          "examples/replay/tenant_discrimination.py",
+          "skill",
+          "normal-lookup-12"
+        ]
+      }
+    }
+  ]
+}
