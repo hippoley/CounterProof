@@ -881,3 +881,79 @@ def test_discriminate_json_exposes_next_probe_suggestions_when_ambiguous(tmp_pat
     assert raw["survivors"] == ["policy", "skill"]
     assert len(raw["next_probe_suggestions"]) == 1
     assert raw["next_probe_suggestions"][0]["title"] == "Separate policy from skill"
+
+
+def test_preregistered_predictions_are_scored_before_selection():
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    by_surface = {item.surface: item for item in run.variants}
+
+    assert run.has_preregistered_predictions is True
+    assert by_surface["policy"].expected_signature == ("P", "P", "P")
+    assert by_surface["policy"].prediction_status == "supported"
+    assert by_surface["policy"].prediction_mismatch_count == 0
+
+    assert by_surface["skill"].expected_signature == ("P", "P", "P")
+    assert by_surface["skill"].signature == ("P", "F", "P")
+    assert by_surface["skill"].prediction_status == "contradicted"
+    assert by_surface["skill"].prediction_mismatch_count == 1
+
+    assert run.discriminated_surface == "policy"
+    assert tuple(item.surface for item in run.eligible_survivors) == ("policy",)
+
+
+def test_surviving_runtime_variant_with_wrong_preregistered_prediction_is_not_selectable():
+    replays = (
+        ReplayResult("failure", "regression", "pass", 0.0, 1.0),
+        ReplayResult("normal", "holdout", "pass", 1.0, 1.0),
+    )
+    variant = VariantEvidence(
+        surface="policy",
+        replays=replays,
+        outcomes=(),
+        predictions=("fail", "pass"),
+    )
+    run = DiscriminationRun(variants=(variant,))
+
+    assert variant.status == "survived"
+    assert variant.prediction_status == "contradicted"
+    assert variant.prediction_mismatch_count == 1
+    assert run.survivors == (variant,)
+    assert run.eligible_survivors == ()
+    assert run.discriminated_surface is None
+
+
+def test_ambiguous_preregistered_survivors_stay_ambiguous():
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    by_surface = {item.surface: item for item in run.variants}
+
+    assert by_surface["policy"].prediction_status == "supported"
+    assert by_surface["skill"].prediction_status == "supported"
+    assert tuple(item.surface for item in run.eligible_survivors) == (
+        "policy",
+        "skill",
+    )
+    assert run.discriminated_surface is None
+    assert run.unresolved_pairs == (("policy", "skill"),)
+
+
+def test_discrimination_payload_exposes_preregistered_prediction_evidence():
+    from skill_factory.evolution.discriminate import discrimination_to_dict
+
+    run = run_discrimination_manifest(
+        Path("examples/discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    payload = discrimination_to_dict(run)
+    by_surface = {item["surface"]: item for item in payload["variants"]}
+
+    assert payload["has_preregistered_predictions"] is True
+    assert payload["eligible_survivors"] == ["policy"]
+    assert by_surface["policy"]["prediction_status"] == "supported"
+    assert by_surface["skill"]["prediction_status"] == "contradicted"
+    assert by_surface["skill"]["prediction_mismatches"] == 1
