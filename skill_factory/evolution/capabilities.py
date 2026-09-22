@@ -1,6 +1,4 @@
 """Machine-readable truth table for EvoPR capabilities."""
-from __future__ import annotations
-
 
 CAPABILITIES: tuple[dict[str, str], ...] = (
     {
