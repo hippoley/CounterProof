@@ -11,7 +11,14 @@ from pathlib import Path
 import click
 
 from .capabilities import capability_report
-from .models import CandidateMutation, Evidence, EvolutionPacket, Hypothesis, ProbeSpec, ReplayResult
+from .models import (
+    CandidateMutation,
+    Evidence,
+    EvolutionPacket,
+    Hypothesis,
+    ProbeSpec,
+    ReplayResult,
+)
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
