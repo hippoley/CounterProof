@@ -195,6 +195,18 @@ def run_discrimination_manifest(
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     root = resolve_declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
+    manifest_status = str(raw.get("status", "ready"))
+    if manifest_status != "ready":
+        raise ValueError(
+            f"discrimination manifest status is {manifest_status!r}; review it and set status='ready' before execution"
+        )
+    adapter = raw.get("adapter")
+    if adapter is not None and (
+        not isinstance(adapter, list)
+        or not adapter
+        or not all(isinstance(part, str) and part for part in adapter)
+    ):
+        raise ValueError("adapter must be a non-empty argv list")
     cases = raw.get("cases", [])
     if not cases:
         raise ValueError("discrimination manifest contains no cases")
@@ -231,9 +243,25 @@ def run_discrimination_manifest(
         cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
         common_env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
+        if "payload" in case:
+            common_env["EVOPR_CASE_JSON"] = json.dumps(
+                case["payload"],
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+
+        baseline_spec = case.get("baseline", adapter)
+        if baseline_spec is None:
+            raise ValueError(
+                f"case {case_id!r} requires baseline argv or a top-level adapter"
+            )
+        if isinstance(baseline_spec, dict):
+            baseline_argv = list(baseline_spec["argv"])
+        else:
+            baseline_argv = list(baseline_spec)
 
         baseline = run_command(
-            list(case["baseline"]),
+            baseline_argv,
             cwd=cwd,
             timeout_seconds=timeout,
             env={**common_env, "EVOPR_VARIANT": "baseline"},
@@ -259,7 +287,12 @@ def run_discrimination_manifest(
                 argv = list(variant_spec)
                 expectation = None
             elif isinstance(variant_spec, dict):
-                argv = list(variant_spec["argv"])
+                variant_argv = variant_spec.get("argv", adapter)
+                if variant_argv is None:
+                    raise ValueError(
+                        f"variant {surface!r} in case {case_id!r} requires argv or a top-level adapter"
+                    )
+                argv = list(variant_argv)
                 expectation = variant_spec.get("expect")
                 if expectation not in {None, "pass", "fail"}:
                     raise ValueError(
