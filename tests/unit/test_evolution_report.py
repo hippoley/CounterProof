@@ -22,6 +22,7 @@ from skill_factory.evolution.models import (
     ReplayResult,
 )
 from skill_factory.evolution.probe_planner import plan_next_probes, render_probe_plan
+from skill_factory.evolution.receipt import file_sha256
 from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
 from skill_factory.evolution.report import render_evolution_pr
 from skill_factory.evolution.trace import compile_trace, load_trace
@@ -956,3 +957,121 @@ def test_discrimination_payload_exposes_preregistered_prediction_evidence():
     assert by_surface["policy"]["prediction_status"] == "supported"
     assert by_surface["skill"]["prediction_status"] == "contradicted"
     assert by_surface["skill"]["prediction_mismatches"] == 1
+
+
+def test_evopr_evolve_can_emit_reproducible_proof_receipt(tmp_path):
+    review = tmp_path / "review.md"
+    receipt = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(review),
+            "--receipt-out",
+            str(receipt),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(receipt.read_text(encoding="utf-8"))
+    assert raw["schema_version"] == 1
+    assert raw["discriminated_surface"] == "policy"
+    assert raw["selected_candidate_id"] == "C1"
+    assert raw["trace"]["sha256"] == file_sha256(
+        Path("examples/traces/tenant_failure.json")
+    )
+    assert raw["experiment"]["sha256"] == file_sha256(
+        Path("examples/discrimination_suite.json")
+    )
+    assert raw["runtime_signatures"]["policy"] == ["P", "P", "P"]
+    assert raw["expected_signatures"]["policy"] == ["P", "P", "P"]
+    assert raw["prediction_status"]["skill"] == "contradicted"
+
+
+def test_verify_receipt_cli_accepts_unchanged_sources(tmp_path):
+    receipt = tmp_path / "receipt.json"
+    build = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(tmp_path / "review.md"),
+            "--receipt-out",
+            str(receipt),
+        ],
+    )
+    assert build.exit_code == 0, build.output
+
+    verify = CliRunner().invoke(
+        evo_cli,
+        ["verify-receipt", str(receipt)],
+    )
+    assert verify.exit_code == 0, verify.output
+    assert "VERIFIED" in verify.output
+
+
+def test_verify_receipt_cli_rejects_changed_trace(tmp_path):
+    receipt = tmp_path / "receipt.json"
+    build = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(tmp_path / "review.md"),
+            "--receipt-out",
+            str(receipt),
+        ],
+    )
+    assert build.exit_code == 0, build.output
+
+    changed_trace = tmp_path / "changed_trace.json"
+    original = json.loads(
+        Path("examples/traces/tenant_failure.json").read_text(encoding="utf-8")
+    )
+    original["task"] = original["task"] + " changed"
+    changed_trace.write_text(
+        json.dumps(original, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    verify = CliRunner().invoke(
+        evo_cli,
+        [
+            "verify-receipt",
+            str(receipt),
+            "--trace",
+            str(changed_trace),
+            "--experiment-manifest",
+            "examples/discrimination_suite.json",
+        ],
+    )
+    assert verify.exit_code != 0
+    assert "trace hash mismatch" in verify.output
