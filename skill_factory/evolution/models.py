@@ -53,6 +53,14 @@ class ReplayResult:
     candidate_score: float
     note: str = ""
 
+    def __post_init__(self) -> None:
+        for label, score in (
+            ("baseline_score", self.baseline_score),
+            ("candidate_score", self.candidate_score),
+        ):
+            if not 0.0 <= score <= 1.0:
+                raise ValueError(f"{label} must be between 0 and 1")
+
     @property
     def delta(self) -> float:
         return self.candidate_score - self.baseline_score
@@ -93,10 +101,15 @@ class CandidateMutation:
         )
 
     @property
+    def failure_count(self) -> int:
+        return sum(1 for replay in self.valid_replays if replay.verdict == "fail")
+
+    @property
     def eligible_for_promotion(self) -> bool:
         valid = self.valid_replays
         return (
             bool(valid)
+            and self.failure_count == 0
             and self.mean_delta > 0
             and self.regression_count == 0
             and not self.risk_flags
@@ -115,6 +128,21 @@ class EvolutionPacket:
     candidates: tuple[CandidateMutation, ...] = ()
     selected_candidate_id: str | None = None
     metadata: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        hypothesis_ids = {hypothesis.id for hypothesis in self.hypotheses}
+        for candidate in self.candidates:
+            if candidate.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    f"candidate {candidate.id} references unknown hypothesis "
+                    f"{candidate.hypothesis_id}"
+                )
+        if self.selected_candidate_id is not None:
+            candidate_ids = {candidate.id for candidate in self.candidates}
+            if self.selected_candidate_id not in candidate_ids:
+                raise ValueError(
+                    f"selected_candidate_id {self.selected_candidate_id} does not exist"
+                )
 
     def selected_candidate(self) -> CandidateMutation | None:
         if self.selected_candidate_id is None:
