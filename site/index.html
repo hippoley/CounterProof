@@ -3,36 +3,78 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="SkillFactory live review surface, built from real repository skills and validation results.">
-  <title>SkillFactory · Failure to reusable skill</title>
+  <meta name="description" content="EvoPR — review agent behavior changes before they become permanent.">
+  <title>EvoPR · Pull requests for agent behavior</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header><a href="https://github.com/hippoley/SkillFactory" class="logo">SKILL<span>FACTORY</span></a><div id="build">VERIFYING BUILD…</div></header>
+  <header class="topbar">
+    <a class="brand" href="https://github.com/hippoley/SkillFactory"><span class="mark">E</span><span>EvoPR</span><i>/ SkillFactory</i></a>
+    <div class="topmeta"><span class="live-dot"></span><span>INTERACTIVE DEMO</span><span class="divider"></span><span id="build">BUILD —</span><a href="https://github.com/hippoley/SkillFactory/pull/2">PR #2 ↗</a></div>
+  </header>
   <main>
-    <section class="intro">
-      <p class="eyebrow">FAILURE → TRAJECTORY → SKILL → EVAL</p>
-      <h1>Agent skills should be forged from<br><em>what actually went wrong.</em></h1>
-      <p class="lead">Inspect the repository’s real smart-home skills, their trigger boundaries, evaluation cases and static safety checks. GitHub Actions rebuilds this review surface on every change.</p>
-      <div class="summary"><div><strong id="total">—</strong><span>skills</span></div><div><strong id="valid">—</strong><span>passing validation</span></div><div><strong id="cases">—</strong><span>evaluation cases</span></div></div>
+    <section class="hero">
+      <p class="kicker">VERIFIED AGENT EVOLUTION</p>
+      <h1>Your agent can rewrite itself.<br><em>Make it open a pull request first.</em></h1>
+      <p class="hero-copy">Inspect the failure, challenge the causal hypothesis, replay the same world, then promote only the smallest behavior change that survives evidence.</p>
+      <div class="hero-line"><span>TRACE</span><b>→</b><span>CAUSE</span><b>→</b><span>FORK</span><b>→</b><span>BEHAVIOR DIFF</span><b>→</b><span>PROMOTE / ROLLBACK</span></div>
     </section>
-
-    <section class="factory">
-      <aside>
-        <div class="aside-head"><span>REPOSITORY SKILLS</span><input id="search" placeholder="Filter skills"></div>
-        <div id="skills" class="skill-list"><p class="loading">Loading build output…</p></div>
-      </aside>
-      <article id="detail">
-        <div class="blank"><b>Select a skill</b><p>Open its contract, validation result, eval cases and trigger boundary.</p></div>
-      </article>
+    <section class="workspace">
+      <div class="workspace-head">
+        <div><p class="micro">ACTIVE EVOLUTION PACKET</p><select id="caseSelect" aria-label="Choose evolution case"></select></div>
+        <div class="packet-health"><span id="packetStatus" class="pill neutral">READY TO PROBE</span><span id="packetId" class="mono">—</span></div>
+      </div>
+      <div class="triage-grid">
+        <section class="pane failure-pane">
+          <div class="pane-title"><span>01</span><div><b>Reality</b><small>What actually happened</small></div></div>
+          <div class="failure-card"><span class="label danger">FAILURE</span><h2 id="failureTitle">—</h2><p id="failureSummary">—</p></div>
+          <div class="capsule"><div class="section-label">DECISION CAPSULE</div><div id="decisionCapsule" class="capsule-body"></div></div>
+          <div class="section-label receipt-label">OUTCOME RECEIPT</div><div id="outcomeReceipt" class="receipt"></div>
+          <div class="section-label evidence-label">EVIDENCE</div><div id="evidenceList" class="evidence-list"></div>
+        </section>
+        <section class="pane probe-pane">
+          <div class="pane-title"><span>02</span><div><b>Causal Probe</b><small>Challenge the explanation</small></div></div>
+          <div class="probe-instruction"><span class="pulse"></span><p>Select the mechanism you think caused the failure. EvoPR will fork the recorded world and test its mutation.</p></div>
+          <div id="hypothesisList" class="hypothesis-list"></div>
+          <button id="forkBtn" class="primary-action"><span>FORK WORLD</span><small>same task · same state · one capability changed</small></button>
+          <div id="worldFork" class="world-fork hidden">
+            <div class="fork-head"><span>COUNTERFACTUAL REPLAY</span><span id="forkHypothesis" class="mono">—</span></div>
+            <div class="worlds">
+              <div class="world baseline"><div class="world-top"><span>BASELINE</span><i>recorded</i></div><div id="baselineFlow" class="flow"></div><div id="baselineResult" class="world-result bad">FAIL</div></div>
+              <div class="world candidate"><div class="world-top"><span>CANDIDATE</span><i>mutation</i></div><div id="candidateFlow" class="flow"></div><div id="candidateResult" class="world-result pending">NOT RUN</div></div>
+            </div>
+            <button id="replayBtn" class="replay-action">RUN REPLAY <span>⌘↵</span></button>
+          </div>
+        </section>
+        <section class="pane diff-pane">
+          <div class="pane-title"><span>03</span><div><b>Behavior PR</b><small>Review what changes in the same world</small></div></div>
+          <div class="selected-mutation"><div><span class="section-label">SELECTED MUTATION</span><h3 id="mutationTitle">Choose a hypothesis</h3></div><span id="surfaceTag" class="surface-tag">—</span></div>
+          <div class="behavior-diff">
+            <div class="diff-head"><span>BEHAVIOR DIFF</span><span>decision-level</span></div>
+            <div class="diff-block before"><span>BEFORE</span><pre id="beforeDiff">Select a hypothesis to inspect its behavior mutation.</pre></div>
+            <div class="diff-arrow">↓</div>
+            <div class="diff-block after"><span>AFTER</span><pre id="afterDiff">—</pre></div>
+          </div>
+          <div class="replay-metrics"><div><span>MEAN Δ</span><strong id="meanDelta">—</strong></div><div><span>REGRESSIONS</span><strong id="regressions">—</strong></div><div><span>RISK FLAGS</span><strong id="riskFlags">—</strong></div></div>
+          <div id="replayMatrix" class="replay-matrix empty"><span>REPLAY MATRIX</span><p>Fork the world and run replay to produce promotion evidence.</p></div>
+          <div class="gate"><div><span class="section-label">PROMOTION GATE</span><b id="gateText">WAITING FOR REPLAY</b></div><span id="gateLight" class="gate-light"></span></div>
+          <div class="actions"><button id="rollbackBtn" class="secondary-action" disabled>ROLLBACK</button><button id="promoteBtn" class="promote-action" disabled>PROMOTE CANDIDATE</button></div>
+          <p class="demo-note">Demo controls change browser state only. Git merge/revert wiring is the next integration step.</p>
+        </section>
+      </div>
     </section>
-
-    <section class="pipeline">
-      <p class="eyebrow">THE CONTRACT</p><h2>Not a prompt folder. A controlled learning loop.</h2>
-      <div class="steps"><div><i>01</i><b>Capture failure</b><span>Preserve the task, actions, observation and outcome.</span></div><div><i>02</i><b>Extract pattern</b><span>Generalize the reusable constraint—not the one-off answer.</span></div><div><i>03</i><b>Verify skill</b><span>Check structure, safety, scope and executable resources.</span></div><div><i>04</i><b>Run A/B eval</b><span>Keep only skills that improve behavior under held-out tasks.</span></div></div>
+    <section class="manifesto">
+      <div><p class="kicker">THE DIFFERENCE</p><h2>Git shows what bytes changed.<br><em>EvoPR shows what the agent will do differently.</em></h2></div>
+      <div class="manifesto-grid">
+        <div><span>01</span><b>Attribute</b><p>Don’t turn every failure into a prompt edit. Compete causal explanations.</p></div>
+        <div><span>02</span><b>Intervene minimally</b><p>Change a Skill, policy, router, memory or tool contract—whichever actually failed.</p></div>
+        <div><span>03</span><b>Replay</b><p>Fixing the original failure is insufficient. Holdouts and regressions are first-class.</p></div>
+        <div><span>04</span><b>Stay reversible</b><p>Every promoted capability change carries provenance, scope and a rollback reference.</p></div>
+      </div>
     </section>
   </main>
-  <footer><span>SkillFactory</span><span>Forge agent skills from real task failures, not imagination.</span><a href="https://github.com/hippoley/SkillFactory">Source</a></footer>
+  <div id="toast" class="toast"></div>
+  <footer><span>EvoPR / SkillFactory</span><span>Agents will learn. The question is whether you can review what they learned.</span><a href="https://github.com/hippoley/SkillFactory">GitHub ↗</a></footer>
   <script src="app.js"></script>
 </body>
 </html>
