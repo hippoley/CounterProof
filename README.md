@@ -27,13 +27,19 @@ It is:
 EvoPR explores a Git-like review contract for agent behavior.
 
 ```text
-failure
+raw trace
   ↓
-evidence + decision context
+Decision Capsule + Outcome Receipt
   ↓
-candidate mutation
+evidence extraction
   ↓
-baseline / candidate replay
+competing hypotheses
+  ↓
+falsifiable Probe Contracts
+  ↓
+one candidate mutation
+  ↓
+REAL baseline / candidate replay
   ↓
 Behavior Proof
   ↓
@@ -47,10 +53,12 @@ This repository is an **early executable prototype**, not a finished self-evolvi
 The following paths are exercised in CI:
 
 ```text
-Evolution Packet                  TESTED
+generic JSON / JSONL trace ingest TESTED
+Trace → Evolution Packet          TESTED
+Probe Contracts                   TESTED
+Trace → replay → Behavior Proof   TESTED
 Promotion gate                    TESTED
 Behavior PR Markdown renderer     TESTED
-evopr build                       TESTED
 command-based baseline replay     TESTED
 clean wheel install               TESTED
 interactive browser flow          TESTED UI / FIXTURE DATA
@@ -59,8 +67,8 @@ interactive browser flow          TESTED UI / FIXTURE DATA
 These are **not implemented yet**:
 
 ```text
-automatic trace / PR ingestion
-automatic causal-hypothesis generation
+live GitHub / framework trace adapters
+learned / unique causal attribution
 captured world-state forks
 automatic mutation application to every surface
 GitHub PR open / merge / revert automation
@@ -102,7 +110,9 @@ evopr demo
 # http://127.0.0.1:8765
 ```
 
-The command replay is not a mocked UI animation. EvoPR launches the baseline and candidate processes, records return codes, duration and output, and can attach those measured results directly to the selected mutation in the Behavior PR.
+The trace compiler extracts the last relevant decision before a negative outcome, builds a Decision Capsule and Outcome Receipt, converts corrections/verifier results into evidence, ranks candidate mutation surfaces, and creates one falsifiable Probe Contract per hypothesis.
+
+Those hypotheses are **heuristic proposals, not causal truth**. The command replay then launches real baseline and candidate processes, records return codes, duration and output, and attaches measured evidence to the selected mutation.
 
 The current example intentionally uses a tiny deterministic fixture so the behavior is reproducible in CI. Your project can replace those commands with its own tests, evaluator, agent harness, simulator or workflow.
 
@@ -140,6 +150,69 @@ EvoPR asks:
 > **In the same case, where did behavior diverge?**
 
 The browser interaction itself is exercised in headless Chromium in CI. The replay values shown in that browser demo are fixtures; real command replay lives in the CLI.
+
+---
+
+# Raw trace → proof
+
+A minimal raw trace looks like:
+
+~~~json
+{
+  "trace_id": "tenant-scope-418",
+  "agent": "coding-agent",
+  "events": [
+    {
+      "type": "decision",
+      "world_state": {"tenant_scope": "provisional"},
+      "selected_action": "query_database",
+      "guards": {"tenant_scope_validated": false}
+    },
+    {
+      "type": "human_correction",
+      "text": "Validate tenant scope before database access.",
+      "surface_hint": "policy"
+    },
+    {
+      "type": "test_failure",
+      "text": "Cross-tenant regression reproduced."
+    }
+  ]
+}
+~~~
+
+Compile without running anything:
+
+~~~bash
+evopr ingest examples/traces/tenant_failure.json --out EVOLUTION_PACKET.json
+~~~
+
+Or go end to end:
+
+~~~bash
+evopr prove examples/traces/tenant_failure.json \
+  --replay-manifest examples/replay_suite.json \
+  --surface policy \
+  --out EVOLUTION_PR.md
+~~~
+
+If `--surface` is omitted, EvoPR tests the top heuristic candidate and labels the report accordingly. Replay evidence can support or reject that mutation, but it still does not establish unique causal truth.
+
+Each generated hypothesis also gets a **Probe Contract**:
+
+~~~text
+INTERVENTION
+change only one behavior surface
+
+SUPPORTS IF
+the original failure disappears
+
+FALSIFIED IF
+the failure survives, or an unrelated case regresses
+
+HOLDOUT
+a nearby case that must remain unchanged
+~~~
 
 ---
 
@@ -198,6 +271,7 @@ The current default gate is intentionally inspectable:
 
 ```text
 at least one valid replay
+AND explicit replay failures == 0
 AND mean delta > 0
 AND regressions == 0
 AND risk_flags == []
@@ -209,9 +283,14 @@ This gate is simple. It is **not** presented as a statistically sufficient rollo
 
 ---
 
-# Evolution Packet
+# Trace compiler and Evolution Packet
 
-Today EvoPR expects an explicit packet rather than pretending it can already infer causality automatically.
+EvoPR now supports two entry points:
+
+1. an explicit Evolution Packet when you already know the review structure;
+2. a generic JSON / JSONL event trace that EvoPR compiles into a packet.
+
+The compiler proposes causal surfaces with explicit uncertainty. It does **not** claim that heuristic ranking proves a unique root cause.
 
 ```json
 {
