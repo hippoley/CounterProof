@@ -61,6 +61,12 @@ try {
     throw new Error("ambiguous comparison did not produce a next probe");
   }
 
+  // The first screen must communicate the concrete proof-of-fix wedge.
+  const witnessHero = await page.locator(".witness-hero").textContent();
+  if (!witnessHero.includes("WITNESSED") || !witnessHero.includes("BASE CODE + PR TEST")) {
+    throw new Error("Regression Witness hero is missing the before/after proof");
+  }
+
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
