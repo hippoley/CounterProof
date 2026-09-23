@@ -137,7 +137,7 @@ def _name_status(repo: Path, base_ref: str, head_ref: str) -> list[tuple[str, st
         repo,
         "diff",
         "--name-status",
-        f"{base_ref}...{head_ref}",
+        f"{base_ref}..{head_ref}",
         "--",
     )
     rows: list[tuple[str, str]] = []
@@ -159,7 +159,7 @@ def _changed_added_lines(
         "diff",
         "--unified=0",
         "--no-color",
-        f"{base_ref}...{head_ref}",
+        f"{base_ref}..{head_ref}",
         "--",
     )
     path = ""
