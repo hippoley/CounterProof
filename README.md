@@ -75,6 +75,7 @@ jobs:
         with:
           test-command: "python -m pytest -q {tests}"
           require-witness: "true"
+          require-clean-integrity: "true"
 ```
 
 Counterproof automatically:
@@ -88,6 +89,20 @@ Counterproof automatically:
 6. emits WITNESSED / NOT WITNESSED / HEAD FAILING / INCONCLUSIVE
 7. updates one sticky PR comment instead of spamming the thread
 ```
+
+It also checks whether the PR changed the **judge** that produced the evidence:
+
+```text
+deleted test                     → review
+new skip / xfail                 → review
+continue-on-error: true          → review
+pytest || true                   → review
+pull_request trigger removed     → review
+workflow/test config changed     → surface explicitly
+```
+
+A fix and its proof can live in the same PR. Counterproof does not call that malicious; it makes the dependency visible so a reviewer knows the evidence is no longer independent.
+
 
 Example proof:
 
@@ -210,6 +225,8 @@ fitness vs diagnostic case roles             TESTED
 ambiguity → Next Probe Plan                  TESTED
 draft probe scaffold                         TESTED
 reviewed adapter binding                     TESTED
+Regression Witness                           TESTED
+Proof Integrity Guard                        TESTED
 structured COUNTERPROOF_RESULT json-v1       TESTED
 continuous scores + metrics + observations   TESTED
 Behavior Proof                               TESTED
