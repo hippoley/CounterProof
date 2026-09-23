@@ -18,6 +18,18 @@ class VariantEvidence:
     predictions: tuple[str | None, ...] = ()
     roles: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if self.predictions and len(self.predictions) != len(self.replays):
+            raise ValueError("predictions must align one-to-one with replays")
+        if self.roles and len(self.roles) != len(self.replays):
+            raise ValueError("roles must align one-to-one with replays")
+        invalid_roles = set(self.roles) - {"fitness", "diagnostic"}
+        if invalid_roles:
+            raise ValueError(
+                "roles must be fitness or diagnostic: "
+                + ", ".join(sorted(invalid_roles))
+            )
+
     @property
     def valid_replays(self) -> tuple[ReplayResult, ...]:
         return tuple(item for item in self.replays if item.verdict != "infra_error")
