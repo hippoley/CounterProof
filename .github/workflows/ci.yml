@@ -78,8 +78,9 @@ jobs:
           mkdir -p /tmp/counterproof-init-fixture/tests
           printf '[pytest]\n' > /tmp/counterproof-init-fixture/pytest.ini
 
-          /tmp/counterproof-clean/bin/counterproof init-github \
+          /tmp/counterproof-clean/bin/counterproof init \
             --repo /tmp/counterproof-init-fixture \
+            --action-ref main \
             --require-witness \
             --require-clean-integrity
 
