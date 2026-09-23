@@ -77,3 +77,7 @@ addopts = "-v --tb=short"
     "site/data/evolution_cases.json",
     "site/data/capabilities.json",
 ]
+
+"share/counterproof/schemas" = [
+    "schemas/proof-summary-v1.schema.json",
+]
