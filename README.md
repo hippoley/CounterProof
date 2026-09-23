@@ -55,12 +55,16 @@ It gives:
 ```bash
 pip install counterproof
 
+counterproof doctor
+
 counterproof init-github \
   --require-witness \
   --require-clean-integrity
 ```
 
-Counterproof detects the local test runner and writes:
+Counterproof first self-tests its own Git/worktree/integrity mechanics with `counterproof doctor`.
+
+Then `init-github` detects the local test runner, adds the matching runtime/dependency setup, and writes:
 
 ```text
 .github/workflows/counterproof.yml
@@ -89,6 +93,8 @@ counterproof init-github \
 ```
 
 It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
+
+For detected projects, generated workflows currently include practical setup for Python, Node, Go, Ruby and Java ecosystems. Custom commands stay intentionally explicit instead of guessing dependency installation.
 
 ### GitHub Action
 
