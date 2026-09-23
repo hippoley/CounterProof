@@ -67,6 +67,34 @@ try {
     throw new Error("Regression Witness hero is missing the before/after proof");
   }
 
+  // The PR Proof Lab must distinguish a real regression from a weak test.
+  await page.locator('[data-witness-scenario="weak-test"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessVerdict")?.textContent === "NOT WITNESSED"
+  );
+  if ((await page.locator("#witnessBaseVerdict").textContent()) !== "PASS") {
+    throw new Error("weak-test scenario should already pass on base");
+  }
+
+  // A changed judge is not silently treated as clean evidence.
+  await page.locator('[data-witness-scenario="judge-changed"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessVerdict")?.textContent === "REVIEW REQUIRED"
+  );
+  const integrityText = await page.locator("#witnessIntegrity").textContent();
+  if (!integrityText.includes("CI/TEST SURFACE CHANGED")) {
+    throw new Error("judge-changed scenario did not surface proof integrity risk");
+  }
+
+  // Reset to the primary proof-of-fix story.
+  await page.locator('[data-witness-scenario="witnessed"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessVerdict")?.textContent === "WITNESSED"
+  );
+  if ((await page.locator("#witnessBaseVerdict").textContent()) !== "FAIL") {
+    throw new Error("witnessed scenario must fail on base");
+  }
+
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
@@ -78,7 +106,7 @@ try {
     throw new Error("capability truth table is missing");
   }
 
-  console.log("EvoPR browser smoke: PASS");
+  console.log("Counterproof browser smoke: PASS");
 } finally {
   await browser.close();
 }
