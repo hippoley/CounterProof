@@ -11,6 +11,59 @@ const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;",
 const confidence = h => Math.round((1 - Number(h.uncertainty ?? .5)) * 100);
 const candidate = () => activeCase?.candidates.find(c => c.hypothesis_id === activeHypothesis?.id) || null;
 
+const witnessScenarios = {
+  witnessed: {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "FAIL",
+    baseNote: "pre-change behavior reproduced",
+    verdict: "WITNESSED",
+    integrity: "proof integrity · CLEAN",
+    explanation: "The changed test passes on the PR and fails on the old code.",
+    takeaway: "This test demonstrates a real regression delta."
+  },
+  "weak-test": {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "PASS",
+    baseNote: "the test already passed before the fix",
+    verdict: "NOT WITNESSED",
+    integrity: "proof integrity · CLEAN",
+    explanation: "Green on HEAD is not enough when the same test was already green on BASE.",
+    takeaway: "The test does not prove the bug was fixed."
+  },
+  "judge-changed": {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "FAIL",
+    baseNote: "pre-change behavior reproduced",
+    verdict: "REVIEW REQUIRED",
+    integrity: "proof integrity · CI/TEST SURFACE CHANGED",
+    explanation: "The regression witness exists, but the PR also changed how evidence is produced.",
+    takeaway: "Inspect the judge before trusting the green result."
+  }
+};
+
+function setWitnessScenario(name) {
+  const scenario = witnessScenarios[name] || witnessScenarios.witnessed;
+  byId("witnessHeadVerdict").textContent = scenario.head;
+  byId("witnessHeadNote").textContent = scenario.headNote;
+  byId("witnessBaseVerdict").textContent = scenario.base;
+  byId("witnessBaseNote").textContent = scenario.baseNote;
+  byId("witnessVerdict").textContent = scenario.verdict;
+  byId("witnessIntegrity").textContent = scenario.integrity;
+  byId("witnessExplanation").textContent = scenario.explanation;
+  byId("witnessTakeaway").textContent = scenario.takeaway;
+
+  document.querySelectorAll(".witness-scenario").forEach(button => {
+    button.classList.toggle("active", button.dataset.witnessScenario === name);
+  });
+
+  const verdict = byId("witnessVerdict");
+  verdict.classList.toggle("warn", name === "weak-test");
+  verdict.classList.toggle("review", name === "judge-changed");
+}
+
 function toast(message) {
   const el = byId("toast");
   el.textContent = message;
@@ -319,6 +372,14 @@ async function init() {
     byId("failureSummary").textContent = String(error);
   }
 }
+
+
+document.querySelectorAll(".witness-scenario").forEach(button => {
+  button.addEventListener("click", () => {
+    setWitnessScenario(button.dataset.witnessScenario || "witnessed");
+  });
+});
+setWitnessScenario("witnessed");
 
 byId("evidenceToggle").addEventListener("click", () => {
   const drawer = byId("evidenceDrawer");
