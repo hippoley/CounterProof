@@ -122,10 +122,29 @@ HEAD + changed tests  PASS
 BASE + same tests     FAIL
 judge unchanged       CLEAN
       ↓
-WITNESSED
+VERIFIED
 ```
 
 If the runner can only execute a whole suite, Counterproof says **SUITE DELTA** instead of overstating the evidence.
+
+### Unified machine verdict
+
+Counterproof exposes one aggregate result for bots, branch protection, dashboards, and higher-level agent runtimes:
+
+```text
+proof-status = verified | review-required | suite-delta | unproven | ...
+proof-ready  = true | false
+```
+
+Only this combination becomes `verified / true`:
+
+```text
+Regression Witness = WITNESSED
+Evidence mode      = PRECISE
+Proof Integrity    = CLEAN
+```
+
+`proof-ready` means Counterproof's configured evidence contract is satisfied. It does **not** claim the entire PR is generally safe to merge.
 
 ### GitHub Action
 
