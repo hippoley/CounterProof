@@ -59,14 +59,14 @@ python -m pip install "git+https://github.com/hippoley/SkillFactory.git"
 
 counterproof doctor
 
-counterproof init-github \
+counterproof init \
   --require-witness \
   --require-clean-integrity
 ```
 
 Counterproof first self-tests its own Git/worktree/integrity mechanics with `counterproof doctor`.
 
-Then `init-github` detects the local test runner, adds the matching runtime/dependency setup, and writes:
+Then `counterproof init` detects the local test runner, adds the matching runtime/dependency setup, and writes:
 
 ```text
 .github/workflows/counterproof.yml
@@ -89,14 +89,40 @@ Gradle
 If detection is wrong or your repository uses a custom harness:
 
 ```bash
-counterproof init-github \
+counterproof init \
   --test-command "./scripts/regression-check" \
   --require-witness
 ```
 
 It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
 
+Need a stable Action version instead of floating `main`?
+
+```bash
+counterproof init --action-ref v0.2.0
+```
+
+You can pin a tag, branch, or commit SHA. Counterproof validates the ref before writing it into workflow YAML.
+
+`counterproof init-github` remains available as a compatibility alias.
+
 For detected projects, generated workflows currently include practical setup for Python, Node, Go, Ruby and Java ecosystems. Custom commands stay intentionally explicit instead of guessing dependency installation.
+
+### 30-second mental model
+
+```text
+counterproof init
+      ↓
+opens PR
+      ↓
+HEAD + changed tests  PASS
+BASE + same tests     FAIL
+judge unchanged       CLEAN
+      ↓
+WITNESSED
+```
+
+If the runner can only execute a whole suite, Counterproof says **SUITE DELTA** instead of overstating the evidence.
 
 ### GitHub Action
 
