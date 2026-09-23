@@ -22,6 +22,7 @@ from .integrity import (
     render_integrity_markdown,
     write_integrity_json,
 )
+from .onboarding import initialize_github
 from .models import (
     CandidateMutation,
     Evidence,
@@ -547,6 +548,68 @@ def verify_receipt(
     click.echo(
         "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
     )
+
+
+@cli.command("init")
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option(
+    "--test-command",
+    default=None,
+    help="Override automatic test-runner detection.",
+)
+@click.option(
+    "--action-ref",
+    default="main",
+    show_default=True,
+    help="Counterproof Action git ref written into the workflow.",
+)
+@click.option(
+    "--strict-witness",
+    is_flag=True,
+    help="Require changed tests to produce a Regression Witness.",
+)
+@click.option(
+    "--strict-integrity",
+    is_flag=True,
+    help="Block when the PR changes test/CI evidence surfaces.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Replace an existing generated counterproof.yml workflow.",
+)
+def init(
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    strict_witness: bool,
+    strict_integrity: bool,
+    force: bool,
+) -> None:
+    """Detect the test stack and install the Counterproof PR workflow."""
+    try:
+        path, guess = initialize_github(
+            Path(repo_dir),
+            test_command=test_command,
+            action_ref=action_ref,
+            require_witness=strict_witness,
+            require_clean_integrity=strict_integrity,
+            force=force,
+        )
+    except (FileExistsError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(
+        f"Detected {guess.ecosystem} test stack "
+        f"({guess.confidence} confidence): {guess.reason}"
+    )
+    click.echo(f"Test command: {guess.test_command}")
+    click.echo(f"Wrote {path}")
+    if not strict_witness or not strict_integrity:
+        click.echo(
+            "Counterproof starts in advisory mode. Re-run with "
+            "--strict-witness and/or --strict-integrity when you are ready to gate merges."
+        )
 
 
 @cli.command("integrity")
