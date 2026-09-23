@@ -122,7 +122,7 @@ jobs:
           python-version: "3.11"
 
       # Install your project dependencies before this step.
-      - uses: hippoley/SkillFactory/actions/witness@main
+      - uses: hippoley/SkillFactory@main
         with:
           test-command: "python -m pytest -q {tests}"
           require-witness: "true"
@@ -221,6 +221,29 @@ reviewed behavior change
   ↓
 fingerprinted Proof Receipt
 ```
+
+## Need the deeper causal runtime?
+
+The root Action is intentionally the simple, useful default:
+
+```yaml
+- uses: hippoley/SkillFactory@main
+```
+
+It runs Regression Witness + Proof Integrity.
+
+If your team already has traces and executable intervention manifests, the advanced Action is separate:
+
+```yaml
+- uses: hippoley/SkillFactory/actions/behavior-proof@main
+  with:
+    trace: path/to/trace.json
+    experiment-manifest: path/to/experiments.json
+```
+
+That path enables competing hypotheses, pre-registered predictions, active discrimination, guarded selection and Proof Receipts without making every new user pay the complexity cost.
+
+---
 
 ## Why this is not Trace → Skill
 
