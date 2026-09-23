@@ -23,6 +23,13 @@
       "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically."
     },
     {
+      "id": "github-pr-proof",
+      "name": "Root GitHub Action for Regression Witness + Proof Integrity",
+      "status": "tested",
+      "evidence": "The repository root action is the low-friction PR proof path; init-github generates workflows against it, while the advanced causal Behavior Proof action remains available under actions/behavior-proof.",
+      "limitation": "The Action proves configured test behavior and evidence integrity; it does not autonomously approve, merge, or deploy the pull request."
+    },
+    {
       "id": "proof-integrity-guard",
       "name": "Proof Integrity Guard for changed tests and CI",
       "status": "tested",
@@ -30,11 +37,25 @@
       "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect."
     },
     {
+      "id": "install-doctor",
+      "name": "Install-level real-git doctor self-test",
+      "status": "tested",
+      "evidence": "counterproof doctor creates a temporary real Git repository and exercises structured-result parsing, Regression Witness, and Proof Integrity without relying on an external service.",
+      "limitation": "Doctor validates Counterproof's local mechanics, not the consuming repository's project-specific dependency graph or test semantics."
+    },
+    {
+      "id": "github-onboarding",
+      "name": "One-command GitHub onboarding with test-runner detection",
+      "status": "tested",
+      "evidence": "counterproof init-github detects common test runners and writes a pull-request workflow wired to Regression Witness and Proof Integrity without overwriting existing config by default.",
+      "limitation": "Project dependency installation is repository-specific and remains the consuming repository's responsibility."
+    },
+    {
       "id": "regression-witness",
       "name": "Regression Witness for agent pull requests",
       "status": "tested",
-      "evidence": "Counterproof detects changed tests, runs them on PR head, overlays the same tests onto a detached base worktree, and distinguishes witnessed fixes from tests that already passed before the change.",
-      "limitation": "The first release relies on repository-local test commands and changed-test filename patterns; dependency setup remains the consuming repository's responsibility."
+      "evidence": "In precise mode, Counterproof runs the exact changed tests on PR head and on detached base code with changed test support overlaid; only that mode can produce WITNESSED. Full-suite commands are reported separately as SUITE DELTA.",
+      "limitation": "Suite-level deltas are intentionally weaker evidence and cannot satisfy --require-witness. Dependency setup and runner-specific semantics remain the consuming repository's responsibility."
     },
     {
       "id": "proof-receipt",
@@ -192,10 +213,10 @@
     },
     {
       "id": "github-change-control",
-      "name": "Automatic Evolution PR open / merge / revert",
+      "name": "Automatic mutation PR open / merge / revert",
       "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "No GitHub automation is wired into the Counterproof runtime yet."
+      "evidence": "Roadmap only. PR proof comments and CI gates exist, but mutation lifecycle automation does not.",
+      "limitation": "Counterproof does not yet open, merge, deploy, or revert agent mutations automatically."
     },
     {
       "id": "online-rollout",
@@ -206,7 +227,7 @@
     }
   ],
   "summary": {
-    "tested": 20,
+    "tested": 23,
     "partial": 4,
     "demo": 1,
     "planned": 4
