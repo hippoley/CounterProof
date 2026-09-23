@@ -76,6 +76,12 @@ The browser scenarios are fixtures. **Real evidence comes from the CLI / GitHub 
 
 ---
 
+[![Counterproof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)
+
+> **Click the walkthrough to open the live Proof Lab.**
+
+---
+
 ## The fastest useful thing Counterproof does
 
 Take tests changed in a pull request.
@@ -420,6 +426,18 @@ examples/
 ├── replay/
 └── *_suite.json
 ```
+
+---
+
+## Share it
+
+A 1280×640 social card is included at:
+
+```text
+assets/social-preview.svg
+```
+
+Use it for the repository social preview, launch posts, HN/X screenshots, or release notes.
 
 ---
 
