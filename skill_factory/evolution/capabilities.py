@@ -30,6 +30,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect.",
     },
     {
+        "id": "install-doctor",
+        "name": "Install-level real-git doctor self-test",
+        "status": "tested",
+        "evidence": "counterproof doctor creates a temporary real Git repository and exercises structured-result parsing, Regression Witness, and Proof Integrity without relying on an external service.",
+        "limitation": "Doctor validates Counterproof's local mechanics, not the consuming repository's project-specific dependency graph or test semantics.",
+    },
+    {
         "id": "github-onboarding",
         "name": "One-command GitHub onboarding with test-runner detection",
         "status": "tested",
