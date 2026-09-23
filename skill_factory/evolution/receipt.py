@@ -8,6 +8,7 @@ from typing import Any
 
 from .discriminate import DiscriminationRun
 from .models import EvolutionPacket
+from .replay import structured_probe_result_to_dict
 
 
 def file_sha256(path: Path) -> str:
@@ -23,7 +24,7 @@ def build_proof_receipt(
 ) -> dict[str, Any]:
     """Build a deterministic receipt tying a proof to its exact source inputs."""
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "packet_id": packet.packet_id,
         "source_trace_id": packet.metadata.get("source_trace_id", ""),
         "trace": {
@@ -46,6 +47,24 @@ def build_proof_receipt(
         },
         "runtime_status": {
             item.surface: item.status for item in run.variants
+        },
+        "behavior_scores": {
+            item.surface: [replay.candidate_score for replay in item.replays]
+            for item in run.variants
+        },
+        "case_roles": {
+            item.surface: list(item.normalized_roles) for item in run.variants
+        },
+        "structured_probe_results": {
+            item.surface: [
+                (
+                    structured_probe_result_to_dict(outcome.probe_result)
+                    if outcome is not None
+                    else None
+                )
+                for outcome in item.outcomes
+            ]
+            for item in run.variants
         },
         "eligible_survivors": [
             item.surface for item in run.eligible_survivors
