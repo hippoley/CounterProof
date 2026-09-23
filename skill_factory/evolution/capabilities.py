@@ -107,6 +107,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically.",
     },
     {
+        "id": "diagnostic-case-roles",
+        "name": "Fitness vs diagnostic case-role semantics",
+        "status": "tested",
+        "evidence": "Diagnostic cases may intentionally pre-register FAIL outcomes; they contribute to prediction testing but are excluded from fitness failure/regression counting and cannot alone promote a mutation.",
+        "limitation": "Case roles are declared by the experiment author or scaffold generator; domain correctness still depends on the adapter and review.",
+    },
+    {
         "id": "reviewed-adapter-binding",
         "name": "Reviewed draft scaffold -> ready adapter binding",
         "status": "tested",
