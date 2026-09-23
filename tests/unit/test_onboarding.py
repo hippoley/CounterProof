@@ -186,3 +186,92 @@ def test_init_github_allows_full_suite_reporting_without_strong_gate(tmp_path):
     text = destination.read_text(encoding="utf-8")
     assert 'test-command: "go test ./..."' in text
     assert 'require-witness: "false"' in text
+
+
+
+def test_generic_npm_test_is_suite_mode(tmp_path):
+    (tmp_path / "package.json").write_text(
+        json.dumps({"scripts": {"test": "custom-runner --all"}}),
+        encoding="utf-8",
+    )
+
+    detection = detect_test_runner(tmp_path)
+
+    assert detection.runner == "npm-test"
+    assert detection.command == "npm test"
+    assert "{tests}" not in detection.command
+
+
+def test_strong_gate_rejects_generic_npm_suite(tmp_path):
+    (tmp_path / "package.json").write_text(
+        json.dumps({"scripts": {"test": "custom-runner --all"}}),
+        encoding="utf-8",
+    )
+
+    try:
+        init_github(tmp_path, require_witness=True)
+    except ValueError as exc:
+        assert "npm-test is configured as a full-suite command" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for generic npm full-suite gate")
+
+
+def test_action_ref_can_pin_generated_workflow(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    destination, _ = init_github(
+        tmp_path,
+        action_ref="v0.2.0",
+    )
+
+    text = destination.read_text(encoding="utf-8")
+    assert "uses: hippoley/SkillFactory@v0.2.0" in text
+
+
+def test_action_ref_rejects_yaml_or_ref_injection(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    for bad_ref in ("main\n    run: echo pwned", "../main", "main@evil", ""):
+        try:
+            init_github(tmp_path, action_ref=bad_ref, force=True)
+        except ValueError as exc:
+            assert "action_ref must be a conservative Git ref" in str(exc)
+        else:
+            raise AssertionError(f"expected ValueError for {bad_ref!r}")
+
+
+def test_counterproof_init_is_primary_onboarding_alias(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "init",
+            "--repo",
+            str(tmp_path),
+            "--action-ref",
+            "v0.2.0",
+            "--require-witness",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Detected pytest" in result.output
+    assert "Evidence mode: precise" in result.output
+    assert "Action ref: v0.2.0" in result.output
+    workflow = tmp_path / ".github" / "workflows" / "counterproof.yml"
+    assert workflow.exists()
+    text = workflow.read_text(encoding="utf-8")
+    assert "uses: hippoley/SkillFactory@v0.2.0" in text
+
+
+def test_init_github_remains_compatible_alias(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["init-github", "--repo", str(tmp_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Evidence mode: precise" in result.output
