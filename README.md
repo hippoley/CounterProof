@@ -6,6 +6,8 @@
 
 **Behavioral proof for agent-generated pull requests and self-modifying AI systems.**
 
+**No LLM. No API key. No server required for Regression Witness + Proof Integrity Guard.**
+
 [![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
@@ -21,6 +23,8 @@ A green CI run proves one thing:
 It does **not** prove that the agent's new test would have caught the bug before the fix.
 
 Counterproof starts there.
+
+The first-line PR proof is deterministic: Git history + your existing test runner. No model judges the model.
 
 ## Regression Witness
 
@@ -144,7 +148,7 @@ Counterproof currently auto-detects common Python, JavaScript/TypeScript, Go, Ja
 
 Agent PR volume is increasing faster than human review capacity. The hard part is no longer generating more code; it is deciding which agent changes deserve trust.
 
-Counterproof does **not** try to become another AI reviewer that comments on style, naming, or likely bugs.
+Counterproof does **not** try to become another AI reviewer that comments on style, naming, or likely bugs. It complements Copilot/PR-Agent-style review by producing evidence those reviewers and humans can inspect.
 
 It focuses on a narrower question:
 
