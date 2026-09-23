@@ -76,14 +76,32 @@ try {
     throw new Error("weak-test scenario should already pass on base");
   }
 
-  // A changed judge is not silently treated as clean evidence.
+  // A changed judge keeps the regression witness but blocks the aggregate proof.
   await page.locator('[data-witness-scenario="judge-changed"]').click();
   await page.waitForFunction(() =>
-    document.querySelector("#witnessVerdict")?.textContent === "REVIEW REQUIRED"
+    document.querySelector("#witnessVerdict")?.textContent === "WITNESSED"
+  );
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessProofStatus")?.textContent === "REVIEW REQUIRED"
   );
   const integrityText = await page.locator("#witnessIntegrity").textContent();
   if (!integrityText.includes("CI/TEST SURFACE CHANGED")) {
     throw new Error("judge-changed scenario did not surface proof integrity risk");
+  }
+  if ((await page.locator("#witnessProofReady").textContent()) !== "proof ready · FALSE") {
+    throw new Error("judge-changed scenario incorrectly became proof-ready");
+  }
+
+  // Full-suite evidence must stay weaker than an exact witness.
+  await page.locator('[data-witness-scenario="suite-delta"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessVerdict")?.textContent === "SUITE DELTA"
+  );
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessProofStatus")?.textContent === "SUITE DELTA"
+  );
+  if ((await page.locator("#witnessProofReady").textContent()) !== "proof ready · FALSE") {
+    throw new Error("suite-delta scenario incorrectly became proof-ready");
   }
 
   // Reset to the primary proof-of-fix story.
@@ -91,6 +109,12 @@ try {
   await page.waitForFunction(() =>
     document.querySelector("#witnessVerdict")?.textContent === "WITNESSED"
   );
+  await page.waitForFunction(() =>
+    document.querySelector("#witnessProofStatus")?.textContent === "VERIFIED"
+  );
+  if ((await page.locator("#witnessProofReady").textContent()) !== "proof ready · TRUE") {
+    throw new Error("witnessed + clean scenario should be proof-ready");
+  }
   if ((await page.locator("#witnessBaseVerdict").textContent()) !== "FAIL") {
     throw new Error("witnessed scenario must fail on base");
   }
