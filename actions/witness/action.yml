@@ -35,6 +35,9 @@ outputs:
   status:
     description: "witnessed, suite-delta, not-witnessed, head-failing, no-changed-tests, or inconclusive."
     value: ${{ steps.witness.outputs.status }}
+  evidence-mode:
+    description: "precise or suite."
+    value: ${{ steps.witness.outputs.evidence-mode }}
   report-path:
     description: "Generated Regression Witness Markdown path."
     value: ${{ steps.witness.outputs.report-path }}
@@ -135,7 +138,15 @@ runs:
         PY
         )"
 
+        mode="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f).get("mode", "unknown"))
+        PY
+        )"
+
         echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "evidence-mode=$mode" >> "$GITHUB_OUTPUT"
         echo "report-path=.counterproof/out/REGRESSION_WITNESS.md" >> "$GITHUB_OUTPUT"
         echo "json-path=.counterproof/out/REGRESSION_WITNESS.json" >> "$GITHUB_OUTPUT"
 
@@ -243,9 +254,24 @@ runs:
                 return "TIMEOUT"
             return "PASS" if command.get("returncode") == 0 else "FAIL"
 
-        witness_status = str(witness.get("status", "unknown")).upper().replace("-", " ")
+        raw_status = str(witness.get("status", "unknown"))
+        witness_status = raw_status.upper().replace("-", " ")
         witness_mode = str(witness.get("mode", "unknown")).upper()
-        integrity_status = str(integrity.get("status", "unknown")).upper().replace("-", " ")
+        raw_integrity = str(integrity.get("status", "unknown"))
+        integrity_status = raw_integrity.upper().replace("-", " ")
+
+        next_actions = {
+            "witnessed": "Evidence established. Review scope and the remaining checks.",
+            "suite-delta": "Provide a test command with {tests} to upgrade this to an exact witness.",
+            "not-witnessed": "Strengthen the regression test: the configured evidence also passes on base.",
+            "head-failing": "Fix the PR head or its test before claiming proof.",
+            "no-changed-tests": "Add or modify a regression test that reproduces the bug.",
+            "inconclusive": "Inspect the test harness and base replay; no proof claim is justified yet.",
+        }
+        next_action = next_actions.get(raw_status, "Inspect the detailed evidence before proceeding.")
+        if raw_integrity == "review-required":
+            next_action += " Review the PR's changes to tests/CI evidence surfaces first."
+
         changed_tests = "<br>".join(f"`{item}`" for item in tests[:8]) or "—"
         if len(tests) > 8:
             changed_tests += f"<br>… +{len(tests) - 8} more"
@@ -269,6 +295,7 @@ runs:
 | PR head + PR tests | **{verdict(head)}** |
 | Base code + same tests | **{verdict(base)}** |
 | Proof Integrity | **{integrity_status}** |
+| Next action | {next_action} |
 
 **Changed tests**
 
