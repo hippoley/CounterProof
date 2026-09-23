@@ -30,6 +30,10 @@ inputs:
     description: "Fail when the PR changes test/CI evidence surfaces."
     required: false
     default: "false"
+  require-proof-ready:
+    description: "Fail unless the unified Counterproof proof status is VERIFIED."
+    required: false
+    default: "false"
 
 outputs:
   status:
@@ -216,6 +220,8 @@ runs:
       id: summary
       if: ${{ always() }}
       shell: bash
+      env:
+        REQUIRE_PROOF_READY: ${{ inputs.require-proof-ready }}
       run: |
         set -euo pipefail
         mkdir -p .counterproof/out
@@ -284,6 +290,11 @@ runs:
           echo
           cat "$markdown"
         } >> "$GITHUB_STEP_SUMMARY"
+
+        if [[ "${REQUIRE_PROOF_READY,,}" == "true" && "$proof_ready" != "true" ]]; then
+          echo "Counterproof strict gate blocked: proof-status=$proof_status" >&2
+          exit 1
+        fi
 
     - name: Publish sticky witness comment
       if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' && always() }}
