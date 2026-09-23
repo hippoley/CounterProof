@@ -69,6 +69,7 @@ def test_init_github_generates_pr_head_checkout_and_counterproof_action(tmp_path
     assert 'test-command: "python -m pytest -q {tests}"' in text
     assert 'require-witness: "true"' in text
     assert 'require-clean-integrity: "true"' in text
+    assert 'require-proof-ready: "false"' in text
     assert "python -m pip install pytest" in text
 
 
@@ -186,6 +187,7 @@ def test_init_github_allows_full_suite_reporting_without_strong_gate(tmp_path):
     text = destination.read_text(encoding="utf-8")
     assert 'test-command: "go test ./..."' in text
     assert 'require-witness: "false"' in text
+    assert 'require-proof-ready: "false"' in text
 
 
 
@@ -293,3 +295,46 @@ def test_counterproof_init_defaults_to_advisory_gates(tmp_path):
     text = workflow.read_text(encoding="utf-8")
     assert 'require-witness: "false"' in text
     assert 'require-clean-integrity: "false"' in text
+    assert 'require-proof-ready: "false"' in text
+
+
+
+def test_counterproof_init_strict_generates_verified_gate(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["init", "--repo", str(tmp_path), "--strict"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Gate mode: strict (VERIFIED proof required)" in result.output
+    workflow = tmp_path / ".github" / "workflows" / "counterproof.yml"
+    text = workflow.read_text(encoding="utf-8")
+    assert 'require-proof-ready: "true"' in text
+    assert 'require-witness: "false"' in text
+    assert 'require-clean-integrity: "false"' in text
+
+
+def test_counterproof_init_strict_rejects_suite_only_runner(tmp_path):
+    (tmp_path / "go.mod").write_text("module example.com/demo\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["init", "--repo", str(tmp_path), "--strict"],
+    )
+
+    assert result.exit_code != 0
+    assert "--strict/--require-proof-ready requires a precise command containing {tests}" in result.output
+
+
+def test_direct_onboarding_strict_contract_sets_unified_gate(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    destination, _ = init_github(
+        tmp_path,
+        require_proof_ready=True,
+    )
+
+    text = destination.read_text(encoding="utf-8")
+    assert 'require-proof-ready: "true"' in text
