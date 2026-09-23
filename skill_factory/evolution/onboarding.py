@@ -245,10 +245,12 @@ def render_github_workflow(
     detection: TestRunnerDetection | None = None,
     require_witness: bool = False,
     require_clean_integrity: bool = False,
+    require_proof_ready: bool = False,
     action_ref: str = "main",
 ) -> str:
     witness = "true" if require_witness else "false"
     integrity = "true" if require_clean_integrity else "false"
+    proof_ready = "true" if require_proof_ready else "false"
     action_ref = _validate_action_ref(action_ref)
     escaped_command = test_command.replace('"', '\\"')
     head_expr = "$" + "{{ github.event.pull_request.head.sha }}"
@@ -282,6 +284,7 @@ jobs:
           test-command: "{escaped_command}"
           require-witness: "{witness}"
           require-clean-integrity: "{integrity}"
+          require-proof-ready: "{proof_ready}"
 """
 
 
@@ -292,6 +295,7 @@ def init_github(
     force: bool = False,
     require_witness: bool = False,
     require_clean_integrity: bool = False,
+    require_proof_ready: bool = False,
     action_ref: str = "main",
 ) -> tuple[Path, TestRunnerDetection | None]:
     """Create .github/workflows/counterproof.yml without overwriting by default."""
@@ -301,13 +305,14 @@ def init_github(
         detection = detect_test_runner(repo_root)
         test_command = detection.command
 
-    if require_witness and "{tests}" not in test_command:
+    if (require_witness or require_proof_ready) and "{tests}" not in test_command:
         runner = detection.runner if detection is not None else "custom"
+        gate = "--strict/--require-proof-ready" if require_proof_ready else "--require-witness"
         raise ValueError(
             f"{runner} is configured as a full-suite command ({test_command!r}). "
-            "--require-witness requires a precise command containing {tests}. "
-            "Either omit --require-witness to report suite-delta, or pass "
-            "--test-command with an explicit {tests} placeholder."
+            f"{gate} requires a precise command containing {{tests}}. "
+            "Either use advisory suite-delta mode, or pass --test-command "
+            "with an explicit {tests} placeholder."
         )
 
     destination = repo_root / ".github" / "workflows" / "counterproof.yml"
@@ -323,6 +328,7 @@ def init_github(
             detection=detection,
             require_witness=require_witness,
             require_clean_integrity=require_clean_integrity,
+            require_proof_ready=require_proof_ready,
             action_ref=action_ref,
         ),
         encoding="utf-8",
