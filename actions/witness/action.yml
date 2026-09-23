@@ -72,6 +72,18 @@ runs:
         fi
         echo "base=$base" >> "$GITHUB_OUTPUT"
 
+    - name: Check PR head checkout
+      if: ${{ github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      run: |
+        set -euo pipefail
+        actual_head="$(git rev-parse HEAD)"
+        if [[ -n "$EXPECTED_HEAD" && "$actual_head" != "$EXPECTED_HEAD" ]]; then
+          echo "::warning::Counterproof is running on $actual_head, not PR head $EXPECTED_HEAD. Checkout github.event.pull_request.head.sha for the cleanest witness."
+        fi
+
     - name: Fetch base commit
       shell: bash
       env:
