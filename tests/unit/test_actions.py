@@ -19,11 +19,15 @@ def test_root_action_is_regression_witness():
     assert action["inputs"]["test-command"]["required"] is True
     assert "integrity-status" in action["outputs"]
     assert "evidence-mode" in action["outputs"]
+    assert "proof-status" in action["outputs"]
+    assert "proof-ready" in action["outputs"]
+    assert "summary-json-path" in action["outputs"]
 
     steps = action["runs"]["steps"]
     names = [step["name"] for step in steps]
     assert "Run Regression Witness" in names
     assert "Check proof integrity" in names
+    assert "Build unified proof summary" in names
 
 
 def test_advanced_behavior_proof_action_is_valid_composite_action():
@@ -51,6 +55,8 @@ def test_regression_witness_action_alias_is_valid_composite_action():
     assert action["inputs"]["require-witness"]["default"] == "false"
     assert action["inputs"]["require-clean-integrity"]["default"] == "false"
     assert "integrity-status" in action["outputs"]
+    assert "proof-status" in action["outputs"]
+    assert "proof-ready" in action["outputs"]
 
     steps = action["runs"]["steps"]
     names = [step["name"] for step in steps]
@@ -61,6 +67,7 @@ def test_regression_witness_action_alias_is_valid_composite_action():
         "Fetch base commit",
         "Run Regression Witness",
         "Check proof integrity",
+        "Build unified proof summary",
         "Publish sticky witness comment",
     ]
 
@@ -96,6 +103,8 @@ def test_root_and_alias_emit_compact_proof_card():
         assert "| PR head + PR tests | **{verdict(head)}** |" in text
         assert "| Base code + same tests | **{verdict(base)}** |" in text
         assert "| Proof Integrity | **{integrity_status}** |" in text
+        assert "| Unified proof | **{proof_status}** |" in text
+        assert "| Proof ready | **{proof_ready}** |" in text
         assert "| Next action | {next_action} |" in text
         assert "evidence-mode=$mode" in text
         assert "<summary>Evidence details</summary>" in text
@@ -125,3 +134,15 @@ def test_proof_card_has_deterministic_status_actions():
     assert '"no-changed-tests": "Add or modify a regression test' in text
     assert '"inconclusive": "Inspect the test harness' in text
     assert 'if raw_integrity == "review-required"' in text
+
+
+
+def test_action_exports_unified_machine_verdict():
+    for path in ("action.yml", "actions/witness/action.yml"):
+        action = _load(path)
+        assert action["outputs"]["proof-status"]["value"] == "${{ steps.summary.outputs.proof-status }}"
+        assert action["outputs"]["proof-ready"]["value"] == "${{ steps.summary.outputs.proof-ready }}"
+        text = Path(path).read_text(encoding="utf-8")
+        assert "counterproof proof-summary \\" in text
+        assert 'echo "proof-status=$proof_status" >> "$GITHUB_OUTPUT"' in text
+        assert 'echo "proof-ready=$proof_ready" >> "$GITHUB_OUTPUT"' in text
