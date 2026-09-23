@@ -63,6 +63,14 @@ jobs:
           # Legacy CLI alias remains available for existing integrations.
           /tmp/counterproof-clean/bin/evopr --help
 
+      - name: Run packaged Counterproof doctor
+        run: |
+          set -euo pipefail
+          /tmp/counterproof-clean/bin/counterproof doctor --json-output > /tmp/COUNTERPROOF_DOCTOR.json
+          grep -q '"ok": true' /tmp/COUNTERPROOF_DOCTOR.json
+          grep -q '"name": "regression-witness"' /tmp/COUNTERPROOF_DOCTOR.json
+          grep -q '"name": "proof-integrity"' /tmp/COUNTERPROOF_DOCTOR.json
+
       - name: Run packaged one-command GitHub onboarding
         run: |
           set -euo pipefail
