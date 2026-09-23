@@ -6,7 +6,11 @@
 
 ```bash
 pip install counterproof
+
+counterproof doctor
 ```
+
+Doctor creates a temporary real Git repository and checks the local Counterproof install: structured results, Regression Witness, and Proof Integrity.
 
 ## 2. Generate the GitHub workflow
 
@@ -18,7 +22,7 @@ counterproof init-github \
   --require-clean-integrity
 ```
 
-Counterproof detects common test runners and writes:
+Counterproof detects common test runners, adds matching runtime/dependency setup, and writes:
 
 ```text
 .github/workflows/counterproof.yml
