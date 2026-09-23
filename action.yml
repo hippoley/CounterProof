@@ -33,7 +33,7 @@ inputs:
 
 outputs:
   status:
-    description: "witnessed, not-witnessed, head-failing, no-changed-tests, or inconclusive."
+    description: "witnessed, suite-delta, not-witnessed, head-failing, no-changed-tests, or inconclusive."
     value: ${{ steps.witness.outputs.status }}
   report-path:
     description: "Generated Regression Witness Markdown path."
