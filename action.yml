@@ -25,6 +25,10 @@ inputs:
     description: "Fail the Action unless exactly one eligible intervention survives."
     required: false
     default: "false"
+  comment-on-pr:
+    description: "Create or update one sticky Counterproof comment on pull requests."
+    required: false
+    default: "true"
 
 outputs:
   selection-state:
@@ -118,3 +122,74 @@ runs:
           echo
           cat "$proof"
         } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Publish sticky PR proof
+      if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        COUNTERPROOF_PROOF: ${{ steps.proof.outputs.proof-path }}
+        COUNTERPROOF_PACKET: ${{ steps.proof.outputs.packet-path }}
+      run: |
+        set -euo pipefail
+
+        pr_number="$(python - <<'PY'
+        import json, os
+        with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as f:
+            print(json.load(f)["pull_request"]["number"])
+        PY
+        )"
+
+        body_file="$(mktemp)"
+        export COUNTERPROOF_COMMENT_FILE="$body_file"
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        proof = Path(os.environ["COUNTERPROOF_PROOF"]).read_text(encoding="utf-8")
+        packet = json.loads(
+            Path(os.environ["COUNTERPROOF_PACKET"]).read_text(encoding="utf-8")
+        )
+        state = packet.get("metadata", {}).get("discrimination_result", "unknown")
+        selected = packet.get("selected_candidate_id") or "none"
+
+        max_chars = 12000
+        clipped = proof[:max_chars]
+        if len(proof) > max_chars:
+            clipped += "\n\n…proof truncated in PR comment; full artifact remains in the workflow."
+
+        body = f"""<!-- counterproof-behavior-proof -->
+## Counterproof · Behavior Proof
+
+**Selection state:** `{state}`  
+**Selected candidate:** `{selected}`
+
+<details>
+<summary>Open behavioral evidence</summary>
+
+{clipped}
+
+</details>
+
+> Every agent PR should come with proof, not confidence.
+"""
+        Path(os.environ["COUNTERPROOF_COMMENT_FILE"]).write_text(
+            body,
+            encoding="utf-8",
+        )
+        PY
+
+        existing_id="$(
+          gh api "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments" --paginate             --jq '.[] | select(.body | contains("<!-- counterproof-behavior-proof -->")) | .id'             2>/dev/null | head -n 1 || true
+        )"
+
+        if [[ -n "$existing_id" ]]; then
+          if ! gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing_id"             -F "body=@$body_file" >/dev/null; then
+            echo "::warning::Counterproof generated proof, but could not update the PR comment. Check pull-requests: write permission."
+          fi
+        else
+          if ! gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments"             -F "body=@$body_file" >/dev/null; then
+            echo "::warning::Counterproof generated proof, but could not create the PR comment. Check pull-requests: write permission."
+          fi
+        fi
