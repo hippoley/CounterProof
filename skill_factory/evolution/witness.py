@@ -318,14 +318,14 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         "",
         witness.note,
         "",
-        f"- **Base:** \`{witness.base_ref}\`",
-        f"- **Head:** \`{witness.head_ref}\`",
+        f"- **Base:** `{witness.base_ref}`",
+        f"- **Head:** `{witness.head_ref}`",
         f"- **Changed tests:** {len(witness.tests)}",
     ]
 
     if witness.tests:
         lines.extend(["", "### Tests replayed", ""])
-        lines.extend(f"- \`{path}\`" for path in witness.tests)
+        lines.extend(f"- `{path}`" for path in witness.tests)
 
     lines.extend(["", "### Behavior", ""])
     if witness.head is not None:
