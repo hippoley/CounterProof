@@ -12,11 +12,13 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ OPEN THE LIVE PROOF LAB**](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)
+### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#drop-it-into-a-pr) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
 
 [![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)
 
 **Click the panel. Break the proof. Change the judge. See what survives.**
+
+<sub>Works beside Claude Code · Codex · Copilot · Cursor · PR-Agent · human-written PRs — Counterproof verifies the evidence, not the author.</sub>
 
 </div>
 
