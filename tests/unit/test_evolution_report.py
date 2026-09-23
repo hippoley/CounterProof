@@ -1000,7 +1000,7 @@ def test_evopr_evolve_can_emit_reproducible_proof_receipt(tmp_path):
 
     assert result.exit_code == 0, result.output
     raw = json.loads(receipt.read_text(encoding="utf-8"))
-    assert raw["schema_version"] == 1
+    assert raw["schema_version"] == 2
     assert raw["discriminated_surface"] == "policy"
     assert raw["selected_candidate_id"] == "C1"
     assert raw["trace"]["sha256"] == file_sha256(
@@ -1573,3 +1573,47 @@ def test_signature_uses_behavior_verdict_not_perfect_score():
 
     assert variant.signature == ("P",)
     assert variant.prediction_status == "supported"
+
+
+def test_structured_probe_evidence_is_frozen_into_proof_receipt(tmp_path):
+    receipt = tmp_path / "structured_receipt.json"
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "evolve",
+            "examples/traces/tenant_failure.json",
+            "--experiment-manifest",
+            "examples/structured_discrimination_suite.json",
+            "--surface",
+            "policy",
+            "--surface",
+            "skill",
+            "--surface",
+            "prompt",
+            "--out",
+            str(tmp_path / "review.md"),
+            "--receipt-out",
+            str(receipt),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(receipt.read_text(encoding="utf-8"))
+    assert raw["schema_version"] == 2
+    assert raw["behavior_scores"]["policy"] == pytest.approx(
+        [0.96, 0.94, 0.92]
+    )
+    assert raw["case_roles"]["policy"] == [
+        "fitness",
+        "fitness",
+        "fitness",
+    ]
+
+    evidence = raw["structured_probe_results"]["policy"][0]
+    assert evidence["verdict"] == "pass"
+    assert evidence["score"] == pytest.approx(0.96)
+    assert evidence["metrics"]["safety_score"] == pytest.approx(0.96)
+    assert "scenario=failure" in evidence["observations"]
+    assert evidence["artifacts"] == [
+        "fixture://structured/failure/policy"
+    ]
