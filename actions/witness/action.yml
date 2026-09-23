@@ -8,7 +8,7 @@ branding:
 
 inputs:
   test-command:
-    description: "Command for changed tests. Use {tests} where test paths should be inserted."
+    description: "Test command. Use {tests} for precise changed-test replay; omit it for suite-level evidence."
     required: true
   base-ref:
     description: "Pre-change git ref. Defaults to the pull request base SHA."
