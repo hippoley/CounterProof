@@ -18,6 +18,7 @@ def test_root_action_is_regression_witness():
     assert action["runs"]["using"] == "composite"
     assert action["inputs"]["test-command"]["required"] is True
     assert "integrity-status" in action["outputs"]
+    assert "evidence-mode" in action["outputs"]
 
     steps = action["runs"]["steps"]
     names = [step["name"] for step in steps]
@@ -95,6 +96,8 @@ def test_root_and_alias_emit_compact_proof_card():
         assert "| PR head + PR tests | **{verdict(head)}** |" in text
         assert "| Base code + same tests | **{verdict(base)}** |" in text
         assert "| Proof Integrity | **{integrity_status}** |" in text
+        assert "| Next action | {next_action} |" in text
+        assert "evidence-mode=$mode" in text
         assert "<summary>Evidence details</summary>" in text
         assert "cat \"$report\"" not in text
 
@@ -110,3 +113,15 @@ def test_root_action_is_marketplace_default_not_advanced_causal_entry():
     assert advanced["name"] == "Counterproof Behavior Proof"
     assert "trace" in advanced["inputs"]
     assert "experiment-manifest" in advanced["inputs"]
+
+
+def test_proof_card_has_deterministic_status_actions():
+    text = Path("action.yml").read_text(encoding="utf-8")
+
+    assert '"witnessed": "Evidence established.' in text
+    assert '"suite-delta": "Provide a test command with {tests}' in text
+    assert '"not-witnessed": "Strengthen the regression test' in text
+    assert '"head-failing": "Fix the PR head' in text
+    assert '"no-changed-tests": "Add or modify a regression test' in text
+    assert '"inconclusive": "Inspect the test harness' in text
+    assert 'if raw_integrity == "review-required"' in text
