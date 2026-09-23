@@ -20,9 +20,9 @@ def evaluate(variant: str, payload: dict[str, object]) -> bool:
 
 
 def main() -> int:
-    variant = os.environ.get("EVOPR_VARIANT", "")
-    case_id = os.environ.get("EVOPR_CASE_ID", "")
-    payload_raw = os.environ.get("EVOPR_CASE_JSON", "{}")
+    variant = os.environ.get("COUNTERPROOF_VARIANT", os.environ.get("EVOPR_VARIANT", ""))
+    case_id = os.environ.get("COUNTERPROOF_CASE_ID", os.environ.get("EVOPR_CASE_ID", ""))
+    payload_raw = os.environ.get("COUNTERPROOF_CASE_JSON", os.environ.get("EVOPR_CASE_JSON", "{}"))
     try:
         payload = json.loads(payload_raw)
         ok = evaluate(variant, payload)
