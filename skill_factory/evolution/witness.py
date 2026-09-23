@@ -465,13 +465,13 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
     lines.extend(["", "### Behavior", ""])
     if witness.head is not None:
         lines.append(
-            f"- PR head: {'PASS' if witness.head.passed else 'FAIL'} "
+            f"- PR head: **{'PASS' if witness.head.passed else 'FAIL'}** "
             f"({witness.head.duration_ms} ms)"
         )
     if witness.base_with_head_tests is not None:
         lines.append(
             "- Base code + PR tests: "
-            f"{'PASS' if witness.base_with_head_tests.passed else 'FAIL'} "
+            f"**{'PASS' if witness.base_with_head_tests.passed else 'FAIL'}** "
             f"({witness.base_with_head_tests.duration_ms} ms)"
         )
 
