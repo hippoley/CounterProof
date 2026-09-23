@@ -33,6 +33,11 @@ from .models import (
     ReplayResult,
 )
 from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
+from .proof_summary import (
+    load_and_build_proof_summary,
+    render_proof_summary,
+    write_proof_summary,
+)
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
@@ -741,6 +746,68 @@ def integrity(
     if require_clean and report.status != "clean":
         raise click.ClickException(
             f"proof integrity review required: {len(report.findings)} finding(s)"
+        )
+
+
+@cli.command("proof-summary")
+@click.option(
+    "--witness-json",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Regression Witness JSON file.",
+)
+@click.option(
+    "--integrity-json",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Proof Integrity JSON file.",
+)
+@click.option(
+    "--out",
+    "out_file",
+    default="PROOF_SUMMARY.json",
+    show_default=True,
+)
+@click.option(
+    "--markdown-out",
+    default="PROOF_SUMMARY.md",
+    show_default=True,
+)
+@click.option(
+    "--require-proof-ready",
+    is_flag=True,
+    help="Exit non-zero unless Counterproof's configured proof contract is satisfied.",
+)
+def proof_summary_cmd(
+    witness_json: str,
+    integrity_json: str,
+    out_file: str,
+    markdown_out: str,
+    require_proof_ready: bool,
+) -> None:
+    """Aggregate witness + integrity into one conservative machine verdict."""
+    try:
+        summary = load_and_build_proof_summary(
+            Path(witness_json),
+            Path(integrity_json),
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    write_proof_summary(Path(out_file), summary)
+    Path(markdown_out).write_text(
+        render_proof_summary(summary),
+        encoding="utf-8",
+    )
+
+    click.echo(f"Proof status: {summary.proof_status}")
+    click.echo(f"Proof ready: {str(summary.proof_ready).lower()}")
+    click.echo(f"Wrote {out_file}")
+    click.echo(f"Wrote {markdown_out}")
+
+    if require_proof_ready and not summary.proof_ready:
+        raise click.ClickException(
+            f"proof-ready required, got status={summary.proof_status}"
         )
 
 
