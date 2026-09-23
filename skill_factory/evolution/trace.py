@@ -1,4 +1,4 @@
-"""Compile generic agent traces into reviewable EvoPR packets.
+"""Compile generic agent traces into reviewable Counterproof packets.
 
 This module intentionally uses deterministic heuristics. It can extract evidence and
 propose hypotheses, but it does not claim unique causal attribution.
