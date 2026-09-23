@@ -100,7 +100,7 @@ jobs:
 
           grep -q '"status": "witnessed"' /tmp/REGRESSION_WITNESS.json
           grep -q '"witnessed": true' /tmp/REGRESSION_WITNESS.json
-          grep -q 'REGRESSION WITNESS' /tmp/REGRESSION_WITNESS.md
+          grep -q 'Counterproof · Regression Witness' /tmp/REGRESSION_WITNESS.md
           grep -q 'Base code + PR tests: **FAIL**' /tmp/REGRESSION_WITNESS.md
 
       - name: Run packaged Proof Integrity Guard
