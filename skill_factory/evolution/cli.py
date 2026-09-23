@@ -45,6 +45,19 @@ from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
 from .witness import render_witness_markdown, run_regression_witness, write_witness_json
 
 
+def _schema_path(name: str) -> Path:
+    filename = {
+        "proof-summary-v1": "proof-summary-v1.schema.json",
+    }[name]
+    checkout = Path(__file__).resolve().parents[2] / "schemas" / filename
+    installed = Path(sys.prefix) / "share" / "counterproof" / "schemas" / filename
+    if checkout.is_file():
+        return checkout
+    if installed.is_file():
+        return installed
+    raise click.ClickException(f"Counterproof schema not found: {name}")
+
+
 def _packet_from_json(raw: dict) -> EvolutionPacket:
     evidence = tuple(Evidence(**item) for item in raw.get("evidence", []))
     hypotheses = tuple(Hypothesis(**item) for item in raw.get("hypotheses", []))
@@ -522,6 +535,29 @@ def bind_probe_adapter_cmd(
         "Bound reviewed scaffold to adapter; status=ready. "
         "Runtime evidence is still required before any mutation can be selected."
     )
+    click.echo(f"Wrote {out_file}")
+
+
+@cli.command("schema")
+@click.argument(
+    "name",
+    type=click.Choice(["proof-summary-v1"], case_sensitive=True),
+)
+@click.option(
+    "--out",
+    "out_file",
+    default=None,
+    type=click.Path(dir_okay=False),
+    help="Write the schema to a file instead of stdout.",
+)
+def schema_cmd(name: str, out_file: str | None) -> None:
+    """Print or export a versioned Counterproof machine-contract schema."""
+    source = _schema_path(name)
+    text = source.read_text(encoding="utf-8")
+    if out_file is None:
+        click.echo(text)
+        return
+    Path(out_file).write_text(text, encoding="utf-8")
     click.echo(f"Wrote {out_file}")
 
 
