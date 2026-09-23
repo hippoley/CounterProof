@@ -26,6 +26,32 @@ Counterproof starts there.
 
 The first-line PR proof is deterministic: Git history + your existing test runner. No model judges the model.
 
+## 30-second setup
+
+Today, install directly from GitHub:
+
+```bash
+python -m pip install "git+https://github.com/hippoley/SkillFactory.git"
+counterproof init
+git add .github/workflows/counterproof.yml
+```
+
+Counterproof detects common Python, Node, Go and Ruby test stacks and writes a conservative PR workflow.
+
+It starts in **advisory mode**. Once the proof is stable in your repository:
+
+```bash
+counterproof init --force --strict-witness --strict-integrity
+```
+
+If Counterproof cannot infer your test runner safely, it refuses to guess:
+
+```bash
+counterproof init --test-command "./scripts/regression-check"
+```
+
+It never overwrites an existing generated workflow unless you pass `--force`.
+
 ## Regression Witness
 
 **Take the tests changed by the PR. Run them on the PR. Then replay the exact same tests against the pre-change code.**
