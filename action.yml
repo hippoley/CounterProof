@@ -1,0 +1,120 @@
+name: "Counterproof Behavior Proof"
+description: "Attach falsifiable behavior evidence to agent-generated changes."
+author: "hippoley"
+
+branding:
+  icon: "check-circle"
+  color: "purple"
+
+inputs:
+  trace:
+    description: "Path to a Counterproof JSON/JSONL trace."
+    required: true
+  experiment-manifest:
+    description: "Path to the discrimination experiment manifest."
+    required: true
+  surfaces:
+    description: "Comma-separated intervention surfaces to compare."
+    required: false
+    default: "policy,skill,prompt"
+  output-dir:
+    description: "Directory for Behavior Proof, packet and receipt artifacts."
+    required: false
+    default: ".counterproof/out"
+  require-unique-survivor:
+    description: "Fail the Action unless exactly one eligible intervention survives."
+    required: false
+    default: "false"
+
+outputs:
+  selection-state:
+    description: "Counterproof discrimination result."
+    value: ${{ steps.proof.outputs.selection-state }}
+  selected-candidate:
+    description: "Selected candidate id, if any."
+    value: ${{ steps.proof.outputs.selected-candidate }}
+  proof-path:
+    description: "Generated Behavior Proof Markdown path."
+    value: ${{ steps.proof.outputs.proof-path }}
+  receipt-path:
+    description: "Generated Proof Receipt JSON path."
+    value: ${{ steps.proof.outputs.receipt-path }}
+  packet-path:
+    description: "Generated evolved packet JSON path."
+    value: ${{ steps.proof.outputs.packet-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Counterproof
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m pip install "${{ github.action_path }}"
+
+    - name: Build Behavior Proof
+      id: proof
+      shell: bash
+      env:
+        COUNTERPROOF_TRACE: ${{ inputs.trace }}
+        COUNTERPROOF_EXPERIMENT: ${{ inputs.experiment-manifest }}
+        COUNTERPROOF_SURFACES: ${{ inputs.surfaces }}
+        COUNTERPROOF_OUTPUT_DIR: ${{ inputs.output-dir }}
+        COUNTERPROOF_REQUIRE_UNIQUE: ${{ inputs.require-unique-survivor }}
+      run: |
+        set -euo pipefail
+
+        mkdir -p "$COUNTERPROOF_OUTPUT_DIR"
+        proof="$COUNTERPROOF_OUTPUT_DIR/BEHAVIOR_PROOF.md"
+        packet="$COUNTERPROOF_OUTPUT_DIR/EVOLVED_PACKET.json"
+        receipt="$COUNTERPROOF_OUTPUT_DIR/PROOF_RECEIPT.json"
+
+        args=()
+        IFS=',' read -ra raw_surfaces <<< "$COUNTERPROOF_SURFACES"
+        for raw in "${raw_surfaces[@]}"; do
+          surface="$(printf '%s' "$raw" | xargs)"
+          if [[ -z "$surface" || ! "$surface" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            echo "Invalid Counterproof surface: '$surface'" >&2
+            exit 2
+          fi
+          args+=(--surface "$surface")
+        done
+
+        counterproof evolve "$COUNTERPROOF_TRACE"           --experiment-manifest "$COUNTERPROOF_EXPERIMENT"           "${args[@]}"           --out "$proof"           --packet-out "$packet"           --receipt-out "$receipt"
+
+        export COUNTERPROOF_PACKET="$packet"
+        export COUNTERPROOF_PROOF="$proof"
+        export COUNTERPROOF_RECEIPT="$receipt"
+
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        packet_path = Path(os.environ["COUNTERPROOF_PACKET"])
+        packet = json.loads(packet_path.read_text(encoding="utf-8"))
+        metadata = packet.get("metadata", {})
+        state = str(metadata.get("discrimination_result", "unknown"))
+        selected = packet.get("selected_candidate_id") or ""
+
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+            out.write(f"selection-state={state}\n")
+            out.write(f"selected-candidate={selected}\n")
+            out.write(f"proof-path={os.environ['COUNTERPROOF_PROOF']}\n")
+            out.write(f"receipt-path={os.environ['COUNTERPROOF_RECEIPT']}\n")
+            out.write(f"packet-path={os.environ['COUNTERPROOF_PACKET']}\n")
+
+        require_unique = os.environ.get("COUNTERPROOF_REQUIRE_UNIQUE", "false").lower()
+        if require_unique in {"1", "true", "yes"} and not state.startswith("unique-survivor:"):
+            raise SystemExit(
+                f"Counterproof gate blocked: expected unique survivor, got {state}"
+            )
+        PY
+
+        {
+          echo "## Counterproof · Behavior Proof"
+          echo
+          echo "**Selection:** `$(python -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("metadata",{}).get("discrimination_result","unknown"))' "$packet")`"
+          echo
+          cat "$proof"
+        } >> "$GITHUB_STEP_SUMMARY"
