@@ -81,6 +81,7 @@ class RegressionWitness:
     base_with_head_tests: WitnessCommand | None
     status: str
     note: str
+    mode: str = "precise"
     support_files: tuple[str, ...] = ()
 
     @property
@@ -163,18 +164,22 @@ def changed_test_support_files(
     )
 
 
-def _build_test_argv(command: str, tests: tuple[str, ...]) -> tuple[str, ...]:
+def _build_test_argv(
+    command: str,
+    tests: tuple[str, ...],
+) -> tuple[tuple[str, ...], str]:
     parts = shlex.split(command)
     if not parts:
         raise ValueError("test command must not be empty")
 
+    precise = "{tests}" in parts
     argv: list[str] = []
     for part in parts:
         if part == "{tests}":
             argv.extend(tests)
         else:
             argv.append(part)
-    return tuple(argv)
+    return tuple(argv), ("precise" if precise else "suite")
 
 
 def _run(
@@ -422,6 +427,7 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
         "tests": list(witness.tests),
         "support_files": list(witness.support_files),
         "status": witness.status,
+        "mode": witness.mode,
         "witnessed": witness.witnessed,
         "note": witness.note,
         "head": _command_to_dict(witness.head),
@@ -436,6 +442,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         "head-failing": "HEAD FAILING",
         "no-changed-tests": "NO CHANGED TESTS",
         "inconclusive": "INCONCLUSIVE",
+        "suite-delta": "SUITE DELTA",
     }.get(witness.status, witness.status.upper())
 
     lines = [
@@ -481,6 +488,14 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
                 "",
                 "> The same changed tests fail before the fix and pass after it.",
                 "> This proves the tested regression delta; it does not prove every claimed cause.",
+            ]
+        )
+    elif witness.status == "suite-delta":
+        lines.extend(
+            [
+                "",
+                "> The full configured suite distinguishes base from head.",
+                "> Because the runner did not target changed tests directly, this is not labeled a Regression Witness.",
             ]
         )
     return "\n".join(lines) + "\n"
