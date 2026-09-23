@@ -117,7 +117,9 @@ For detected projects, generated workflows currently include practical setup for
 ```text
 counterproof init
       ↓
-opens PR
+commit generated workflow
+      ↓
+next pull request
       ↓
 HEAD + changed tests  PASS
 BASE + same tests     FAIL
@@ -169,7 +171,7 @@ Counterproof automatically:
 3. creates a detached worktree at the base commit
 4. overlays the PR's changed tests onto the old code
 5. runs the exact same tests again
-6. emits WITNESSED / NOT WITNESSED / HEAD FAILING / INCONCLUSIVE
+6. emits WITNESSED / SUITE DELTA / NOT WITNESSED / HEAD FAILING / NO CHANGED TESTS / INCONCLUSIVE
 7. updates one sticky PR comment instead of spamming the thread
 ```
 
