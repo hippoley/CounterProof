@@ -88,8 +88,7 @@ If detection is wrong or your repository uses a custom harness:
 
 ```bash
 counterproof init \
-  --test-command "./scripts/regression-check" \
-  --require-witness
+  --test-command "./scripts/regression-check"
 ```
 
 It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
@@ -97,12 +96,10 @@ It never overwrites an existing Counterproof workflow unless you explicitly pass
 Start advisory. After Counterproof has behaved correctly on a few real PRs, promote it to a merge gate:
 
 ```bash
-counterproof init --force \
-  --require-witness \
-  --require-clean-integrity
+counterproof init --force --strict
 ```
 
-For full-suite-only runners, Counterproof will refuse `--require-witness` until you provide a precise command containing `{tests}`.
+For full-suite-only runners, Counterproof will refuse `--strict` until you provide a precise command containing `{tests}`, because SUITE DELTA is deliberately weaker than VERIFIED proof.
 
 The generated workflow currently targets `@main`, because no Counterproof release tag has been published yet.
 
@@ -159,8 +156,7 @@ jobs:
       - uses: hippoley/SkillFactory@main
         with:
           test-command: "python -m pytest -q {tests}"
-          require-witness: "true"
-          require-clean-integrity: "true"
+          require-proof-ready: "true"
 ```
 
 Counterproof automatically:
@@ -233,7 +229,9 @@ command omits {tests}
 
 Use the precise mode when your runner accepts explicit paths. Commands such as `go test ./...`, `mvn test`, or `./gradlew test` currently produce **SUITE DELTA**, not **WITNESSED**.
 
-`--require-witness` accepts only precise mode. During `counterproof init`, Counterproof refuses to create a strong witness gate from a full-suite command instead of silently weakening the proof.
+`--strict` accepts only precise mode. During `counterproof init`, Counterproof refuses to create a VERIFIED gate from a full-suite command instead of silently weakening the proof.
+
+The lower-level `--require-witness` and `--require-clean-integrity` flags remain available for teams that intentionally want separate gates.
 
 Counterproof currently recognizes common test conventions across Python, JavaScript/TypeScript, Go, Ruby, Java, Kotlin, C#, and C++.
 
