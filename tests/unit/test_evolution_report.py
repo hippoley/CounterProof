@@ -141,7 +141,7 @@ def test_report_contains_behavior_change_and_replay_matrix():
     )
 
     report = render_evolution_pr(packet)
-    assert "EvoPR" in report
+    assert "Counterproof" in report
     assert "Causal hypotheses" in report
     assert "Replay matrix" in report
     assert "query first -> validate first" in report
@@ -726,7 +726,7 @@ def test_evopr_evolve_selects_only_unique_survivor_and_attaches_replays(tmp_path
     assert len(selected["replay_results"]) == 3
     review = output.read_text(encoding="utf-8")
     assert "Eligible for promotion." in review
-    assert "EvoPR Discrimination Matrix" in review
+    assert "Counterproof Discrimination Matrix" in review
     assert "cross-tenant-attack-07" in matrix_output.read_text(encoding="utf-8")
 
 
@@ -865,7 +865,7 @@ def test_evopr_evolve_writes_next_probe_plan_when_ambiguous(tmp_path):
     assert "learned instruction / demonstrations" in probe_text
 
     review = output.read_text(encoding="utf-8")
-    assert "EvoPR Next Probe Plan" in review
+    assert "Counterproof Next Probe Plan" in review
     assert "Eligible for promotion." not in review
 
 
@@ -1473,7 +1473,7 @@ def test_discrimination_payload_exposes_case_roles():
 
 def test_parse_structured_probe_result_reads_score_metrics_and_evidence():
     result = parse_structured_probe_result(
-        'normal log\nEVOPR_RESULT={"verdict":"pass","score":0.82,'
+        'normal log\nCOUNTERPROOF_RESULT={"verdict":"pass","score":0.82,'
         '"metrics":{"latency_ms":17},"observations":["stable"],'
         '"artifacts":["artifact://trace/1"]}\n'
     )
@@ -1498,9 +1498,9 @@ def test_json_v1_missing_or_broken_result_is_infrastructure_error():
         argv=("adapter",),
         returncode=0,
         duration_ms=1,
-        stdout='EVOPR_RESULT={"verdict":"pass"',
+        stdout='COUNTERPROOF_RESULT={"verdict":"pass"',
         stderr="",
-        probe_result_error="invalid EVOPR_RESULT JSON",
+        probe_result_error="invalid COUNTERPROOF_RESULT JSON",
     )
 
     assert interpret_command_outcome(
