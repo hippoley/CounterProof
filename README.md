@@ -290,7 +290,73 @@ A missing variant, timeout, or infrastructure error makes that intervention **in
 
 ---
 
-## One adapter, many probes
+## Fitness cases vs diagnostic probes
+
+Not every FAIL means regression.
+
+EvoPR now distinguishes:
+
+~~~text
+role = fitness
+  used for behavior quality / regression / promotion gates
+
+role = diagnostic
+  used to test competing predictions
+  may intentionally produce a pre-registered FAIL
+  never promotes a mutation by itself
+~~~
+
+Generated crossed probes are always emitted as:
+
+~~~json
+{
+  "suite": "discriminating-probe",
+  "role": "diagnostic"
+}
+~~~
+
+So this result:
+
+~~~text
+policy diagnostic case A -> PASS
+policy diagnostic case B -> FAIL
+~~~
+
+can be **prediction evidence** without being counted as a product regression.
+
+A diagnostic-only experiment returns:
+
+~~~text
+selection_state = diagnostic-only
+selected_candidate_id = null
+~~~
+
+That separation matters: causal evidence and release fitness are different questions.
+
+---
+
+# Review before execution
+
+Generated experiment scaffolds start as `status=draft` and cannot run.
+
+After inspecting the case semantics, bind a real adapter explicitly:
+
+~~~bash
+evopr bind-probe-adapter NEXT_EXPERIMENT.json \
+  --adapter python \
+  --adapter ./my_probe_adapter.py \
+  --reviewed-by alice \
+  --review-note "Checked intervention isolation and case assumptions." \
+  --out READY_EXPERIMENT.json
+~~~
+
+The ready manifest records the reviewer, note and approval decision.
+
+This authorizes **execution plumbing only**. It does not certify that the adapter faithfully models the target domain; the subsequent predictions and observed evidence still have to survive the experiment.
+
+---
+
+# One adapter, many probes
 
 You do not have to repeat a command for every case × intervention.
 
@@ -674,6 +740,8 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Pre-registered predictions | **TESTED** | Expected PASS/FAIL outcomes are recorded before execution; contradicted predictions can block selection |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Fitness vs diagnostic roles | **TESTED** | Diagnostic expected FAILs are prediction evidence, not fitness regressions; diagnostic-only experiments cannot promote |
+| Reviewed adapter binding | **TESTED** | Draft scaffold requires reviewer + note + real adapter before becoming ready |
 | Probe Adapter protocol | **TESTED** | One adapter argv can execute many cases/variants via EVOPR_CASE_ID / EVOPR_VARIANT / EVOPR_CASE_JSON |
 | Draft probe scaffold | **TESTED** | Ambiguity can emit crossed experiment cases with pre-registered predictions; execution is blocked until reviewed |
 | Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
@@ -713,6 +781,7 @@ Every pull request checks:
    - `evopr prove`
    - `evopr discriminate`
    - `evopr evolve`
+   - `evopr bind-probe-adapter`
    - `evopr verify-receipt`
    - `evopr demo`
 7. Chromium opens the playground and exercises:
@@ -835,6 +904,7 @@ skill_factory/
     ├── models.py
     ├── replay.py
     ├── discriminate.py
+    ├── adapter_binding.py
     ├── probe_planner.py
     ├── receipt.py
     ├── trace.py
@@ -855,7 +925,8 @@ examples/
 └── replay/
     ├── tenant_policy.py
     ├── tenant_discrimination.py
-    └── env_probe_adapter.py
+    ├── env_probe_adapter.py
+    └── cross_probe_adapter.py
 
 site/
 ├── index.html
