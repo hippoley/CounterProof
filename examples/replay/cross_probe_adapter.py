@@ -11,8 +11,8 @@ import sys
 
 
 def main() -> int:
-    variant = os.environ.get("EVOPR_VARIANT", "")
-    payload_raw = os.environ.get("EVOPR_CASE_JSON", "{}")
+    variant = os.environ.get("COUNTERPROOF_VARIANT", os.environ.get("EVOPR_VARIANT", ""))
+    payload_raw = os.environ.get("COUNTERPROOF_CASE_JSON", os.environ.get("EVOPR_CASE_JSON", "{}"))
     try:
         payload = json.loads(payload_raw)
     except json.JSONDecodeError as exc:
