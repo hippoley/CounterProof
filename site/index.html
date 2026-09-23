@@ -30,6 +30,7 @@
         <button type="button" class="witness-scenario active" data-witness-scenario="witnessed">REAL REGRESSION</button>
         <button type="button" class="witness-scenario" data-witness-scenario="weak-test">WEAK TEST</button>
         <button type="button" class="witness-scenario" data-witness-scenario="judge-changed">JUDGE CHANGED</button>
+        <button type="button" class="witness-scenario" data-witness-scenario="suite-delta">FULL SUITE</button>
       </div>
       <div class="witness-grid">
         <div class="witness-side">
@@ -47,9 +48,14 @@
           <small id="witnessBaseNote">pre-change behavior reproduced</small>
         </div>
         <div class="witness-verdict">
-          <span>COUNTERPROOF</span>
+          <span>REGRESSION WITNESS</span>
           <strong id="witnessVerdict">WITNESSED</strong>
           <small id="witnessIntegrity">proof integrity · CLEAN</small>
+          <div id="witnessUnified" class="witness-unified verified">
+            <span>UNIFIED PROOF</span>
+            <b id="witnessProofStatus">VERIFIED</b>
+            <small id="witnessProofReady">proof ready · TRUE</small>
+          </div>
         </div>
       </div>
       <div class="witness-foot">
