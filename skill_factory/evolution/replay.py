@@ -1,4 +1,4 @@
-"""Deterministic command-based replay for EvoPR.
+"""Deterministic command-based replay for Counterproof.
 
 The legacy contract treats exit code 0 as behavioral PASS. The optional json-v1
 protocol separates adapter execution from behavioral outcome and supports continuous
@@ -16,7 +16,7 @@ from typing import Any
 
 from .models import ReplayResult
 
-RESULT_PREFIXES = ("COUNTERPROOF_RESULT=", "COUNTERPROOF_RESULT=")
+RESULT_PREFIXES = ("COUNTERPROOF_RESULT=", "EVOPR_RESULT=")
 
 
 @dataclass(frozen=True)
