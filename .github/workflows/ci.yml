@@ -81,16 +81,16 @@ jobs:
           /tmp/counterproof-clean/bin/counterproof init \
             --repo /tmp/counterproof-init-fixture \
             --action-ref main \
-            --require-witness \
-            --require-clean-integrity
+            --strict
 
           workflow=/tmp/counterproof-init-fixture/.github/workflows/counterproof.yml
           test -f "$workflow"
           grep -q 'github.event.pull_request.head.sha' "$workflow"
           grep -q 'hippoley/SkillFactory@main' "$workflow"
           grep -q 'python -m pytest -q {tests}' "$workflow"
-          grep -q 'require-witness: "true"' "$workflow"
-          grep -q 'require-clean-integrity: "true"' "$workflow"
+          grep -q 'require-proof-ready: "true"' "$workflow"
+          grep -q 'require-witness: "false"' "$workflow"
+          grep -q 'require-clean-integrity: "false"' "$workflow"
 
       - name: Run packaged Regression Witness
         run: |
