@@ -1,4 +1,4 @@
-"""Render a GitHub-friendly EvoPR report from an EvolutionPacket."""
+"""Render a GitHub-friendly Counterproof report from an EvolutionPacket."""
 from __future__ import annotations
 
 from .models import CandidateMutation, EvolutionPacket
@@ -15,7 +15,7 @@ def _status(candidate: CandidateMutation) -> str:
 def render_evolution_pr(packet: EvolutionPacket) -> str:
     selected = packet.selected_candidate()
     lines: list[str] = [
-        f"# EvoPR — {packet.packet_id}",
+        f"# Counterproof — {packet.packet_id}",
         "",
         "> Your agent changed. Show the proof.",
         "",
