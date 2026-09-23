@@ -131,8 +131,19 @@ function renderDiscrimination() {
   } else {
     byId("discriminationStamp").textContent = "AMBIGUOUS";
     byId("discriminationStamp").className = "verdict-stamp";
-    byId("discriminationNote").textContent =
-      "More than one intervention remains compatible with the current fixture. Add a case where their predicted behavior differs.";
+    if (data.next_probe) {
+      byId("discriminationNote").innerHTML =
+        '<strong>Next probe → ' + esc(data.next_probe.title) + '</strong><br>' +
+        'Keep fixed: ' + esc(data.next_probe.keep_fixed) + '<br>' +
+        'Vary: ' + esc(data.next_probe.vary) + '<br>' +
+        '<em>Policy predicts:</em> ' + esc(data.next_probe.policy_predicts) + '<br>' +
+        '<em>Skill predicts:</em> ' + esc(data.next_probe.skill_predicts) + '<br>' +
+        'Falsifier: ' + esc(data.next_probe.falsifier) +
+        '<br><br>This is fixture-based experiment design. Real next-probe planning is available through the CLI.';
+    } else {
+      byId("discriminationNote").textContent =
+        "More than one intervention remains compatible with the current fixture. Add a case where their predicted behavior differs.";
+    }
   }
 
   section.hidden = false;
