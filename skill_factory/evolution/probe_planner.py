@@ -210,6 +210,7 @@ def build_probe_scaffold(
             {
                 "case_id": f"probe-{pair}-{index}-right",
                 "suite": "discriminating-probe",
+                "role": "diagnostic",
                 "payload": {
                     **common,
                     "design": "isolate-right-lever",
