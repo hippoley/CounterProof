@@ -565,36 +565,20 @@ def doctor(json_output: bool) -> None:
         raise click.ClickException("Counterproof doctor failed")
 
 
-@cli.command("init-github")
-@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
-@click.option(
-    "--test-command",
-    default=None,
-    help="Override automatic test-runner detection. Use {tests} where changed test paths belong.",
-)
-@click.option("--force", is_flag=True, help="Replace an existing Counterproof workflow.")
-@click.option(
-    "--require-witness",
-    is_flag=True,
-    help="Generate a workflow that blocks unless a real regression witness is produced.",
-)
-@click.option(
-    "--require-clean-integrity",
-    is_flag=True,
-    help="Generate a workflow that blocks on any test/CI evidence-surface change.",
-)
-def init_github_cmd(
+def _run_init_command(
+    *,
     repo_dir: str,
     test_command: str | None,
+    action_ref: str,
     force: bool,
     require_witness: bool,
     require_clean_integrity: bool,
 ) -> None:
-    """Detect the local test runner and install a Counterproof PR workflow."""
     try:
         destination, detection = init_github(
             Path(repo_dir),
             test_command=test_command,
+            action_ref=action_ref,
             force=force,
             require_witness=require_witness,
             require_clean_integrity=require_clean_integrity,
@@ -612,10 +596,97 @@ def init_github_cmd(
     else:
         click.echo(f"Using explicit test command: {test_command}")
 
+    mode = "precise" if test_command and "{tests}" in test_command else None
+    if detection is not None:
+        mode = "precise" if "{tests}" in detection.command else "suite"
+    elif mode is None:
+        mode = "suite"
+
+    click.echo(f"Evidence mode: {mode}")
+    click.echo(f"Action ref: {action_ref}")
     click.echo(f"Wrote {destination}")
     click.echo(
-        "Next: install your project dependencies in the generated workflow before "
-        "the Counterproof step when the runner needs them."
+        "Next: review the generated workflow, then commit it. "
+        "Project-specific dependency setup remains explicit when Counterproof cannot infer it."
+    )
+
+
+def _init_options(function):
+    function = click.option(
+        "--repo",
+        "repo_dir",
+        default=".",
+        show_default=True,
+        type=click.Path(file_okay=False),
+    )(function)
+    function = click.option(
+        "--test-command",
+        default=None,
+        help="Override test-runner detection. Use {tests} for precise changed-test replay.",
+    )(function)
+    function = click.option(
+        "--action-ref",
+        default="main",
+        show_default=True,
+        help="Counterproof Action ref to write, e.g. main, v0.2.0, or a commit SHA.",
+    )(function)
+    function = click.option(
+        "--force",
+        is_flag=True,
+        help="Replace an existing Counterproof workflow.",
+    )(function)
+    function = click.option(
+        "--require-witness",
+        is_flag=True,
+        help="Block unless precise changed-test replay produces a Regression Witness.",
+    )(function)
+    function = click.option(
+        "--require-clean-integrity",
+        is_flag=True,
+        help="Block on any test/CI evidence-surface change.",
+    )(function)
+    return function
+
+
+@cli.command("init")
+@_init_options
+def init_cmd(
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    force: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    """Install the Counterproof PR workflow with conservative runner detection."""
+    _run_init_command(
+        repo_dir=repo_dir,
+        test_command=test_command,
+        action_ref=action_ref,
+        force=force,
+        require_witness=require_witness,
+        require_clean_integrity=require_clean_integrity,
+    )
+
+
+@cli.command("init-github")
+@_init_options
+def init_github_cmd(
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    force: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    """Compatibility alias for `counterproof init`."""
+    _run_init_command(
+        repo_dir=repo_dir,
+        test_command=test_command,
+        action_ref=action_ref,
+        force=force,
+        require_witness=require_witness,
+        require_clean_integrity=require_clean_integrity,
     )
 
 
