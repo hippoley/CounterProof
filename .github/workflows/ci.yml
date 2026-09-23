@@ -97,6 +97,23 @@ jobs:
           grep -q '"discriminated_surface": "policy"' /tmp/DISCRIMINATION.json
           grep -q "Only \*\*policy\*\* survived" /tmp/DISCRIMINATION.md
 
+      - name: Run packaged structured probe result protocol
+        run: |
+          cd /tmp
+          /tmp/evopr-clean/bin/evopr discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/structured_discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --surface prompt \
+            --out /tmp/STRUCTURED_MATRIX.md \
+            --json-out /tmp/STRUCTURED_MATRIX.json
+          grep -q '"discriminated_surface": "policy"' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"score": 0.96' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"safety_score": 0.96' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"prediction_status": "contradicted"' /tmp/STRUCTURED_MATRIX.json
+          grep -q 'fixture://structured/failure/policy' /tmp/STRUCTURED_MATRIX.json
+
       - name: Run packaged env-driven probe adapter
         run: |
           cd /tmp
