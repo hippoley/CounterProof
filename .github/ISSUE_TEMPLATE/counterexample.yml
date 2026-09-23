@@ -1,0 +1,75 @@
+name: "Counterexample: break Counterproof"
+description: "Show a case where Counterproof overclaims, underclaims, or misclassifies behavioral evidence."
+title: "[counterexample] "
+labels:
+  - counterexample
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Break Counterproof
+
+        The most valuable bug report is a case where Counterproof says the evidence is stronger than it really is.
+
+        Please give us the smallest reproducible example you can.
+
+  - type: dropdown
+    id: classification
+    attributes:
+      label: What went wrong?
+      options:
+        - Counterproof claimed strong proof from weak evidence
+        - Counterproof missed a real regression witness
+        - Proof Integrity missed a changed judge
+        - Proof Integrity raised a misleading finding
+        - Replay semantics differ from the real project
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should Counterproof have concluded?
+      placeholder: "Example: NOT WITNESSED, but Counterproof reported WITNESSED."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What did Counterproof conclude?
+      placeholder: "Paste the status / PR card / CLI output."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: "Link a public repo/PR, or paste the smallest file + test setup that reproduces it."
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is the evidence misleading?
+      description: "Explain the semantic gap. This is the most important field."
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, language, test runner, Counterproof commit/version"
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I am reporting an evidence-semantics issue, not just a code-style preference.
+          required: true
