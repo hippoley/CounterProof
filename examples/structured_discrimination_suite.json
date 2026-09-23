@@ -1,0 +1,66 @@
+{
+  "status": "ready",
+  "root": "..",
+  "result_protocol": "json-v1",
+  "timeout_seconds": 10,
+  "adapter": [
+    "python",
+    "examples/replay/structured_probe_adapter.py"
+  ],
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "suite": "regression",
+      "payload": {
+        "scenario": "failure"
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    },
+    {
+      "case_id": "cross-tenant-attack-07",
+      "suite": "security-holdout",
+      "payload": {
+        "scenario": "attack"
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    },
+    {
+      "case_id": "normal-lookup-12",
+      "suite": "holdout",
+      "payload": {
+        "scenario": "normal"
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    }
+  ]
+}
