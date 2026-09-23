@@ -157,6 +157,15 @@ jobs:
           grep -q "EvoPR Next Probe Plan" /tmp/AMBIGUOUS_REVIEW.md
           grep -q '"status": "draft"' /tmp/NEXT_EXPERIMENT.json
           grep -q 'TODO_REPLACE_WITH_ADAPTER' /tmp/NEXT_EXPERIMENT.json
+          /tmp/evopr-clean/bin/evopr bind-probe-adapter /tmp/NEXT_EXPERIMENT.json \
+            --adapter python \
+            --adapter "$GITHUB_WORKSPACE/examples/replay/env_probe_adapter.py" \
+            --reviewed-by ci-reviewer \
+            --review-note "CI fixture review only; domain semantics are not certified." \
+            --out /tmp/READY_EXPERIMENT.json
+          grep -q '"status": "ready"' /tmp/READY_EXPERIMENT.json
+          grep -q '"decision": "approved-for-execution"' /tmp/READY_EXPERIMENT.json
+          grep -q 'ci-reviewer' /tmp/READY_EXPERIMENT.json
           if /tmp/evopr-clean/bin/evopr discriminate \
             "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
             --experiment-manifest /tmp/NEXT_EXPERIMENT.json \
