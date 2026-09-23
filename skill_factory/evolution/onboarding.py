@@ -281,6 +281,15 @@ def init_github(
         detection = detect_test_runner(repo_root)
         test_command = detection.command
 
+    if require_witness and "{tests}" not in test_command:
+        runner = detection.runner if detection is not None else "custom"
+        raise ValueError(
+            f"{runner} is configured as a full-suite command ({test_command!r}). "
+            "--require-witness requires a precise command containing {tests}. "
+            "Either omit --require-witness to report suite-delta, or pass "
+            "--test-command with an explicit {tests} placeholder."
+        )
+
     destination = repo_root / ".github" / "workflows" / "counterproof.yml"
     if destination.exists() and not force:
         raise FileExistsError(
