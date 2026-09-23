@@ -223,7 +223,7 @@ command omits {tests}
 
 Use the precise mode when your runner accepts explicit paths. Commands such as `go test ./...`, `mvn test`, or `./gradlew test` currently produce **SUITE DELTA**, not **WITNESSED**.
 
-`--require-witness` accepts only precise mode. During `init-github`, Counterproof refuses to create a strong witness gate from a full-suite command instead of silently weakening the proof.
+`--require-witness` accepts only precise mode. During `counterproof init`, Counterproof refuses to create a strong witness gate from a full-suite command instead of silently weakening the proof.
 
 Counterproof currently recognizes common test conventions across Python, JavaScript/TypeScript, Go, Ruby, Java, Kotlin, C#, and C++.
 
