@@ -229,6 +229,49 @@ jobs:
             exit 1
           fi
 
+      - name: Run packaged unified proof verdict
+        run: |
+          set -euo pipefail
+
+          cd /tmp/counterproof-witness-fixture
+          witness_base="$(git rev-list --max-parents=0 HEAD)"
+          /tmp/counterproof-clean/bin/counterproof integrity \
+            --base "$witness_base" \
+            --out /tmp/CLEAN_INTEGRITY.md \
+            --json-out /tmp/CLEAN_INTEGRITY.json
+
+          grep -q '"status": "clean"' /tmp/CLEAN_INTEGRITY.json
+
+          /tmp/counterproof-clean/bin/counterproof proof-summary \
+            --witness-json /tmp/REGRESSION_WITNESS.json \
+            --integrity-json /tmp/CLEAN_INTEGRITY.json \
+            --out /tmp/VERIFIED_SUMMARY.json \
+            --markdown-out /tmp/VERIFIED_SUMMARY.md \
+            --require-proof-ready
+
+          grep -q '"proof_status": "verified"' /tmp/VERIFIED_SUMMARY.json
+          grep -q '"proof_ready": true' /tmp/VERIFIED_SUMMARY.json
+          grep -q 'Proof status: **VERIFIED**' /tmp/VERIFIED_SUMMARY.md
+
+          /tmp/counterproof-clean/bin/counterproof proof-summary \
+            --witness-json /tmp/REGRESSION_WITNESS.json \
+            --integrity-json /tmp/PROOF_INTEGRITY.json \
+            --out /tmp/REVIEW_SUMMARY.json \
+            --markdown-out /tmp/REVIEW_SUMMARY.md
+
+          grep -q '"proof_status": "review-required"' /tmp/REVIEW_SUMMARY.json
+          grep -q '"proof_ready": false' /tmp/REVIEW_SUMMARY.json
+
+          if /tmp/counterproof-clean/bin/counterproof proof-summary \
+            --witness-json /tmp/REGRESSION_WITNESS.json \
+            --integrity-json /tmp/PROOF_INTEGRITY.json \
+            --out /tmp/REVIEW_GATE.json \
+            --markdown-out /tmp/REVIEW_GATE.md \
+            --require-proof-ready; then
+            echo "Expected unified proof gate to reject review-required evidence"
+            exit 1
+          fi
+
       - name: Run packaged CLI against external packet
         run: |
           cd /tmp
