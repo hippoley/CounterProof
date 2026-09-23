@@ -28,7 +28,13 @@ from skill_factory.evolution.probe_planner import (
     render_probe_plan,
 )
 from skill_factory.evolution.receipt import file_sha256
-from skill_factory.evolution.replay import run_replay_manifest, serialize_replays
+from skill_factory.evolution.replay import (
+    CommandOutcome,
+    interpret_command_outcome,
+    parse_structured_probe_result,
+    run_replay_manifest,
+    serialize_replays,
+)
 from skill_factory.evolution.report import render_evolution_pr
 from skill_factory.evolution.trace import compile_trace, load_trace
 
@@ -1463,3 +1469,107 @@ def test_discrimination_payload_exposes_case_roles():
     assert item["fitness_case_count"] == 1
     assert item["diagnostic_case_count"] == 1
     assert payload["declared_diagnostic_cases"] == ["diagnostic"]
+
+
+def test_parse_structured_probe_result_reads_score_metrics_and_evidence():
+    result = parse_structured_probe_result(
+        'normal log\nEVOPR_RESULT={"verdict":"pass","score":0.82,'
+        '"metrics":{"latency_ms":17},"observations":["stable"],'
+        '"artifacts":["artifact://trace/1"]}\n'
+    )
+
+    assert result is not None
+    assert result.verdict == "pass"
+    assert result.score == pytest.approx(0.82)
+    assert result.metrics["latency_ms"] == 17
+    assert result.observations == ("stable",)
+    assert result.artifacts == ("artifact://trace/1",)
+
+
+def test_json_v1_missing_or_broken_result_is_infrastructure_error():
+    missing = CommandOutcome(
+        argv=("adapter",),
+        returncode=0,
+        duration_ms=1,
+        stdout="no structured result",
+        stderr="",
+    )
+    broken = CommandOutcome(
+        argv=("adapter",),
+        returncode=0,
+        duration_ms=1,
+        stdout='EVOPR_RESULT={"verdict":"pass"',
+        stderr="",
+        probe_result_error="invalid EVOPR_RESULT JSON",
+    )
+
+    assert interpret_command_outcome(
+        missing,
+        protocol="json-v1",
+    ).verdict == "infra_error"
+    assert interpret_command_outcome(
+        broken,
+        protocol="json-v1",
+    ).verdict == "infra_error"
+
+
+def test_structured_discrimination_separates_process_success_from_behavior():
+    run = run_discrimination_manifest(
+        Path("examples/structured_discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    by_surface = {item.surface: item for item in run.variants}
+
+    assert run.discriminated_surface == "policy"
+    assert run.selection_state == "unique-survivor"
+
+    policy = by_surface["policy"]
+    assert policy.signature == ("P", "P", "P")
+    assert policy.prediction_status == "supported"
+    assert [item.candidate_score for item in policy.replays] == pytest.approx(
+        [0.96, 0.94, 0.92]
+    )
+    assert all(outcome is not None for outcome in policy.outcomes)
+    assert all(outcome.returncode == 0 for outcome in policy.outcomes if outcome)
+
+    skill = by_surface["skill"]
+    assert skill.signature == ("P", "F", "P")
+    assert skill.replays[0].candidate_score == pytest.approx(0.82)
+    assert skill.replays[0].verdict == "pass"
+    assert skill.replays[1].candidate_score == pytest.approx(0.45)
+    assert skill.replays[1].verdict == "fail"
+    assert skill.prediction_status == "contradicted"
+    assert all(outcome.returncode == 0 for outcome in skill.outcomes if outcome)
+
+
+def test_structured_discrimination_payload_carries_adapter_evidence():
+    run = run_discrimination_manifest(
+        Path("examples/structured_discrimination_suite.json"),
+        surfaces=("policy", "skill", "prompt"),
+    )
+    payload = discrimination_to_dict(run)
+    by_surface = {item["surface"]: item for item in payload["variants"]}
+
+    policy_results = by_surface["policy"]["probe_results"]
+    assert policy_results[0]["verdict"] == "pass"
+    assert policy_results[0]["score"] == pytest.approx(0.96)
+    assert policy_results[0]["metrics"]["safety_score"] == pytest.approx(0.96)
+    assert "scenario=failure" in policy_results[0]["observations"]
+    assert policy_results[0]["artifacts"] == [
+        "fixture://structured/failure/policy"
+    ]
+
+
+def test_signature_uses_behavior_verdict_not_perfect_score():
+    variant = VariantEvidence(
+        surface="skill",
+        replays=(
+            ReplayResult("case", "fitness", "pass", 0.2, 0.82),
+        ),
+        outcomes=(),
+        predictions=("pass",),
+        roles=("fitness",),
+    )
+
+    assert variant.signature == ("P",)
+    assert variant.prediction_status == "supported"
