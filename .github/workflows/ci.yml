@@ -103,6 +103,75 @@ jobs:
           grep -q 'REGRESSION WITNESS' /tmp/REGRESSION_WITNESS.md
           grep -q 'Base code + PR tests: **FAIL**' /tmp/REGRESSION_WITNESS.md
 
+      - name: Run packaged Proof Integrity Guard
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-integrity-fixture
+          mkdir -p /tmp/counterproof-integrity-fixture
+          cd /tmp/counterproof-integrity-fixture
+
+          git init
+          git config user.email "counterproof@example.test"
+          git config user.name "Counterproof CI"
+
+          printf 'VALUE = 1\n' > app.py
+          mkdir -p tests .github/workflows
+          cat > tests/test_value.py <<'PY'
+          from app import VALUE
+
+          def test_value():
+              assert VALUE == 1
+          PY
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: CI
+          on:
+            pull_request:
+            push:
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - run: pytest
+          YAML
+          git add .
+          git commit -m "base evidence"
+          base_sha="$(git rev-parse HEAD)"
+
+          rm tests/test_value.py
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: CI
+          on:
+            push:
+          jobs:
+            test:
+              continue-on-error: true
+              runs-on: ubuntu-latest
+              steps:
+                - run: pytest || true
+          YAML
+          git add -A
+          git commit -m "weaken evidence"
+
+          /tmp/counterproof-clean/bin/counterproof integrity \
+            --base "$base_sha" \
+            --out /tmp/PROOF_INTEGRITY.md \
+            --json-out /tmp/PROOF_INTEGRITY.json
+
+          grep -q '"status": "review-required"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "test-deleted"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "continue-on-error"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "shell-ignore-failure"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "pull-request-trigger-removed"' /tmp/PROOF_INTEGRITY.json
+
+          if /tmp/counterproof-clean/bin/counterproof integrity \
+            --base "$base_sha" \
+            --out /tmp/PROOF_INTEGRITY_GATE.md \
+            --json-out /tmp/PROOF_INTEGRITY_GATE.json \
+            --require-clean; then
+            echo "Expected Proof Integrity Guard to block weakened evidence"
+            exit 1
+          fi
+
       - name: Run packaged CLI against external packet
         run: |
           cd /tmp
