@@ -42,6 +42,7 @@ def test_regression_witness_action_is_valid_composite_action():
     assert names == [
         "Install Counterproof",
         "Resolve base ref",
+        "Check PR head checkout",
         "Fetch base commit",
         "Run Regression Witness",
         "Check proof integrity",
