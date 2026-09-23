@@ -7,14 +7,21 @@ from pathlib import Path
 from typing import Any
 
 from .models import ReplayResult
-from .replay import CommandOutcome, resolve_declared_root, run_command, safe_cwd
+from .replay import (
+    CommandOutcome,
+    interpret_command_outcome,
+    resolve_declared_root,
+    run_command,
+    safe_cwd,
+    structured_probe_result_to_dict,
+)
 
 
 @dataclass(frozen=True)
 class VariantEvidence:
     surface: str
     replays: tuple[ReplayResult, ...]
-    outcomes: tuple[CommandOutcome, ...]
+    outcomes: tuple[CommandOutcome | None, ...]
     predictions: tuple[str | None, ...] = ()
     roles: tuple[str, ...] = ()
 
@@ -104,7 +111,7 @@ class VariantEvidence:
         return tuple(
             "I"
             if item.verdict == "infra_error"
-            else ("P" if item.candidate_score >= 1.0 else "F")
+            else ("P" if item.verdict == "pass" else "F")
             for item in self.replays
         )
 
@@ -125,7 +132,7 @@ class VariantEvidence:
         for replay, prediction in zip(self.replays, self.predictions, strict=False):
             if prediction is None or replay.verdict == "infra_error":
                 continue
-            actual = "pass" if replay.candidate_score >= 1.0 else "fail"
+            actual = replay.verdict
             if actual != prediction:
                 mismatches += 1
         return mismatches
@@ -269,6 +276,9 @@ def run_discrimination_manifest(
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     root = resolve_declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
+    default_protocol = str(raw.get("result_protocol", "exit-code"))
+    if default_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown result protocol: {default_protocol}")
     manifest_status = str(raw.get("status", "ready"))
     if manifest_status != "ready":
         raise ValueError(
@@ -308,7 +318,7 @@ def run_discrimination_manifest(
     variant_results: dict[str, list[ReplayResult]] = {
         surface: [] for surface in selected
     }
-    variant_outcomes: dict[str, list[CommandOutcome]] = {
+    variant_outcomes: dict[str, list[CommandOutcome | None]] = {
         surface: [] for surface in selected
     }
     variant_predictions: dict[str, list[str | None]] = {
@@ -328,6 +338,9 @@ def run_discrimination_manifest(
             )
         cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
+        protocol = str(case.get("result_protocol", default_protocol))
+        if protocol not in {"exit-code", "json-v1"}:
+            raise ValueError(f"unknown result protocol: {protocol}")
         common_env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
         if "payload" in case:
             common_env["EVOPR_CASE_JSON"] = json.dumps(
@@ -352,17 +365,22 @@ def run_discrimination_manifest(
             timeout_seconds=timeout,
             env={**common_env, "EVOPR_VARIANT": "baseline"},
         )
+        baseline_behavior = interpret_command_outcome(
+            baseline,
+            protocol=protocol,
+        )
 
         for surface in selected:
             variants = case["variants"]
             if surface not in variants:
                 variant_predictions[surface].append(None)
                 variant_roles[surface].append(role)
+                variant_outcomes[surface].append(None)
                 result = ReplayResult(
                     case_id=case_id,
                     suite=suite,
                     verdict="infra_error",
-                    baseline_score=baseline.score,
+                    baseline_score=baseline_behavior.score,
                     candidate_score=0.0,
                     note=f"variant {surface!r} is missing for this case",
                 )
@@ -399,20 +417,21 @@ def run_discrimination_manifest(
                 timeout_seconds=timeout,
                 env={**common_env, "EVOPR_VARIANT": surface},
             )
-            verdict = (
-                "infra_error"
-                if outcome.timed_out
-                else ("pass" if outcome.returncode == 0 else "fail")
+            behavior = interpret_command_outcome(
+                outcome,
+                protocol=protocol,
             )
             result = ReplayResult(
                 case_id=case_id,
                 suite=suite,
-                verdict=verdict,
-                baseline_score=baseline.score,
-                candidate_score=outcome.score,
+                verdict=behavior.verdict,
+                baseline_score=baseline_behavior.score,
+                candidate_score=behavior.score,
                 note=(
-                    f"baseline rc={baseline.returncode}, {surface} rc={outcome.returncode}; "
-                    f"{baseline.duration_ms}ms/{outcome.duration_ms}ms"
+                    f"protocol={protocol}; baseline rc={baseline.returncode}, "
+                    f"{surface} rc={outcome.returncode}; "
+                    f"{baseline.duration_ms}ms/{outcome.duration_ms}ms; "
+                    f"{surface}={behavior.note}"
                 ),
             )
             variant_results[surface].append(result)
@@ -457,6 +476,12 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
                 "prediction_status": item.prediction_status,
                 "prediction_coverage": item.prediction_coverage,
                 "prediction_mismatches": item.prediction_mismatch_count,
+                "probe_results": [
+                    structured_probe_result_to_dict(outcome.probe_result)
+                    if outcome is not None
+                    else None
+                    for outcome in item.outcomes
+                ],
                 "replays": [
                     {
                         "case_id": replay.case_id,
