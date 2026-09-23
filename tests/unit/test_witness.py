@@ -177,9 +177,12 @@ def test_witness_command_without_placeholder_runs_verbatim(tmp_path):
         timeout_seconds=30,
     )
 
-    assert witness.status == "witnessed"
+    assert witness.status == "suite-delta"
+    assert witness.mode == "suite"
+    assert witness.witnessed is False
     assert witness.head is not None
     assert "tests/test_regression.py" not in witness.head.argv
+    assert "not labeled a Regression Witness" in render_witness_markdown(witness)
 
 
 def test_changed_test_detection_covers_common_non_python_conventions(tmp_path):
@@ -346,3 +349,54 @@ def test_pytest_infrastructure_exit_is_inconclusive_not_witnessed(tmp_path):
     assert witness.base_with_head_tests is not None
     assert witness.base_with_head_tests.returncode == 2
     assert "Only pytest exit 1" in witness.note
+
+
+
+def test_require_witness_rejects_suite_delta(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    payload = tmp_path / "suite.json"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "witness",
+            "--repo",
+            str(repo),
+            "--base",
+            base,
+            "--test-command",
+            f"{sys.executable} -m pytest -q",
+            "--out",
+            str(tmp_path / "suite.md"),
+            "--json-out",
+            str(payload),
+            "--require-witness",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "regression witness required, got status=suite-delta" in result.output
+    raw = json.loads(payload.read_text(encoding="utf-8"))
+    assert raw["status"] == "suite-delta"
+    assert raw["mode"] == "suite"
+    assert raw["witnessed"] is False
+
+
+def test_precise_witness_serializes_mode(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    payload = witness_to_dict(witness)
+
+    assert witness.mode == "precise"
+    assert payload["mode"] == "precise"
+    assert payload["witnessed"] is True
