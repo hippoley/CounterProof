@@ -41,7 +41,7 @@ EVIDENCE_CONFIG_PATTERNS = (
 ADDED_LINE_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "continue-on-error",
-        re.compile(r"\bcontinue-on-error\s*:\s*true\b", re.I),
+        re.compile(r"\bcontinue-on-error\s*:\s*true\b", re.IGNORECASE),
         "Workflow step was changed to continue after failure.",
     ),
     (
