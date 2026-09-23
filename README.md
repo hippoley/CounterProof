@@ -129,7 +129,17 @@ If the runner can only execute a whole suite, Counterproof says **SUITE DELTA** 
 
 ### Unified machine verdict
 
-Counterproof exposes one aggregate result for bots, branch protection, dashboards, and higher-level agent runtimes:
+Counterproof exposes one aggregate result for bots, branch protection, dashboards, and higher-level agent runtimes.
+
+**Protocol:** [Counterproof Proof Protocol v1](docs/PROOF_PROTOCOL.md)
+
+Export the versioned JSON Schema:
+
+```bash
+counterproof schema proof-summary-v1 --out proof-summary.schema.json
+```
+
+The machine contract is:
 
 ```text
 proof-status = verified | review-required | suite-delta | unproven | ...
