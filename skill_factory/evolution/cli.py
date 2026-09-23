@@ -12,6 +12,7 @@ import click
 
 from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
+from .doctor import doctor_json, render_doctor, run_doctor
 from .discriminate import (
     discrimination_to_dict,
     render_discrimination_markdown,
@@ -548,6 +549,20 @@ def verify_receipt(
     click.echo(
         "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
     )
+
+
+@cli.command("doctor")
+@click.option(
+    "--json-output",
+    is_flag=True,
+    help="Emit machine-readable self-test results.",
+)
+def doctor(json_output: bool) -> None:
+    """Run an install-level self-test using a temporary real Git repository."""
+    report = run_doctor()
+    click.echo(doctor_json(report) if json_output else render_doctor(report))
+    if not report.ok:
+        raise click.ClickException("Counterproof doctor failed")
 
 
 @cli.command("init-github")
