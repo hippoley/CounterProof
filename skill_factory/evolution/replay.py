@@ -16,7 +16,7 @@ from typing import Any
 
 from .models import ReplayResult
 
-RESULT_PREFIX = "EVOPR_RESULT="
+RESULT_PREFIXES = ("COUNTERPROOF_RESULT=", "COUNTERPROOF_RESULT=")
 
 
 @dataclass(frozen=True)
@@ -52,12 +52,15 @@ class CommandOutcome:
 
 
 def parse_structured_probe_result(stdout: str) -> StructuredProbeResult | None:
-    """Parse the last EVOPR_RESULT=<json> line from adapter stdout."""
+    """Parse the last Counterproof structured-result line from adapter stdout."""
     payload_text: str | None = None
     for line in reversed(stdout.splitlines()):
         stripped = line.strip()
-        if stripped.startswith(RESULT_PREFIX):
-            payload_text = stripped[len(RESULT_PREFIX) :].strip()
+        for prefix in RESULT_PREFIXES:
+            if stripped.startswith(prefix):
+                payload_text = stripped[len(prefix) :].strip()
+                break
+        if payload_text is not None:
             break
 
     if payload_text is None:
@@ -66,40 +69,40 @@ def parse_structured_probe_result(stdout: str) -> StructuredProbeResult | None:
     try:
         raw = json.loads(payload_text)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"invalid EVOPR_RESULT JSON: {exc}") from exc
+        raise ValueError(f"invalid COUNTERPROOF_RESULT JSON: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise TypeError("EVOPR_RESULT must be a JSON object")
+        raise TypeError("COUNTERPROOF_RESULT must be a JSON object")
 
     verdict = raw.get("verdict")
     if verdict not in {"pass", "fail"}:
-        raise ValueError("EVOPR_RESULT verdict must be 'pass' or 'fail'")
+        raise ValueError("COUNTERPROOF_RESULT verdict must be 'pass' or 'fail'")
 
     default_score = 1.0 if verdict == "pass" else 0.0
     try:
         score = float(raw.get("score", default_score))
     except (TypeError, ValueError) as exc:
-        raise ValueError("EVOPR_RESULT score must be numeric") from exc
+        raise ValueError("COUNTERPROOF_RESULT score must be numeric") from exc
     if not 0.0 <= score <= 1.0:
-        raise ValueError("EVOPR_RESULT score must be between 0 and 1")
+        raise ValueError("COUNTERPROOF_RESULT score must be between 0 and 1")
 
     metrics = raw.get("metrics", {})
     if not isinstance(metrics, dict):
-        raise TypeError("EVOPR_RESULT metrics must be an object")
+        raise TypeError("COUNTERPROOF_RESULT metrics must be an object")
 
     observations = raw.get("observations", [])
     if (
         not isinstance(observations, list)
         or not all(isinstance(item, str) for item in observations)
     ):
-        raise ValueError("EVOPR_RESULT observations must be a list of strings")
+        raise ValueError("COUNTERPROOF_RESULT observations must be a list of strings")
 
     artifacts = raw.get("artifacts", [])
     if (
         not isinstance(artifacts, list)
         or not all(isinstance(item, str) for item in artifacts)
     ):
-        raise ValueError("EVOPR_RESULT artifacts must be a list of strings")
+        raise ValueError("COUNTERPROOF_RESULT artifacts must be a list of strings")
 
     return StructuredProbeResult(
         verdict=verdict,
@@ -147,7 +150,7 @@ def interpret_command_outcome(
         return BehavioralOutcome(
             "infra_error",
             0.0,
-            "json-v1 adapter did not emit EVOPR_RESULT",
+            "json-v1 adapter did not emit COUNTERPROOF_RESULT",
         )
 
     return BehavioralOutcome(
@@ -266,7 +269,11 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
         protocol = str(case.get("result_protocol", default_protocol))
         if protocol not in {"exit-code", "json-v1"}:
             raise ValueError(f"unknown result protocol: {protocol}")
-        env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
+        env = {
+            "COUNTERPROOF_CASE_ID": case_id,
+            "EVOPR_CASE_ID": case_id,
+            **case.get("env", {}),
+        }
 
         baseline = run_command(
             list(case["baseline"]),
