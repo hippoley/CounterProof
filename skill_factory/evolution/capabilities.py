@@ -23,6 +23,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically.",
     },
     {
+        "id": "proof-integrity-guard",
+        "name": "Proof Integrity Guard for changed tests and CI",
+        "status": "tested",
+        "evidence": "Counterproof deterministically flags deleted tests, added skip/xfail markers, shell failure masking, continue-on-error, removed pull-request workflow triggers, and other evidence-surface changes.",
+        "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect.",
+    },
+    {
         "id": "regression-witness",
         "name": "Regression Witness for agent pull requests",
         "status": "tested",
