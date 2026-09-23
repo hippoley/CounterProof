@@ -407,4 +407,4 @@ jobs:
           exit 1
 
       - name: Exercise worldline proof interaction in Chromium
-        run: node tests/browser/evopr_smoke.mjs
+        run: node tests/browser/counterproof_smoke.mjs
