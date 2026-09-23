@@ -91,6 +91,7 @@ def test_root_and_alias_emit_compact_proof_card():
     for path in ("action.yml", "actions/witness/action.yml"):
         text = Path(path).read_text(encoding="utf-8")
         assert "| Regression Witness | **{witness_status}** |" in text
+        assert "| Evidence mode | **{witness_mode}** |" in text
         assert "| PR head + PR tests | **{verdict(head)}** |" in text
         assert "| Base code + same tests | **{verdict(base)}** |" in text
         assert "| Proof Integrity | **{integrity_status}** |" in text
