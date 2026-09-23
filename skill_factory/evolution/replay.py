@@ -1,8 +1,8 @@
 """Deterministic command-based replay for EvoPR.
 
-The runner deliberately keeps the contract small: a project supplies two argv lists
-for the same case (baseline and candidate). Exit code 0 means the case passed.
-This makes the first real replay adapter usable with any language or agent harness.
+The legacy contract treats exit code 0 as behavioral PASS. The optional json-v1
+protocol separates adapter execution from behavioral outcome and supports continuous
+scores plus structured evidence.
 """
 from __future__ import annotations
 
@@ -16,6 +16,24 @@ from typing import Any
 
 from .models import ReplayResult
 
+RESULT_PREFIX = "EVOPR_RESULT="
+
+
+@dataclass(frozen=True)
+class StructuredProbeResult:
+    verdict: str
+    score: float
+    metrics: dict[str, Any]
+    observations: tuple[str, ...] = ()
+    artifacts: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class BehavioralOutcome:
+    verdict: str
+    score: float
+    note: str = ""
+
 
 @dataclass(frozen=True)
 class CommandOutcome:
@@ -25,10 +43,132 @@ class CommandOutcome:
     stdout: str
     stderr: str
     timed_out: bool = False
+    probe_result: StructuredProbeResult | None = None
+    probe_result_error: str | None = None
 
     @property
     def score(self) -> float:
         return 0.0 if self.timed_out or self.returncode != 0 else 1.0
+
+
+def parse_structured_probe_result(stdout: str) -> StructuredProbeResult | None:
+    """Parse the last EVOPR_RESULT=<json> line from adapter stdout."""
+    payload_text: str | None = None
+    for line in reversed(stdout.splitlines()):
+        stripped = line.strip()
+        if stripped.startswith(RESULT_PREFIX):
+            payload_text = stripped[len(RESULT_PREFIX) :].strip()
+            break
+
+    if payload_text is None:
+        return None
+
+    try:
+        raw = json.loads(payload_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid EVOPR_RESULT JSON: {exc}") from exc
+
+    if not isinstance(raw, dict):
+        raise ValueError("EVOPR_RESULT must be a JSON object")
+
+    verdict = raw.get("verdict")
+    if verdict not in {"pass", "fail"}:
+        raise ValueError("EVOPR_RESULT verdict must be 'pass' or 'fail'")
+
+    default_score = 1.0 if verdict == "pass" else 0.0
+    try:
+        score = float(raw.get("score", default_score))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("EVOPR_RESULT score must be numeric") from exc
+    if not 0.0 <= score <= 1.0:
+        raise ValueError("EVOPR_RESULT score must be between 0 and 1")
+
+    metrics = raw.get("metrics", {})
+    if not isinstance(metrics, dict):
+        raise ValueError("EVOPR_RESULT metrics must be an object")
+
+    observations = raw.get("observations", [])
+    if (
+        not isinstance(observations, list)
+        or not all(isinstance(item, str) for item in observations)
+    ):
+        raise ValueError("EVOPR_RESULT observations must be a list of strings")
+
+    artifacts = raw.get("artifacts", [])
+    if (
+        not isinstance(artifacts, list)
+        or not all(isinstance(item, str) for item in artifacts)
+    ):
+        raise ValueError("EVOPR_RESULT artifacts must be a list of strings")
+
+    return StructuredProbeResult(
+        verdict=verdict,
+        score=score,
+        metrics=metrics,
+        observations=tuple(observations),
+        artifacts=tuple(artifacts),
+    )
+
+
+def interpret_command_outcome(
+    outcome: CommandOutcome,
+    *,
+    protocol: str,
+) -> BehavioralOutcome:
+    """Convert process execution into behavioral evidence under the selected protocol."""
+    if protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown result protocol: {protocol}")
+
+    if outcome.timed_out:
+        return BehavioralOutcome("infra_error", 0.0, "command timed out")
+
+    if protocol == "exit-code":
+        verdict = "pass" if outcome.returncode == 0 else "fail"
+        score = 1.0 if verdict == "pass" else 0.0
+        return BehavioralOutcome(
+            verdict,
+            score,
+            f"exit-code protocol rc={outcome.returncode}",
+        )
+
+    if outcome.returncode != 0:
+        return BehavioralOutcome(
+            "infra_error",
+            0.0,
+            f"json-v1 adapter exited non-zero rc={outcome.returncode}",
+        )
+    if outcome.probe_result_error:
+        return BehavioralOutcome(
+            "infra_error",
+            0.0,
+            outcome.probe_result_error,
+        )
+    if outcome.probe_result is None:
+        return BehavioralOutcome(
+            "infra_error",
+            0.0,
+            "json-v1 adapter did not emit EVOPR_RESULT",
+        )
+
+    return BehavioralOutcome(
+        outcome.probe_result.verdict,
+        outcome.probe_result.score,
+        "json-v1 structured probe result",
+    )
+
+
+def structured_probe_result_to_dict(
+    result: StructuredProbeResult | None,
+) -> dict[str, Any] | None:
+    if result is None:
+        return None
+    return {
+        "verdict": result.verdict,
+        "score": result.score,
+        "metrics": result.metrics,
+        "observations": list(result.observations),
+        "artifacts": list(result.artifacts),
+    }
 
 
 @dataclass(frozen=True)
@@ -78,12 +218,22 @@ def run_command(
             check=False,
         )
         duration_ms = round((time.perf_counter() - started) * 1000)
+        stdout = proc.stdout[-4000:]
+        probe_result = None
+        probe_result_error = None
+        try:
+            probe_result = parse_structured_probe_result(stdout)
+        except ValueError as exc:
+            probe_result_error = str(exc)
+
         return CommandOutcome(
             argv=tuple(argv),
             returncode=proc.returncode,
             duration_ms=duration_ms,
-            stdout=proc.stdout[-4000:],
+            stdout=stdout,
             stderr=proc.stderr[-4000:],
+            probe_result=probe_result,
+            probe_result_error=probe_result_error,
         )
     except subprocess.TimeoutExpired as exc:
         duration_ms = round((time.perf_counter() - started) * 1000)
@@ -103,6 +253,9 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     root = resolve_declared_root(path.parent, str(raw.get("root", ".")))
     default_timeout = float(raw.get("timeout_seconds", 30))
+    default_protocol = str(raw.get("result_protocol", "exit-code"))
+    if default_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown result protocol: {default_protocol}")
     results: list[ExecutedReplay] = []
 
     for case in raw.get("cases", []):
@@ -110,6 +263,9 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
         suite = str(case.get("suite", "replay"))
         cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
+        protocol = str(case.get("result_protocol", default_protocol))
+        if protocol not in {"exit-code", "json-v1"}:
+            raise ValueError(f"unknown result protocol: {protocol}")
         env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
 
         baseline = run_command(
@@ -125,18 +281,25 @@ def run_replay_manifest(path: Path) -> tuple[ExecutedReplay, ...]:
             env=env,
         )
 
-        verdict = "infra_error" if candidate.timed_out else (
-            "pass" if candidate.returncode == 0 else "fail"
+        baseline_behavior = interpret_command_outcome(
+            baseline,
+            protocol=protocol,
+        )
+        candidate_behavior = interpret_command_outcome(
+            candidate,
+            protocol=protocol,
         )
         result = ReplayResult(
             case_id=case_id,
             suite=suite,
-            verdict=verdict,
-            baseline_score=baseline.score,
-            candidate_score=candidate.score,
+            verdict=candidate_behavior.verdict,
+            baseline_score=baseline_behavior.score,
+            candidate_score=candidate_behavior.score,
             note=(
-                f"baseline rc={baseline.returncode}, candidate rc={candidate.returncode}; "
-                f"{baseline.duration_ms}ms/{candidate.duration_ms}ms"
+                f"protocol={protocol}; baseline rc={baseline.returncode}, "
+                f"candidate rc={candidate.returncode}; "
+                f"{baseline.duration_ms}ms/{candidate.duration_ms}ms; "
+                f"candidate={candidate_behavior.note}"
             ),
         )
         results.append(
@@ -170,6 +333,10 @@ def serialize_replays(executed: tuple[ExecutedReplay, ...]) -> dict[str, Any]:
                     "stdout": item.baseline.stdout,
                     "stderr": item.baseline.stderr,
                     "timed_out": item.baseline.timed_out,
+                    "probe_result": structured_probe_result_to_dict(
+                        item.baseline.probe_result
+                    ),
+                    "probe_result_error": item.baseline.probe_result_error,
                 },
                 "candidate": {
                     "argv": list(item.candidate.argv),
@@ -178,6 +345,10 @@ def serialize_replays(executed: tuple[ExecutedReplay, ...]) -> dict[str, Any]:
                     "stdout": item.candidate.stdout,
                     "stderr": item.candidate.stderr,
                     "timed_out": item.candidate.timed_out,
+                    "probe_result": structured_probe_result_to_dict(
+                        item.candidate.probe_result
+                    ),
+                    "probe_result_error": item.candidate.probe_result_error,
                 },
             }
             for item in executed
