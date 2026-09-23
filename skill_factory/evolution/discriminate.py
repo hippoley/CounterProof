@@ -1,4 +1,4 @@
-"""Active discrimination across competing EvoPR mutation hypotheses."""
+"""Active discrimination across competing Counterproof mutation hypotheses."""
 from __future__ import annotations
 
 import json
@@ -343,7 +343,7 @@ def run_discrimination_manifest(
             raise ValueError(f"unknown result protocol: {protocol}")
         common_env = {
             "COUNTERPROOF_CASE_ID": case_id,
-            "EVOPR_CASE_ID": case_id,
+            "COUNTERPROOF_CASE_ID": case_id,
             **case.get("env", {}),
         }
         if "payload" in case:
@@ -353,7 +353,7 @@ def run_discrimination_manifest(
                 sort_keys=True,
             )
             common_env["COUNTERPROOF_CASE_JSON"] = case_json
-            common_env["EVOPR_CASE_JSON"] = case_json
+            common_env["COUNTERPROOF_CASE_JSON"] = case_json
 
         baseline_spec = case.get("baseline", adapter)
         if baseline_spec is None:
@@ -372,7 +372,7 @@ def run_discrimination_manifest(
             env={
                 **common_env,
                 "COUNTERPROOF_VARIANT": "baseline",
-                "EVOPR_VARIANT": "baseline",
+                "COUNTERPROOF_VARIANT": "baseline",
             },
         )
         baseline_behavior = interpret_command_outcome(
@@ -428,7 +428,7 @@ def run_discrimination_manifest(
                 env={
                     **common_env,
                     "COUNTERPROOF_VARIANT": surface,
-                    "EVOPR_VARIANT": surface,
+                    "COUNTERPROOF_VARIANT": surface,
                 },
             )
             behavior = interpret_command_outcome(
@@ -524,7 +524,7 @@ def render_discrimination_markdown(
     mechanisms: dict[str, str] | None = None,
 ) -> str:
     lines = [
-        "# EvoPR Discrimination Matrix",
+        "# Counterproof Discrimination Matrix",
         "",
         "| Surface | Hypothesis | Runtime | Prediction | Mean delta | Regressions | Failures |",
         "|---|---|---|---|---:|---:|---:|",
