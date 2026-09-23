@@ -23,6 +23,13 @@
       "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically."
     },
     {
+      "id": "proof-receipt",
+      "name": "Reproducible Proof Receipt with source fingerprints",
+      "status": "tested",
+      "evidence": "EvoPR can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
+      "limitation": "The receipt fingerprints source artifacts; it does not yet capture a full container image, dependency lock or external service state."
+    },
+    {
       "id": "packaged-install",
       "name": "Clean wheel install and packaged playground",
       "status": "tested",
@@ -86,11 +93,39 @@
       "limitation": "Selection is heuristic unless the user explicitly supplies a mutation surface."
     },
     {
+      "id": "preregistered-predictions",
+      "name": "Pre-registered PASS / FAIL predictions for intervention cases",
+      "status": "tested",
+      "evidence": "Experiment manifests can register expected outcomes before execution; contradicted or partial predictions are tracked separately from runtime pass/fail and can block automatic selection.",
+      "limitation": "Prediction quality still depends on the experiment author or adapter; EvoPR does not yet learn calibrated causal predictions."
+    },
+    {
       "id": "active-discrimination",
       "name": "Active discrimination across competing interventions",
       "status": "tested",
       "evidence": "The discriminate CLI runs the same baseline cases across multiple mutation surfaces and reports survivors, falsified variants, or ambiguity.",
       "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
+    },
+    {
+      "id": "probe-adapter",
+      "name": "Reusable env-driven Probe Adapter protocol",
+      "status": "tested",
+      "evidence": "A single adapter argv can execute baseline and multiple intervention variants using EVOPR_CASE_ID, EVOPR_VARIANT and EVOPR_CASE_JSON across many cases.",
+      "limitation": "Projects still need to implement an adapter that maps those inputs into their own agent or simulator."
+    },
+    {
+      "id": "probe-scaffold",
+      "name": "Guarded draft experiment scaffold generation",
+      "status": "tested",
+      "evidence": "Ambiguous survivor pairs can be compiled into crossed two-case experiment scaffolds with pre-registered predictions and a shared adapter placeholder.",
+      "limitation": "Generated scaffolds are intentionally status=draft and cannot execute until a human or adapter reviews the assumptions and marks them ready."
+    },
+    {
+      "id": "next-probe-planner",
+      "name": "Next discriminating probe planning for ambiguous survivors",
+      "status": "tested",
+      "evidence": "When survivor behavior signatures are identical, EvoPR emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
+      "limitation": "The planner produces experiment-design guidance, not an automatically instantiated executable domain test."
     },
     {
       "id": "active-evolve",
@@ -136,7 +171,7 @@
     }
   ],
   "summary": {
-    "tested": 10,
+    "tested": 15,
     "partial": 4,
     "demo": 1,
     "planned": 4
