@@ -244,6 +244,7 @@ runs:
             return "PASS" if command.get("returncode") == 0 else "FAIL"
 
         witness_status = str(witness.get("status", "unknown")).upper().replace("-", " ")
+        witness_mode = str(witness.get("mode", "unknown")).upper()
         integrity_status = str(integrity.get("status", "unknown")).upper().replace("-", " ")
         changed_tests = "<br>".join(f"`{item}`" for item in tests[:8]) or "—"
         if len(tests) > 8:
@@ -264,6 +265,7 @@ runs:
 | Proof | Result |
 |---|---|
 | Regression Witness | **{witness_status}** |
+| Evidence mode | **{witness_mode}** |
 | PR head + PR tests | **{verdict(head)}** |
 | Base code + same tests | **{verdict(base)}** |
 | Proof Integrity | **{integrity_status}** |
