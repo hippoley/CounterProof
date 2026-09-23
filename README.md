@@ -121,6 +121,22 @@ The same changed test fails before the fix and passes after it.
 
 **Green CI says it passes now. Counterproof proves whether the test failed before the fix.**
 
+### Works with your existing test runner
+
+```text
+pytest       python -m pytest -q {tests}
+Jest         npx jest {tests} --runInBand
+Vitest       npx vitest run {tests}
+Playwright   npx playwright test {tests}
+RSpec        bundle exec rspec {tests}
+Go           go test ./...
+custom       ./scripts/regression-check
+```
+
+Use `{tests}` when the runner accepts explicit changed-test paths. Omit it when your runner should execute the whole suite; Counterproof still overlays the PR's changed tests onto the base worktree before replay.
+
+Counterproof currently auto-detects common Python, JavaScript/TypeScript, Go, Java, Kotlin and Ruby test filename conventions.
+
 ---
 
 ## Why this exists
