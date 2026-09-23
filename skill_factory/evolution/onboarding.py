@@ -1,0 +1,205 @@
+"""Zero-friction GitHub onboarding for Counterproof."""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class TestRunnerDetection:
+    command: str
+    runner: str
+    confidence: str
+    evidence: tuple[str, ...]
+
+
+def _read_json(path: Path) -> dict:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
+    """Detect a practical changed-test command from common project files."""
+    repo_root = repo_root.resolve()
+    package_json = repo_root / "package.json"
+    if package_json.is_file():
+        package = _read_json(package_json)
+        deps: dict[str, object] = {}
+        for key in ("dependencies", "devDependencies"):
+            value = package.get(key, {})
+            if isinstance(value, dict):
+                deps.update(value)
+
+        if "@playwright/test" in deps:
+            return TestRunnerDetection(
+                command="npx playwright test {tests}",
+                runner="playwright",
+                confidence="high",
+                evidence=("package.json:@playwright/test",),
+            )
+        if "vitest" in deps:
+            return TestRunnerDetection(
+                command="npx vitest run {tests}",
+                runner="vitest",
+                confidence="high",
+                evidence=("package.json:vitest",),
+            )
+        if "jest" in deps:
+            return TestRunnerDetection(
+                command="npx jest {tests} --runInBand",
+                runner="jest",
+                confidence="high",
+                evidence=("package.json:jest",),
+            )
+
+        scripts = package.get("scripts", {})
+        if isinstance(scripts, dict) and isinstance(scripts.get("test"), str):
+            return TestRunnerDetection(
+                command="npm test -- {tests}",
+                runner="npm-test",
+                confidence="medium",
+                evidence=("package.json:scripts.test",),
+            )
+
+    pyproject = repo_root / "pyproject.toml"
+    pytest_ini = repo_root / "pytest.ini"
+    tox_ini = repo_root / "tox.ini"
+    if (
+        pytest_ini.is_file()
+        or tox_ini.is_file()
+        or (pyproject.is_file() and "pytest" in pyproject.read_text(encoding="utf-8"))
+        or (repo_root / "tests").is_dir()
+    ):
+        return TestRunnerDetection(
+            command="python -m pytest -q {tests}",
+            runner="pytest",
+            confidence="high" if pytest_ini.is_file() or pyproject.is_file() else "medium",
+            evidence=tuple(
+                item
+                for item, exists in (
+                    ("pytest.ini", pytest_ini.is_file()),
+                    ("tox.ini", tox_ini.is_file()),
+                    ("pyproject.toml", pyproject.is_file()),
+                    ("tests/", (repo_root / "tests").is_dir()),
+                )
+                if exists
+            ),
+        )
+
+    if (repo_root / "go.mod").is_file():
+        return TestRunnerDetection(
+            command="go test ./...",
+            runner="go-test",
+            confidence="high",
+            evidence=("go.mod",),
+        )
+
+    if (repo_root / "Gemfile").is_file():
+        gemfile = (repo_root / "Gemfile").read_text(encoding="utf-8")
+        if "rspec" in gemfile.lower():
+            return TestRunnerDetection(
+                command="bundle exec rspec {tests}",
+                runner="rspec",
+                confidence="high",
+                evidence=("Gemfile:rspec",),
+            )
+
+    if (repo_root / "pom.xml").is_file():
+        return TestRunnerDetection(
+            command="mvn test",
+            runner="maven-test",
+            confidence="medium",
+            evidence=("pom.xml",),
+        )
+
+    if (repo_root / "gradlew").is_file():
+        return TestRunnerDetection(
+            command="./gradlew test",
+            runner="gradle-test",
+            confidence="medium",
+            evidence=("gradlew",),
+        )
+
+    raise ValueError(
+        "could not detect a supported test runner; pass --test-command explicitly"
+    )
+
+
+def render_github_workflow(
+    *,
+    test_command: str,
+    require_witness: bool = False,
+    require_clean_integrity: bool = False,
+) -> str:
+    witness = "true" if require_witness else "false"
+    integrity = "true" if require_clean_integrity else "false"
+    escaped_command = test_command.replace('"', '\\"')
+    head_expr = "$" + "{{ github.event.pull_request.head.sha }}"
+
+    return f"""name: Counterproof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: {head_expr}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Install your project's dependencies before Counterproof when needed.
+      # Example: pip install -e .[dev] / npm ci / bundle install
+      - uses: hippoley/SkillFactory/actions/witness@main
+        with:
+          test-command: "{escaped_command}"
+          require-witness: "{witness}"
+          require-clean-integrity: "{integrity}"
+"""
+
+
+def init_github(
+    repo_root: Path,
+    *,
+    test_command: str | None = None,
+    force: bool = False,
+    require_witness: bool = False,
+    require_clean_integrity: bool = False,
+) -> tuple[Path, TestRunnerDetection | None]:
+    """Create .github/workflows/counterproof.yml without overwriting by default."""
+    repo_root = repo_root.resolve()
+    detection: TestRunnerDetection | None = None
+    if test_command is None:
+        detection = detect_test_runner(repo_root)
+        test_command = detection.command
+
+    destination = repo_root / ".github" / "workflows" / "counterproof.yml"
+    if destination.exists() and not force:
+        raise FileExistsError(
+            f"{destination} already exists; use --force to replace it"
+        )
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        render_github_workflow(
+            test_command=test_command,
+            require_witness=require_witness,
+            require_clean_integrity=require_clean_integrity,
+        ),
+        encoding="utf-8",
+    )
+    return destination, detection
