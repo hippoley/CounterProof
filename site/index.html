@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Counterproof Behavior Proof — test agent mutations against the same world before promotion.">
+  <meta name="description" content="Counterproof proves agent PR fixes by replaying changed tests against pre-change code, then protects the evidence from CI/test tampering.">
   <title>Counterproof · Behavior Proof</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -18,9 +18,38 @@
     <section class="opening">
       <div class="opening-index">01—</div>
       <div>
-        <p class="overline">A REVIEW SURFACE FOR SELF-CHANGING AGENTS</p>
-        <h1>Don’t review the prompt.<br><em>Review the changed behavior.</em></h1>
-        <p class="opening-copy">One failure. Several possible causes. Change one thing, replay the same test, and keep only what survives.</p>
+        <p class="overline">PROOF-OF-FIX FOR AGENT PULL REQUESTS</p>
+        <h1>Green says it passes now.<br><em>Prove it failed before the fix.</em></h1>
+        <p class="opening-copy">Counterproof replays the PR’s changed tests against pre-change code, then checks whether the same PR weakened the tests or CI that produced the evidence.</p>
+      </div>
+    </section>
+
+    <section class="witness-hero" aria-label="Regression witness example">
+      <div class="witness-kicker">REGRESSION WITNESS / SAME TEST · TWO WORLDS</div>
+      <div class="witness-grid">
+        <div class="witness-side">
+          <span>PR HEAD</span>
+          <strong>PASS</strong>
+          <small>tests/test_tenant_scope.py</small>
+        </div>
+        <div class="witness-spine">
+          <span>same changed test</span>
+          <b>→</b>
+        </div>
+        <div class="witness-side base">
+          <span>BASE CODE + PR TEST</span>
+          <strong>FAIL</strong>
+          <small>pre-change behavior reproduced</small>
+        </div>
+        <div class="witness-verdict">
+          <span>COUNTERPROOF</span>
+          <strong>WITNESSED</strong>
+          <small>proof integrity · CLEAN</small>
+        </div>
+      </div>
+      <div class="witness-foot">
+        <span>A green test is a current-state fact.</span>
+        <b>A regression witness is a before/after claim you can replay.</b>
       </div>
     </section>
 
