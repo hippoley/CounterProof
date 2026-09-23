@@ -116,11 +116,9 @@ def _build_test_argv(command: str, tests: tuple[str, ...]) -> tuple[str, ...]:
         raise ValueError("test command must not be empty")
 
     argv: list[str] = []
-    expanded = False
     for part in parts:
         if part == "{tests}":
             argv.extend(tests)
-            expanded = True
         else:
             argv.append(part)
     return tuple(argv)
