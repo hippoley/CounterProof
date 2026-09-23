@@ -121,6 +121,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "Binding authorizes execution plumbing; it does not certify that the adapter faithfully models target-domain semantics.",
     },
     {
+        "id": "structured-probe-result",
+        "name": "Structured json-v1 Probe Result protocol",
+        "status": "tested",
+        "evidence": "Adapters can separate process execution from behavioral verdict and emit continuous 0-1 scores, metrics, observations and artifact references via EVOPR_RESULT JSON.",
+        "limitation": "The protocol records adapter-reported evidence; semantic trust still depends on the adapter, experiment design and review.",
+    },
+    {
         "id": "probe-adapter",
         "name": "Reusable env-driven Probe Adapter protocol",
         "status": "tested",
