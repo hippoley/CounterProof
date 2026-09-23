@@ -159,21 +159,25 @@ runs:
         if len(proof) > max_chars:
             clipped += "\n\n…proof truncated in PR comment; full artifact remains in the workflow."
 
-        body = f"""<!-- counterproof-behavior-proof -->
-## Counterproof · Behavior Proof
-
-**Selection state:** `{state}`  
-**Selected candidate:** `{selected}`
-
-<details>
-<summary>Open behavioral evidence</summary>
-
-{clipped}
-
-</details>
-
-> Every agent PR should come with proof, not confidence.
-"""
+        body = "\n".join(
+            [
+                "<!-- counterproof-behavior-proof -->",
+                "## Counterproof · Behavior Proof",
+                "",
+                f"**Selection state:** `{state}`  ",
+                f"**Selected candidate:** `{selected}`",
+                "",
+                "<details>",
+                "<summary>Open behavioral evidence</summary>",
+                "",
+                clipped,
+                "",
+                "</details>",
+                "",
+                "> Every agent PR should come with proof, not confidence.",
+                "",
+            ]
+        )
         Path(os.environ["COUNTERPROOF_COMMENT_FILE"]).write_text(
             body,
             encoding="utf-8",
