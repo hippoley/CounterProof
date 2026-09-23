@@ -274,6 +274,7 @@ def _classify_base_result(
     baseline: WitnessCommand,
     *,
     argv: tuple[str, ...],
+    mode: str,
 ) -> tuple[str, str]:
     if baseline.timed_out:
         return (
@@ -295,6 +296,15 @@ def _classify_base_result(
                 f"Base pytest exited with code {baseline.returncode}. "
                 "Only pytest exit 1 is accepted as an actual test-failure witness; "
                 "collection, usage, internal, interruption, and no-tests exits are inconclusive."
+            ),
+        )
+    if mode == "suite":
+        return (
+            "suite-delta",
+            (
+                "The configured full suite passes on head and fails on base with the PR's "
+                "changed test support overlaid. This proves a suite-level before/after delta, "
+                "but not that the changed test itself caused the base failure."
             ),
         )
     return (
@@ -345,10 +355,11 @@ def run_regression_witness(
             base_with_head_tests=None,
             status="no-changed-tests",
             note="No changed test files matched the configured patterns.",
+            mode="precise" if "{tests}" in shlex.split(test_command) else "suite",
             support_files=(),
         )
 
-    argv = _build_test_argv(test_command, tests)
+    argv, mode = _build_test_argv(test_command, tests)
     head = _run(
         argv,
         cwd=repo_root,
@@ -363,7 +374,8 @@ def run_regression_witness(
             head=head,
             base_with_head_tests=None,
             status="head-failing",
-            note="Changed tests do not pass on the PR head; no proof-of-fix can be claimed.",
+            note="Configured tests do not pass on the PR head; no proof-of-fix can be claimed.",
+            mode=mode,
             support_files=support_files,
         )
 
@@ -393,7 +405,11 @@ def run_regression_witness(
                 check=False,
             )
 
-    status, note = _classify_base_result(baseline, argv=argv)
+    status, note = _classify_base_result(
+        baseline,
+        argv=argv,
+        mode=mode,
+    )
     return RegressionWitness(
         base_ref=base_ref,
         head_ref=head_ref,
@@ -402,6 +418,7 @@ def run_regression_witness(
         base_with_head_tests=baseline,
         status=status,
         note=note,
+        mode=mode,
         support_files=support_files,
     )
 
@@ -455,6 +472,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         f"- Base: {witness.base_ref}",
         f"- Head: {witness.head_ref}",
         f"- Changed tests: {len(witness.tests)}",
+        f"- Mode: {witness.mode}",
         f"- Test-support files overlaid: {len(witness.support_files)}",
     ]
 
