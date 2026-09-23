@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hippoley/SkillFactory/blob/main/schemas/proof-summary-v1.schema.json",
+  "title": "Counterproof Proof Summary v1",
+  "description": "Machine-readable aggregate verdict for Counterproof Regression Witness + Proof Integrity evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "witness_status",
+    "evidence_mode",
+    "integrity_status",
+    "proof_status",
+    "proof_ready",
+    "reasons"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "witness_status": {
+      "type": "string",
+      "enum": [
+        "witnessed",
+        "suite-delta",
+        "not-witnessed",
+        "head-failing",
+        "no-changed-tests",
+        "inconclusive",
+        "unknown"
+      ]
+    },
+    "evidence_mode": {
+      "type": "string",
+      "enum": [
+        "precise",
+        "suite",
+        "unknown"
+      ]
+    },
+    "integrity_status": {
+      "type": "string",
+      "enum": [
+        "clean",
+        "review-required",
+        "unknown"
+      ]
+    },
+    "proof_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "review-required",
+        "suite-delta",
+        "unproven",
+        "head-failing",
+        "no-changed-tests",
+        "inconclusive",
+        "integrity-unknown",
+        "unknown"
+      ]
+    },
+    "proof_ready": {
+      "type": "boolean"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "proof_status": {
+            "const": "verified"
+          }
+        },
+        "required": [
+          "proof_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "proof_ready": {
+            "const": true
+          },
+          "witness_status": {
+            "const": "witnessed"
+          },
+          "evidence_mode": {
+            "const": "precise"
+          },
+          "integrity_status": {
+            "const": "clean"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proof_ready": {
+            "const": true
+          }
+        },
+        "required": [
+          "proof_ready"
+        ]
+      },
+      "then": {
+        "properties": {
+          "proof_status": {
+            "const": "verified"
+          }
+        }
+      }
+    }
+  ]
+}
