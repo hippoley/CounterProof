@@ -22,6 +22,7 @@ from .integrity import (
     render_integrity_markdown,
     write_integrity_json,
 )
+from .onboarding import init_github
 from .models import (
     CandidateMutation,
     Evidence,
@@ -546,6 +547,60 @@ def verify_receipt(
         raise click.ClickException("; ".join(errors))
     click.echo(
         "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
+    )
+
+
+@cli.command("init-github")
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option(
+    "--test-command",
+    default=None,
+    help="Override automatic test-runner detection. Use {tests} where changed test paths belong.",
+)
+@click.option("--force", is_flag=True, help="Replace an existing Counterproof workflow.")
+@click.option(
+    "--require-witness",
+    is_flag=True,
+    help="Generate a workflow that blocks unless a real regression witness is produced.",
+)
+@click.option(
+    "--require-clean-integrity",
+    is_flag=True,
+    help="Generate a workflow that blocks on any test/CI evidence-surface change.",
+)
+def init_github_cmd(
+    repo_dir: str,
+    test_command: str | None,
+    force: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    """Detect the local test runner and install a Counterproof PR workflow."""
+    try:
+        destination, detection = init_github(
+            Path(repo_dir),
+            test_command=test_command,
+            force=force,
+            require_witness=require_witness,
+            require_clean_integrity=require_clean_integrity,
+        )
+    except (ValueError, FileExistsError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if detection is not None:
+        click.echo(
+            f"Detected {detection.runner} ({detection.confidence} confidence): "
+            f"{detection.command}"
+        )
+        if detection.evidence:
+            click.echo("Evidence: " + ", ".join(detection.evidence))
+    else:
+        click.echo(f"Using explicit test command: {test_command}")
+
+    click.echo(f"Wrote {destination}")
+    click.echo(
+        "Next: install your project dependencies in the generated workflow before "
+        "the Counterproof step when the runner needs them."
     )
 
 
