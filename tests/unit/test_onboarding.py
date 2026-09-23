@@ -65,7 +65,7 @@ def test_init_github_generates_pr_head_checkout_and_counterproof_action(tmp_path
     text = destination.read_text(encoding="utf-8")
     assert "github.event.pull_request.head.sha" in text
     assert "fetch-depth: 0" in text
-    assert "hippoley/SkillFactory/actions/witness@main" in text
+    assert "hippoley/SkillFactory@main" in text
     assert 'test-command: "python -m pytest -q {tests}"' in text
     assert 'require-witness: "true"' in text
     assert 'require-clean-integrity: "true"' in text
