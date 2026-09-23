@@ -1,10 +1,10 @@
-# EvoPR · SkillFactory
+# Counterproof
 
 <div align="center">
 
-## **Your agent changed. Show the proof.**
+## **Make agent self-improvement falsifiable.**
 
-**Behavior-change review for self-improving agents.**
+**Active causal debugging and change control for self-modifying AI agents.**
 
 [![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -14,123 +14,165 @@
 
 ---
 
-Agents are getting better at changing prompts, skills, policies and tools.
+Agents can already rewrite prompts, skills, policies, memory and routing.
 
-The uncomfortable question is no longer:
+The dangerous part is not **whether they can change**.
 
-> Can the agent learn?
+It is whether they can answer:
 
-It is:
+> **Why this change? What evidence would falsify it? What survived the same test? What regressed? Can we prove the evidence still matches the inputs?**
 
-> **What exactly changed, what evidence supports it, what regressed, and can I reject it before it becomes permanent?**
-
-EvoPR explores a Git-like review contract for agent behavior.
+Counterproof sits between:
 
 ```text
-raw trace
-  ↓
+agent wants to learn
+        ↓
+     COUNTERPROOF
+        ↓
+change is allowed to become permanent
+```
+
+It turns one failure into a controlled experiment:
+
+```text
+RAW TRACE
+   ↓
 Decision Capsule + Outcome Receipt
-  ↓
-evidence extraction
-  ↓
+   ↓
 competing hypotheses
-  ↓
+   ↓
 falsifiable Probe Contracts
-  ↓
-SAME cases × MULTIPLE interventions
-  ↓
-survivor / falsified / ambiguous
-  ↓
-guarded mutation selection
-  ↓
-Behavior Proof
-  ↓
+   ↓
+pre-registered predictions
+   ↓
+same cases × multiple interventions
+   ↓
+fitness evidence + diagnostic evidence
+   ↓
+unique / ambiguous / prediction-blocked
+   ↓
+Next Probe Plan if needed
+   ↓
+reviewed adapter binding
+   ↓
+structured behavior evidence
+   ↓
+Behavior Proof + Proof Receipt
+   ↓
 PROMOTE / HOLD / REJECT
 ```
 
-## What is real today
+## Why this is not Trace → Skill
 
-This repository is an **early executable prototype**, not a finished self-evolving runtime.
+Trajectory distillation asks:
 
-The following paths are exercised in CI:
+> What lesson should the agent remember?
 
-```text
-generic JSON / JSONL trace ingest TESTED
-Trace → Evolution Packet          TESTED
-Probe Contracts                   TESTED
-Pre-registered predictions       TESTED
-Active multi-intervention compare TESTED
-Trace → discriminate → selection  TESTED
-Ambiguity → Next Probe Plan       TESTED
-Proof Receipt + drift detection   TESTED
-Trace → replay → Behavior Proof   TESTED
-Promotion gate                    TESTED
-Behavior PR Markdown renderer     TESTED
-command-based baseline replay     TESTED
-clean wheel install               TESTED
-interactive browser flow          TESTED UI / FIXTURE DATA
-```
+Counterproof asks:
 
-These are **not implemented yet**:
+> **Which explanation survives an experiment, and what evidence earns the right to change behavior?**
 
-```text
-live GitHub / framework trace adapters
-automatic intervention synthesis
-learned / unique causal attribution
-captured world-state forks
-automatic mutation application to every surface
-GitHub PR open / merge / revert automation
-shadow / canary rollout
-automatic runtime rollback
-```
+| | Trace → Skill | Counterproof |
+|---|---|---|
+| Failure handling | summarize a lesson | propose competing hypotheses |
+| Causality | often implicit | intervention + falsifier |
+| Evaluation | test one candidate | compare multiple interventions on the same cases |
+| Predictions | usually after the run | pre-registered before execution |
+| Negative outcomes | failure = bad | diagnostic FAIL can be evidence |
+| Ambiguity | often pick best guess | remain unselected and design the next probe |
+| Evidence | score / reflection | structured metrics, observations, artifacts |
+| Reproducibility | run log | source-fingerprinted Proof Receipt |
 
-Run the truth table yourself:
-
-```bash
-evopr audit
-```
-
-EvoPR intentionally exposes its limitations instead of turning roadmap items into product claims.
-
----
-
-# 60-second run
+## 60-second run
 
 ```bash
 git clone -b feat/evopr-evolution-runtime https://github.com/hippoley/SkillFactory.git
 cd SkillFactory
 pip install -e .
 
-# Raw trace → competing interventions → guarded selection → Behavior Proof
-evopr evolve examples/traces/tenant_failure.json \
+counterproof evolve examples/traces/tenant_failure.json \
   --experiment-manifest examples/discrimination_suite.json \
   --surface policy \
   --surface skill \
   --surface prompt \
-  --out EVOLUTION_REVIEW.md \
-  --packet-out EVOLVED_PACKET.json
+  --out BEHAVIOR_PROOF.md \
+  --receipt-out PROOF_RECEIPT.json
 
-# Inspect the project's own capability truth table
-evopr audit
+counterproof verify-receipt PROOF_RECEIPT.json
 
-# Open the interactive Behavior Proof Sheet
-evopr demo
+counterproof demo
 # http://127.0.0.1:8765
 ```
 
-The trace compiler extracts the last relevant decision before a negative outcome, builds a Decision Capsule and Outcome Receipt, turns corrections/verifier results into evidence, ranks candidate mutation surfaces, and creates a falsifiable Probe Contract for each hypothesis.
+### The result is allowed to say “I still don’t know.”
 
-Then `evopr evolve` runs the **same baseline cases against multiple executable interventions**. A candidate can be:
+Counterproof has explicit selection states:
 
 ```text
-SURVIVED      all required cases ran; failure improved; no regression
-FALSIFIED     an explicit failure or regression was observed
-INCONCLUSIVE  missing / timed-out evidence, or no useful improvement
+unique-survivor      one eligible intervention survived
+ambiguous            multiple eligible interventions survived
+prediction-blocked   runtime looked good, but the hypothesis contradicted its own prediction
+no-survivor          no tested explanation survived
+diagnostic-only      experiment generated causal evidence but cannot promote a mutation
 ```
 
-EvoPR automatically selects a mutation only when exactly one tested intervention survives. If multiple interventions survive, it leaves `selected_candidate_id` empty rather than inventing certainty.
+No winner is better than a fake winner.
 
-That still does **not** establish unique causal truth. It establishes relative support among the interventions and cases actually tested.
+## What is actually tested
+
+The current branch is an executable research prototype. CI exercises:
+
+```text
+JSON / JSONL trace ingestion                 TESTED
+Decision Capsule + Outcome Receipt           TESTED
+falsifiable Probe Contracts                  TESTED
+pre-registered predictions                   TESTED
+multi-intervention discrimination            TESTED
+fitness vs diagnostic case roles             TESTED
+ambiguity → Next Probe Plan                  TESTED
+draft probe scaffold                         TESTED
+reviewed adapter binding                     TESTED
+structured COUNTERPROOF_RESULT json-v1       TESTED
+continuous scores + metrics + observations   TESTED
+Behavior Proof                               TESTED
+Proof Receipt v2 + drift detection            TESTED
+clean wheel install                          TESTED
+Chromium interaction flow                    TESTED
+```
+
+Run the repository's own truth table:
+
+```bash
+counterproof audit
+```
+
+Still not implemented:
+
+```text
+live Claude / Codex / LangGraph / GitHub trace adapters
+automatic trustworthy domain-test synthesis
+learned or unique causal attribution
+arbitrary world snapshot / restore
+generic runtime mutation executors
+shadow / canary rollout
+automatic runtime rollback
+```
+
+Counterproof deliberately separates **what is tested** from **what is still a research target**.
+
+## Name and compatibility
+
+**Counterproof** is the project name and primary CLI from v0.2.
+
+For existing integrations, these remain available:
+
+```text
+counterproof   primary CLI
+evopr          legacy CLI alias
+skill-factory  legacy skill-generation CLI
+```
+
+The Python implementation package remains `skill_factory` for source compatibility during the rename.
 
 ---
 
@@ -165,7 +207,7 @@ Git answers:
 
 > Which bytes changed?
 
-EvoPR asks:
+Counterproof asks:
 
 > **In the same case, where did behavior diverge?**
 
@@ -204,19 +246,19 @@ A minimal raw trace looks like:
 Compile without running anything:
 
 ~~~bash
-evopr ingest examples/traces/tenant_failure.json --out EVOLUTION_PACKET.json
+counterproof ingest examples/traces/tenant_failure.json --out EVOLUTION_PACKET.json
 ~~~
 
 Or go end to end:
 
 ~~~bash
-evopr prove examples/traces/tenant_failure.json \
+counterproof prove examples/traces/tenant_failure.json \
   --replay-manifest examples/replay_suite.json \
   --surface policy \
-  --out EVOLUTION_PR.md
+  --out BEHAVIOR_PROOF.md
 ~~~
 
-If `--surface` is omitted, EvoPR tests the top heuristic candidate and labels the report accordingly. Replay evidence can support or reject that mutation, but it still does not establish unique causal truth.
+If `--surface` is omitted, Counterproof tests the top heuristic candidate and labels the report accordingly. Replay evidence can support or reject that mutation, but it still does not establish unique causal truth.
 
 Each generated hypothesis also gets a **Probe Contract**:
 
@@ -238,10 +280,10 @@ a nearby case that must remain unchanged
 
 # Active discrimination
 
-The key difference from a single trajectory-to-skill pass is that EvoPR can compare **several explanations under the same cases** and register their expected outcomes **before** execution.
+The key difference from a single trajectory-to-skill pass is that Counterproof can compare **several explanations under the same cases** and register their expected outcomes **before** execution.
 
 ```bash
-evopr discriminate examples/traces/tenant_failure.json \
+counterproof discriminate examples/traces/tenant_failure.json \
   --experiment-manifest examples/discrimination_suite.json \
   --surface policy \
   --surface skill \
@@ -284,7 +326,7 @@ prompt                 PASS          FAIL              PASS
 
 The security holdout is therefore a **diagnostic case**: it separates the policy intervention from the alternatives.
 
-If two surviving variants have identical signatures, EvoPR reports the pair as unresolved and asks for a new case where their predictions differ. It does not manufacture a winner.
+If two surviving variants have identical signatures, Counterproof reports the pair as unresolved and asks for a new case where their predictions differ. It does not manufacture a winner.
 
 A missing variant, timeout, or infrastructure error makes that intervention **inconclusive**, not silently promotable.
 
@@ -294,7 +336,7 @@ A missing variant, timeout, or infrastructure error makes that intervention **in
 
 Not every FAIL means regression.
 
-EvoPR now distinguishes:
+Counterproof now distinguishes:
 
 ~~~text
 role = fitness
@@ -342,7 +384,7 @@ Generated experiment scaffolds start as `status=draft` and cannot run.
 After inspecting the case semantics, bind a real adapter explicitly:
 
 ~~~bash
-evopr bind-probe-adapter NEXT_EXPERIMENT.json \
+counterproof bind-probe-adapter NEXT_EXPERIMENT.json \
   --adapter python \
   --adapter ./my_probe_adapter.py \
   --reviewed-by alice \
@@ -360,7 +402,7 @@ This authorizes **execution plumbing only**. It does not certify that the adapte
 
 Exit codes are useful for process control, but too weak for real agent evaluation.
 
-EvoPR supports:
+Counterproof supports:
 
 ~~~json
 {
@@ -371,7 +413,7 @@ EvoPR supports:
 Under `json-v1`, the adapter process should exit `0` when the **adapter executed successfully** and print one final structured line:
 
 ~~~text
-EVOPR_RESULT={"verdict":"pass","score":0.82,"metrics":{"latency_ms":17},"observations":["target stayed stable"],"artifacts":["trace://run/42"]}
+COUNTERPROOF_RESULT={"verdict":"pass","score":0.82,"metrics":{"latency_ms":17},"observations":["target stayed stable"],"artifacts":["trace://run/42"]}
 ~~~
 
 The semantics are deliberately split:
@@ -380,10 +422,10 @@ The semantics are deliberately split:
 process return code
   -> did the adapter / harness execute?
 
-EVOPR_RESULT.verdict
+COUNTERPROOF_RESULT.verdict
   -> did the tested behavior pass?
 
-EVOPR_RESULT.score
+COUNTERPROOF_RESULT.score
   -> continuous behavior quality in [0, 1]
 ~~~
 
@@ -399,7 +441,7 @@ observations  string[]
 artifacts     string[] references
 ~~~
 
-If a `json-v1` adapter exits non-zero, times out, emits malformed JSON, or omits `EVOPR_RESULT`, EvoPR records `infra_error` rather than silently converting it to behavioral failure or success.
+If a `json-v1` adapter exits non-zero, times out, emits malformed JSON, or omits `COUNTERPROOF_RESULT`, Counterproof records `infra_error` rather than silently converting it to behavioral failure or success.
 
 The included structured fixture proves that a case can be:
 
@@ -439,12 +481,12 @@ A discrimination manifest can define one reusable adapter:
 }
 ~~~
 
-EvoPR invokes the same adapter with:
+Counterproof invokes the same adapter with:
 
 ~~~text
-EVOPR_CASE_ID
-EVOPR_VARIANT
-EVOPR_CASE_JSON
+COUNTERPROOF_CASE_ID
+COUNTERPROOF_VARIANT
+COUNTERPROOF_CASE_JSON
 ~~~
 
 So your adapter only needs to answer:
@@ -454,7 +496,7 @@ So your adapter only needs to answer:
 The included example:
 
 ~~~bash
-evopr discriminate examples/traces/tenant_failure.json \
+counterproof discriminate examples/traces/tenant_failure.json \
   --experiment-manifest examples/adapter_discrimination_suite.json \
   --surface policy \
   --surface skill \
@@ -467,10 +509,10 @@ uses a single env-driven Python adapter across the full matrix.
 
 # Ambiguity → draft executable scaffold
 
-When EvoPR cannot distinguish two surviving hypotheses, `evopr evolve` can emit both the prose plan and a machine-readable next experiment:
+When Counterproof cannot distinguish two surviving hypotheses, `counterproof evolve` can emit both the prose plan and a machine-readable next experiment:
 
 ~~~bash
-evopr evolve examples/traces/tenant_failure.json \
+counterproof evolve examples/traces/tenant_failure.json \
   --experiment-manifest examples/ambiguous_discrimination_suite.json \
   --surface policy \
   --surface skill \
@@ -502,7 +544,7 @@ But it is intentionally emitted as:
 }
 ~~~
 
-EvoPR refuses to execute a draft scaffold, and it also refuses a `ready` scaffold that still contains the adapter placeholder.
+Counterproof refuses to execute a draft scaffold, and it also refuses a `ready` scaffold that still contains the adapter placeholder.
 
 This is deliberate: **automatic experiment design is not the same thing as a trustworthy executable test.**
 
@@ -515,7 +557,7 @@ A Behavior Proof should not stay trustworthy after its source inputs silently ch
 Add:
 
 ```bash
-evopr evolve examples/traces/tenant_failure.json \
+counterproof evolve examples/traces/tenant_failure.json \
   --experiment-manifest examples/discrimination_suite.json \
   --surface policy \
   --surface skill \
@@ -547,7 +589,7 @@ diagnostic cases
 Later:
 
 ```bash
-evopr verify-receipt PROOF_RECEIPT.json
+counterproof verify-receipt PROOF_RECEIPT.json
 ```
 
 If either source file changed, verification fails.
@@ -555,7 +597,7 @@ If either source file changed, verification fails.
 You can also verify the same receipt against files moved to a different path:
 
 ```bash
-evopr verify-receipt PROOF_RECEIPT.json \
+counterproof verify-receipt PROOF_RECEIPT.json \
   --trace ./exported/trace.json \
   --experiment-manifest ./exported/experiment.json
 ```
@@ -568,7 +610,7 @@ The current receipt fingerprints source artifacts. It does **not** yet fingerpri
 
 Without a prediction contract, it is easy to run an intervention first and invent the explanation afterward.
 
-EvoPR therefore tracks two different judgments:
+Counterproof therefore tracks two different judgments:
 
 ```text
 RUNTIME STATUS
@@ -598,7 +640,7 @@ This still does not prove unique causality. It prevents one common failure mode:
 
 # When the evidence is ambiguous
 
-EvoPR does not force a winner when two interventions produce the same behavior signature.
+Counterproof does not force a winner when two interventions produce the same behavior signature.
 
 Example:
 
@@ -613,7 +655,7 @@ This is not enough evidence to choose between them.
 Run:
 
 ```bash
-evopr evolve examples/traces/tenant_failure.json \
+counterproof evolve examples/traces/tenant_failure.json \
   --experiment-manifest examples/ambiguous_discrimination_suite.json \
   --surface policy \
   --surface skill \
@@ -622,7 +664,7 @@ evopr evolve examples/traces/tenant_failure.json \
   --probe-plan-out NEXT_PROBE.md
 ```
 
-EvoPR leaves:
+Counterproof leaves:
 
 ```json
 {
@@ -661,7 +703,7 @@ This is automatic **experiment design**, not automatic domain test generation. A
 
 # Real replay: smallest useful adapter
 
-EvoPR v0.1 uses a deliberately boring integration contract: commands.
+Counterproof v0.1 uses a deliberately boring integration contract: commands.
 
 ```json
 {
@@ -689,12 +731,12 @@ EvoPR v0.1 uses a deliberately boring integration contract: commands.
 Then:
 
 ```bash
-evopr replay replay_suite.json --out results.json
+counterproof replay replay_suite.json --out results.json
 ```
 
-Exit code `0` is currently scored as pass (`1.0`), non-zero as fail (`0.0`). Timeout is classified as `infra_error`, not silently counted as a behavioral regression.
+With the legacy `exit-code` protocol, exit `0` maps to pass (`1.0`) and non-zero maps to fail (`0.0`). With `json-v1`, process execution is separated from behavioral verdict and continuous score. Timeout remains `infra_error`.
 
-That means you can connect EvoPR to:
+That means you can connect Counterproof to:
 
 - pytest
 - Playwright
@@ -728,10 +770,10 @@ This gate is simple. It is **not** presented as a statistically sufficient rollo
 
 # Trace compiler and Evolution Packet
 
-EvoPR now supports two entry points:
+Counterproof now supports two entry points:
 
 1. an explicit Evolution Packet when you already know the review structure;
-2. a generic JSON / JSONL event trace that EvoPR compiles into a packet.
+2. a generic JSON / JSONL event trace that Counterproof compiles into a packet.
 
 The compiler proposes causal surfaces with explicit uncertainty. It does **not** claim that heuristic ranking proves a unique root cause.
 
@@ -761,16 +803,16 @@ tool
 eval
 ```
 
-That means EvoPR can **describe and review** these mutation types today.
+That means Counterproof can **describe and review** these mutation types today.
 
 It does **not yet know how to automatically apply every one of them to an arbitrary live agent**. That distinction matters.
 
 ---
 
-# Behavior PR
+# Behavior Proof
 
 ```bash
-evopr build examples/evolution_pr.json --out EVOLUTION_PR.md
+counterproof build examples/evolution_pr.json --out BEHAVIOR_PROOF.md
 ```
 
 The generated artifact contains:
@@ -787,7 +829,7 @@ The generated artifact contains:
 - rollback reference
 - promotion result
 
-See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
+See [examples/BEHAVIOR_PROOF.md](examples/BEHAVIOR_PROOF.md).
 
 ---
 
@@ -801,14 +843,14 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Command replay | **TESTED** | Real baseline/candidate subprocesses execute in CI |
 | Pre-registered predictions | **TESTED** | Expected PASS/FAIL outcomes are recorded before execution; contradicted predictions can block selection |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
-| Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Guarded `counterproof evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
 | Structured Probe Result json-v1 | **TESTED** | Process execution is separated from behavioral verdict; adapters can emit continuous scores, metrics, observations and artifact refs |
 | Fitness vs diagnostic roles | **TESTED** | Diagnostic expected FAILs are prediction evidence, not fitness regressions; diagnostic-only experiments cannot promote |
 | Reviewed adapter binding | **TESTED** | Draft scaffold requires reviewer + note + real adapter before becoming ready |
-| Probe Adapter protocol | **TESTED** | One adapter argv can execute many cases/variants via EVOPR_CASE_ID / EVOPR_VARIANT / EVOPR_CASE_JSON |
+| Probe Adapter protocol | **TESTED** | One adapter argv can execute many cases/variants via COUNTERPROOF_CASE_ID / COUNTERPROOF_VARIANT / COUNTERPROOF_CASE_JSON |
 | Draft probe scaffold | **TESTED** | Ambiguity can emit crossed experiment cases with pre-registered predictions; execution is blocked until reviewed |
 | Next Probe Planner | **TESTED** | Ambiguous survivor pairs produce controlled-variable, competing-prediction and falsification guidance |
-| Behavior PR renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
+| Behavior Proof renderer | **TESTED** | Measured evidence and provenance render into review artifacts |
 | Proof Receipt | **TESTED** | Trace + experiment hashes and observed/expected signatures can be stored and later verified for drift |
 | Clean install | **TESTED** | Wheel installs in a new venv and the CLI + packaged UI run outside the checkout |
 | Multiple mutation surfaces | **PARTIAL** | Data/review contract exists; generic live mutation executors do not |
@@ -825,7 +867,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 The same truth table is generated by the runtime:
 
 ```bash
-evopr audit --json-output
+counterproof audit --json-output
 ```
 
 ---
@@ -840,13 +882,13 @@ Every pull request checks:
 4. Real baseline/candidate subprocess replay.
 5. A wheel built and installed into a clean virtualenv.
 6. From that clean install, outside the repository:
-   - `evopr ingest`
-   - `evopr prove`
-   - `evopr discriminate`
-   - `evopr evolve`
-   - `evopr bind-probe-adapter`
-   - `evopr verify-receipt`
-   - `evopr demo`
+   - `counterproof ingest`
+   - `counterproof prove`
+   - `counterproof discriminate`
+   - `counterproof evolve`
+   - `counterproof bind-probe-adapter`
+   - `counterproof verify-receipt`
+   - `counterproof demo`
 7. Chromium opens the playground and exercises:
    - Compare All Causes,
    - a falsified hypothesis,
@@ -865,7 +907,7 @@ Trajectory distillation asks:
 
 > What lesson can I extract?
 
-EvoPR is moving toward:
+Counterproof is moving toward:
 
 > **What was the failure mechanism, what is the smallest intervention, and what evidence earns deployment?**
 
@@ -908,14 +950,14 @@ Current branch.
 - falsifiable Probe Contracts
 - deterministic command replay
 - multi-intervention discrimination matrix
-- guarded unique-survivor selection via `evopr evolve`
+- guarded unique-survivor selection via `counterproof evolve`
 - conservative promotion gate
 - honest capability audit
 - worldline + Compare Causes playground
 
 ## v0.2 — Replay adapters
 
-Make replay richer without tying EvoPR to one agent stack:
+Make replay richer without tying Counterproof to one agent stack:
 
 - Python callable adapter
 - HTTP/service adapter
@@ -936,7 +978,7 @@ Make replay richer without tying EvoPR to one agent stack:
 
 - ingest PR review + CI corrections
 - create Evolution Packet automatically
-- open Behavior PR
+- open Behavior Proof
 - merge-to-promote
 - revert-to-rollback
 
@@ -953,7 +995,7 @@ Make replay richer without tying EvoPR to one agent stack:
 
 > **Can an agent change exactly the capability that caused a failure, demonstrate that the intervention improves behavior without unrelated regressions, and remain reviewable and reversible?**
 
-EvoPR does not claim to have solved that question.
+Counterproof does not claim to have solved that question.
 
 It is building the testable machinery needed to answer it.
 
@@ -977,7 +1019,7 @@ skill_factory/
 
 examples/
 ├── evolution_pr.json
-├── EVOLUTION_PR.md
+├── BEHAVIOR_PROOF.md
 ├── replay_suite.json
 ├── discrimination_suite.json
 ├── ambiguous_discrimination_suite.json
@@ -1005,7 +1047,7 @@ tests/
 ├── unit/
 │   └── test_evolution_report.py
 └── browser/
-    └── evopr_smoke.mjs
+    └── counterproof_smoke.mjs
 ```
 
 ---
@@ -1014,6 +1056,6 @@ tests/
 
 ### **Claim nothing you can’t replay.**
 
-EvoPR · Behavior proof for self-changing agents.
+Counterproof · Falsifiable change control for self-modifying agents.
 
 </div>
