@@ -29,8 +29,8 @@ RESULTS = {
 
 
 def main() -> int:
-    variant = os.environ.get("EVOPR_VARIANT", "")
-    raw = os.environ.get("EVOPR_CASE_JSON", "{}")
+    variant = os.environ.get("COUNTERPROOF_VARIANT", os.environ.get("EVOPR_VARIANT", ""))
+    raw = os.environ.get("COUNTERPROOF_CASE_JSON", os.environ.get("EVOPR_CASE_JSON", "{}"))
     try:
         payload = json.loads(raw)
         scenario = str(payload["scenario"])
@@ -56,7 +56,7 @@ def main() -> int:
             f"fixture://structured/{scenario}/{variant}"
         ],
     }
-    print("EVOPR_RESULT=" + json.dumps(result, sort_keys=True))
+    print("COUNTERPROOF_RESULT=" + json.dumps(result, sort_keys=True))
     return 0
 
 
