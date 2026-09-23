@@ -11,6 +11,85 @@ const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;",
 const confidence = h => Math.round((1 - Number(h.uncertainty ?? .5)) * 100);
 const candidate = () => activeCase?.candidates.find(c => c.hypothesis_id === activeHypothesis?.id) || null;
 
+const witnessScenarios = {
+  witnessed: {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "FAIL",
+    baseNote: "pre-change behavior reproduced",
+    verdict: "WITNESSED",
+    integrity: "proof integrity · CLEAN",
+    proofStatus: "VERIFIED",
+    proofReady: "proof ready · TRUE",
+    proofClass: "verified",
+    explanation: "The changed test passes on the PR, fails on the old code, and the evidence surface is clean.",
+    takeaway: "The configured Counterproof evidence contract is satisfied."
+  },
+  "weak-test": {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "PASS",
+    baseNote: "the test already passed before the fix",
+    verdict: "NOT WITNESSED",
+    integrity: "proof integrity · CLEAN",
+    proofStatus: "UNPROVEN",
+    proofReady: "proof ready · FALSE",
+    proofClass: "unproven",
+    explanation: "Green on HEAD is not enough when the same test was already green on BASE.",
+    takeaway: "The configured evidence does not prove the regression."
+  },
+  "judge-changed": {
+    head: "PASS",
+    headNote: "tests/test_tenant_scope.py",
+    base: "FAIL",
+    baseNote: "pre-change behavior reproduced",
+    verdict: "WITNESSED",
+    integrity: "proof integrity · CI/TEST SURFACE CHANGED",
+    proofStatus: "REVIEW REQUIRED",
+    proofReady: "proof ready · FALSE",
+    proofClass: "review",
+    explanation: "The regression witness exists, but the PR also changed how evidence is produced.",
+    takeaway: "The witness survives, but the unified proof is blocked until the judge is reviewed."
+  },
+  "suite-delta": {
+    head: "PASS",
+    headNote: "full configured test suite",
+    base: "FAIL",
+    baseNote: "some base-side suite behavior differs",
+    verdict: "SUITE DELTA",
+    integrity: "proof integrity · CLEAN",
+    proofStatus: "SUITE DELTA",
+    proofReady: "proof ready · FALSE",
+    proofClass: "suite",
+    explanation: "The whole suite distinguishes HEAD from BASE, but the changed test was not isolated.",
+    takeaway: "Useful evidence, but deliberately weaker than an exact Regression Witness."
+  }
+};
+
+function setWitnessScenario(name) {
+  const scenario = witnessScenarios[name] || witnessScenarios.witnessed;
+  byId("witnessHeadVerdict").textContent = scenario.head;
+  byId("witnessHeadNote").textContent = scenario.headNote;
+  byId("witnessBaseVerdict").textContent = scenario.base;
+  byId("witnessBaseNote").textContent = scenario.baseNote;
+  byId("witnessVerdict").textContent = scenario.verdict;
+  byId("witnessIntegrity").textContent = scenario.integrity;
+  byId("witnessProofStatus").textContent = scenario.proofStatus;
+  byId("witnessProofReady").textContent = scenario.proofReady;
+  const unified = byId("witnessUnified");
+  unified.className = "witness-unified " + scenario.proofClass;
+  byId("witnessExplanation").textContent = scenario.explanation;
+  byId("witnessTakeaway").textContent = scenario.takeaway;
+
+  document.querySelectorAll(".witness-scenario").forEach(button => {
+    button.classList.toggle("active", button.dataset.witnessScenario === name);
+  });
+
+  const verdict = byId("witnessVerdict");
+  verdict.classList.toggle("warn", name === "weak-test" || name === "suite-delta");
+  verdict.classList.toggle("review", false);
+}
+
 function toast(message) {
   const el = byId("toast");
   el.textContent = message;
@@ -319,6 +398,14 @@ async function init() {
     byId("failureSummary").textContent = String(error);
   }
 }
+
+
+document.querySelectorAll(".witness-scenario").forEach(button => {
+  button.addEventListener("click", () => {
+    setWitnessScenario(button.dataset.witnessScenario || "witnessed");
+  });
+});
+setWitnessScenario("witnessed");
 
 byId("evidenceToggle").addEventListener("click", () => {
   const drawer = byId("evidenceDrawer");
