@@ -1,4 +1,4 @@
-"""Machine-readable truth table for EvoPR capabilities."""
+"""Machine-readable truth table for Counterproof capabilities."""
 
 CAPABILITIES: tuple[dict[str, str], ...] = (
     {
@@ -26,7 +26,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "id": "proof-receipt",
         "name": "Reproducible Proof Receipt with source fingerprints",
         "status": "tested",
-        "evidence": "EvoPR can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
+        "evidence": "Counterproof can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
         "limitation": "The receipt fingerprints source artifacts; it does not yet capture a full container image, dependency lock or external service state.",
     },
     {
@@ -55,7 +55,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "name": "Multiple mutation surfaces",
         "status": "partial",
         "evidence": "The data model accepts skill, prompt, policy, router, memory, tool, and eval surfaces.",
-        "limitation": "EvoPR does not yet apply each mutation surface to a live agent automatically.",
+        "limitation": "Counterproof does not yet apply each mutation surface to a live agent automatically.",
     },
     {
         "id": "evidence-semantics",
@@ -97,7 +97,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "name": "Pre-registered PASS / FAIL predictions for intervention cases",
         "status": "tested",
         "evidence": "Experiment manifests can register expected outcomes before execution; contradicted or partial predictions are tracked separately from runtime pass/fail and can block automatic selection.",
-        "limitation": "Prediction quality still depends on the experiment author or adapter; EvoPR does not yet learn calibrated causal predictions.",
+        "limitation": "Prediction quality still depends on the experiment author or adapter; Counterproof does not yet learn calibrated causal predictions.",
     },
     {
         "id": "active-discrimination",
@@ -124,14 +124,14 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "id": "structured-probe-result",
         "name": "Structured json-v1 Probe Result protocol",
         "status": "tested",
-        "evidence": "Adapters can separate process execution from behavioral verdict and emit continuous 0-1 scores, metrics, observations and artifact references via EVOPR_RESULT JSON.",
+        "evidence": "Adapters can separate process execution from behavioral verdict and emit continuous 0-1 scores, metrics, observations and artifact references via COUNTERPROOF_RESULT JSON.",
         "limitation": "The protocol records adapter-reported evidence; semantic trust still depends on the adapter, experiment design and review.",
     },
     {
         "id": "probe-adapter",
         "name": "Reusable env-driven Probe Adapter protocol",
         "status": "tested",
-        "evidence": "A single adapter argv can execute baseline and multiple intervention variants using EVOPR_CASE_ID, EVOPR_VARIANT and EVOPR_CASE_JSON across many cases.",
+        "evidence": "A single adapter argv can execute baseline and multiple intervention variants using COUNTERPROOF_CASE_ID, COUNTERPROOF_VARIANT and COUNTERPROOF_CASE_JSON across many cases.",
         "limitation": "Projects still need to implement an adapter that maps those inputs into their own agent or simulator.",
     },
     {
@@ -145,7 +145,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "id": "next-probe-planner",
         "name": "Next discriminating probe planning for ambiguous survivors",
         "status": "tested",
-        "evidence": "When survivor behavior signatures are identical, EvoPR emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
+        "evidence": "When survivor behavior signatures are identical, Counterproof emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
         "limitation": "The planner produces experiment-design guidance, not an automatically instantiated executable domain test.",
     },
     {
@@ -181,7 +181,7 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "name": "Automatic Evolution PR open / merge / revert",
         "status": "planned",
         "evidence": "Roadmap only.",
-        "limitation": "No GitHub automation is wired into the EvoPR runtime yet.",
+        "limitation": "No GitHub automation is wired into the Counterproof runtime yet.",
     },
     {
         "id": "online-rollout",
