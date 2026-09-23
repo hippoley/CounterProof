@@ -50,6 +50,46 @@ It gives:
 
 > **this exact test passes after the fix and fails before it.**
 
+### One-command install
+
+```bash
+pip install counterproof
+
+counterproof init-github \
+  --require-witness \
+  --require-clean-integrity
+```
+
+Counterproof detects the local test runner and writes:
+
+```text
+.github/workflows/counterproof.yml
+```
+
+Detected today:
+
+```text
+pytest
+Vitest
+Jest
+Playwright
+npm test
+Go test
+RSpec
+Maven
+Gradle
+```
+
+If detection is wrong or your repository uses a custom harness:
+
+```bash
+counterproof init-github \
+  --test-command "./scripts/regression-check" \
+  --require-witness
+```
+
+It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
+
 ### GitHub Action
 
 ```yaml
