@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 
+from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
 from .discriminate import (
     discrimination_to_dict,
@@ -466,6 +467,48 @@ def replay(manifest_file: str, out_file: str) -> None:
     Path(out_file).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     passed = sum(case["verdict"] == "pass" for case in payload["cases"])
     click.echo(f"Executed {len(payload['cases'])} replay cases; {passed} candidate passes.")
+    click.echo(f"Wrote {out_file}")
+
+
+@cli.command("bind-probe-adapter")
+@click.argument("scaffold_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--adapter",
+    "adapter_parts",
+    multiple=True,
+    required=True,
+    help="Adapter argv part. Repeat for each argument, e.g. --adapter python --adapter my_adapter.py",
+)
+@click.option("--reviewed-by", required=True, help="Reviewer identity or label.")
+@click.option("--review-note", required=True, help="Why this scaffold is safe to execute.")
+@click.option("--out", "out_file", default="READY_EXPERIMENT.json", show_default=True)
+def bind_probe_adapter_cmd(
+    scaffold_file: str,
+    adapter_parts: tuple[str, ...],
+    reviewed_by: str,
+    review_note: str,
+    out_file: str,
+) -> None:
+    """Approve a draft probe scaffold and bind it to one executable adapter."""
+    raw = json.loads(Path(scaffold_file).read_text(encoding="utf-8"))
+    try:
+        bound = bind_probe_adapter(
+            raw,
+            adapter=adapter_parts,
+            reviewed_by=reviewed_by,
+            review_note=review_note,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(out_file).write_text(
+        json.dumps(bound, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    click.echo(
+        "Bound reviewed scaffold to adapter; status=ready. "
+        "Runtime evidence is still required before any mutation can be selected."
+    )
     click.echo(f"Wrote {out_file}")
 
 
