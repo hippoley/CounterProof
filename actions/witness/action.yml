@@ -226,7 +226,11 @@ runs:
         markdown=".counterproof/out/PROOF_SUMMARY.md"
 
         if [[ -f "$witness" && -f "$integrity" ]]; then
-          counterproof proof-summary             --witness-json "$witness"             --integrity-json "$integrity"             --out "$summary"             --markdown-out "$markdown"
+          counterproof proof-summary \
+            --witness-json "$witness" \
+            --integrity-json "$integrity" \
+            --out "$summary" \
+            --markdown-out "$markdown"
         else
           python - <<'PY'
         import json
