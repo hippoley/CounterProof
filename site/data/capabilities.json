@@ -107,6 +107,20 @@
       "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
     },
     {
+      "id": "diagnostic-case-roles",
+      "name": "Fitness vs diagnostic case-role semantics",
+      "status": "tested",
+      "evidence": "Diagnostic cases may intentionally pre-register FAIL outcomes; they contribute to prediction testing but are excluded from fitness failure/regression counting and cannot alone promote a mutation.",
+      "limitation": "Case roles are declared by the experiment author or scaffold generator; domain correctness still depends on the adapter and review."
+    },
+    {
+      "id": "reviewed-adapter-binding",
+      "name": "Reviewed draft scaffold -> ready adapter binding",
+      "status": "tested",
+      "evidence": "The bind-probe-adapter CLI requires a draft scaffold, non-placeholder adapter argv, reviewer identity, and review note before changing status to ready.",
+      "limitation": "Binding authorizes execution plumbing; it does not certify that the adapter faithfully models target-domain semantics."
+    },
+    {
       "id": "probe-adapter",
       "name": "Reusable env-driven Probe Adapter protocol",
       "status": "tested",
@@ -171,7 +185,7 @@
     }
   ],
   "summary": {
-    "tested": 15,
+    "tested": 17,
     "partial": 4,
     "demo": 1,
     "planned": 4
