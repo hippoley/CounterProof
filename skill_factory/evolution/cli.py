@@ -578,6 +578,7 @@ def _run_init_command(
     force: bool,
     require_witness: bool,
     require_clean_integrity: bool,
+    strict: bool,
 ) -> None:
     try:
         destination, detection = init_github(
@@ -587,6 +588,7 @@ def _run_init_command(
             force=force,
             require_witness=require_witness,
             require_clean_integrity=require_clean_integrity,
+            require_proof_ready=strict,
         )
     except (ValueError, FileExistsError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -609,11 +611,14 @@ def _run_init_command(
 
     click.echo(f"Evidence mode: {mode}")
     click.echo(f"Action ref: {action_ref}")
-    click.echo(
-        "Gates: "
-        f"witness={'required' if require_witness else 'advisory'}, "
-        f"integrity={'required' if require_clean_integrity else 'advisory'}"
-    )
+    if strict:
+        click.echo("Gate mode: strict (VERIFIED proof required)")
+    else:
+        click.echo(
+            "Gates: "
+            f"witness={'required' if require_witness else 'advisory'}, "
+            f"integrity={'required' if require_clean_integrity else 'advisory'}"
+        )
     click.echo(f"Wrote {destination}")
     click.echo(
         "Next: review the generated workflow, then commit it. "
@@ -646,6 +651,11 @@ def _init_options(function):
         help="Replace an existing Counterproof workflow.",
     )(function)
     function = click.option(
+        "--strict",
+        is_flag=True,
+        help="Block unless the unified Counterproof proof status is VERIFIED.",
+    )(function)
+    function = click.option(
         "--require-witness",
         is_flag=True,
         help="Block unless precise changed-test replay produces a Regression Witness.",
@@ -665,6 +675,7 @@ def init_cmd(
     test_command: str | None,
     action_ref: str,
     force: bool,
+    strict: bool,
     require_witness: bool,
     require_clean_integrity: bool,
 ) -> None:
@@ -676,6 +687,7 @@ def init_cmd(
         force=force,
         require_witness=require_witness,
         require_clean_integrity=require_clean_integrity,
+        strict=strict,
     )
 
 
@@ -686,6 +698,7 @@ def init_github_cmd(
     test_command: str | None,
     action_ref: str,
     force: bool,
+    strict: bool,
     require_witness: bool,
     require_clean_integrity: bool,
 ) -> None:
@@ -697,6 +710,7 @@ def init_github_cmd(
         force=force,
         require_witness=require_witness,
         require_clean_integrity=require_clean_integrity,
+        strict=strict,
     )
 
 
