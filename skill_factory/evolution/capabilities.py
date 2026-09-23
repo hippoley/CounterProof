@@ -23,6 +23,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically.",
     },
     {
+        "id": "github-pr-proof",
+        "name": "Root GitHub Action for Regression Witness + Proof Integrity",
+        "status": "tested",
+        "evidence": "The repository root action is the low-friction PR proof path; init-github generates workflows against it, while the advanced causal Behavior Proof action remains available under actions/behavior-proof.",
+        "limitation": "The Action proves configured test behavior and evidence integrity; it does not autonomously approve, merge, or deploy the pull request.",
+    },
+    {
         "id": "proof-integrity-guard",
         "name": "Proof Integrity Guard for changed tests and CI",
         "status": "tested",
@@ -206,10 +213,10 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
     },
     {
         "id": "github-change-control",
-        "name": "Automatic Evolution PR open / merge / revert",
+        "name": "Automatic mutation PR open / merge / revert",
         "status": "planned",
-        "evidence": "Roadmap only.",
-        "limitation": "No GitHub automation is wired into the Counterproof runtime yet.",
+        "evidence": "Roadmap only. PR proof comments and CI gates exist, but mutation lifecycle automation does not.",
+        "limitation": "Counterproof does not yet open, merge, deploy, or revert agent mutations automatically.",
     },
     {
         "id": "online-rollout",
