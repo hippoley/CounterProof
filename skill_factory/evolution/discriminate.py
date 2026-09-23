@@ -341,13 +341,19 @@ def run_discrimination_manifest(
         protocol = str(case.get("result_protocol", default_protocol))
         if protocol not in {"exit-code", "json-v1"}:
             raise ValueError(f"unknown result protocol: {protocol}")
-        common_env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
+        common_env = {
+            "COUNTERPROOF_CASE_ID": case_id,
+            "EVOPR_CASE_ID": case_id,
+            **case.get("env", {}),
+        }
         if "payload" in case:
-            common_env["EVOPR_CASE_JSON"] = json.dumps(
+            case_json = json.dumps(
                 case["payload"],
                 ensure_ascii=False,
                 sort_keys=True,
             )
+            common_env["COUNTERPROOF_CASE_JSON"] = case_json
+            common_env["EVOPR_CASE_JSON"] = case_json
 
         baseline_spec = case.get("baseline", adapter)
         if baseline_spec is None:
@@ -363,7 +369,11 @@ def run_discrimination_manifest(
             baseline_argv,
             cwd=cwd,
             timeout_seconds=timeout,
-            env={**common_env, "EVOPR_VARIANT": "baseline"},
+            env={
+                **common_env,
+                "COUNTERPROOF_VARIANT": "baseline",
+                "EVOPR_VARIANT": "baseline",
+            },
         )
         baseline_behavior = interpret_command_outcome(
             baseline,
@@ -415,7 +425,11 @@ def run_discrimination_manifest(
                 argv,
                 cwd=cwd,
                 timeout_seconds=timeout,
-                env={**common_env, "EVOPR_VARIANT": surface},
+                env={
+                    **common_env,
+                    "COUNTERPROOF_VARIANT": surface,
+                    "EVOPR_VARIANT": surface,
+                },
             )
             behavior = interpret_command_outcome(
                 outcome,
