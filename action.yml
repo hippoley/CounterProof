@@ -47,6 +47,15 @@ outputs:
   integrity-status:
     description: "clean or review-required."
     value: ${{ steps.integrity.outputs.integrity-status }}
+  proof-status:
+    description: "verified, review-required, suite-delta, unproven, head-failing, no-changed-tests, inconclusive, integrity-unknown, or unknown."
+    value: ${{ steps.summary.outputs.proof-status }}
+  proof-ready:
+    description: "true only when Counterproof's configured proof contract is satisfied."
+    value: ${{ steps.summary.outputs.proof-ready }}
+  summary-json-path:
+    description: "Generated unified Counterproof proof summary JSON path."
+    value: ${{ steps.summary.outputs.summary-json-path }}
 
 runs:
   using: "composite"
@@ -203,6 +212,75 @@ runs:
 
         exit "$command_status"
 
+    - name: Build unified proof summary
+      id: summary
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
+
+        witness=".counterproof/out/REGRESSION_WITNESS.json"
+        integrity=".counterproof/out/PROOF_INTEGRITY.json"
+        summary=".counterproof/out/PROOF_SUMMARY.json"
+        markdown=".counterproof/out/PROOF_SUMMARY.md"
+
+        if [[ -f "$witness" && -f "$integrity" ]]; then
+          counterproof proof-summary             --witness-json "$witness"             --integrity-json "$integrity"             --out "$summary"             --markdown-out "$markdown"
+        else
+          python - <<'PY'
+        import json
+        from pathlib import Path
+
+        payload = {
+            "schema_version": 1,
+            "witness_status": "unknown",
+            "evidence_mode": "unknown",
+            "integrity_status": "unknown",
+            "proof_status": "unknown",
+            "proof_ready": False,
+            "reasons": [
+                "One or more upstream Counterproof evidence artifacts were unavailable."
+            ],
+        }
+        Path(".counterproof/out/PROOF_SUMMARY.json").write_text(
+            json.dumps(payload, indent=2),
+            encoding="utf-8",
+        )
+        Path(".counterproof/out/PROOF_SUMMARY.md").write_text(
+            "# Counterproof · Proof Summary\n\n"
+            "- Proof status: **UNKNOWN**\n"
+            "- Proof ready: **false**\n\n"
+            "> One or more upstream evidence artifacts were unavailable.\n",
+            encoding="utf-8",
+        )
+        PY
+        fi
+
+        proof_status="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/PROOF_SUMMARY.json", encoding="utf-8") as f:
+            print(json.load(f)["proof_status"])
+        PY
+        )"
+        proof_ready="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/PROOF_SUMMARY.json", encoding="utf-8") as f:
+            print(str(json.load(f)["proof_ready"]).lower())
+        PY
+        )"
+
+        echo "proof-status=$proof_status" >> "$GITHUB_OUTPUT"
+        echo "proof-ready=$proof_ready" >> "$GITHUB_OUTPUT"
+        echo "summary-json-path=$summary" >> "$GITHUB_OUTPUT"
+
+        {
+          echo
+          echo "---"
+          echo
+          cat "$markdown"
+        } >> "$GITHUB_STEP_SUMMARY"
+
     - name: Publish sticky witness comment
       if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' && always() }}
       shell: bash
@@ -225,6 +303,7 @@ runs:
         export COUNTERPROOF_COMMENT_FILE="$body_file"
         export COUNTERPROOF_WITNESS_JSON=".counterproof/out/REGRESSION_WITNESS.json"
         export COUNTERPROOF_INTEGRITY_JSON=".counterproof/out/PROOF_INTEGRITY.json"
+        export COUNTERPROOF_SUMMARY_JSON=".counterproof/out/PROOF_SUMMARY.json"
         export COUNTERPROOF_WITNESS_MD="$report"
         export COUNTERPROOF_INTEGRITY_MD="$integrity"
 
@@ -241,6 +320,12 @@ runs:
             json.loads(integrity_path.read_text(encoding="utf-8"))
             if integrity_path.exists()
             else {"status": "unknown", "findings": []}
+        )
+        summary_path = Path(os.environ["COUNTERPROOF_SUMMARY_JSON"])
+        summary = (
+            json.loads(summary_path.read_text(encoding="utf-8"))
+            if summary_path.exists()
+            else {"proof_status": "unknown", "proof_ready": False}
         )
 
         head = witness.get("head") or {}
@@ -259,6 +344,8 @@ runs:
         witness_mode = str(witness.get("mode", "unknown")).upper()
         raw_integrity = str(integrity.get("status", "unknown"))
         integrity_status = raw_integrity.upper().replace("-", " ")
+        proof_status = str(summary.get("proof_status", "unknown")).upper().replace("-", " ")
+        proof_ready = str(bool(summary.get("proof_ready", False))).lower()
 
         next_actions = {
             "witnessed": "Evidence established. Review scope and the remaining checks.",
@@ -295,6 +382,8 @@ runs:
 | PR head + PR tests | **{verdict(head)}** |
 | Base code + same tests | **{verdict(base)}** |
 | Proof Integrity | **{integrity_status}** |
+| Unified proof | **{proof_status}** |
+| Proof ready | **{proof_ready}** |
 | Next action | {next_action} |
 
 **Changed tests**
