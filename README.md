@@ -356,6 +356,63 @@ This authorizes **execution plumbing only**. It does not certify that the adapte
 
 ---
 
+# Structured Probe Results
+
+Exit codes are useful for process control, but too weak for real agent evaluation.
+
+EvoPR supports:
+
+~~~json
+{
+  "result_protocol": "json-v1"
+}
+~~~
+
+Under `json-v1`, the adapter process should exit `0` when the **adapter executed successfully** and print one final structured line:
+
+~~~text
+EVOPR_RESULT={"verdict":"pass","score":0.82,"metrics":{"latency_ms":17},"observations":["target stayed stable"],"artifacts":["trace://run/42"]}
+~~~
+
+The semantics are deliberately split:
+
+~~~text
+process return code
+  -> did the adapter / harness execute?
+
+EVOPR_RESULT.verdict
+  -> did the tested behavior pass?
+
+EVOPR_RESULT.score
+  -> continuous behavior quality in [0, 1]
+~~~
+
+So all processes can exit `0` while the behavioral matrix still contains PASS and FAIL.
+
+Supported fields:
+
+~~~text
+verdict       pass | fail
+score         0.0 .. 1.0
+metrics       JSON object
+observations  string[]
+artifacts     string[] references
+~~~
+
+If a `json-v1` adapter exits non-zero, times out, emits malformed JSON, or omits `EVOPR_RESULT`, EvoPR records `infra_error` rather than silently converting it to behavioral failure or success.
+
+The included structured fixture proves that a case can be:
+
+~~~text
+verdict = PASS
+score   = 0.82
+signature = P
+~~~
+
+A perfect score is not required for PASS.
+
+---
+
 # One adapter, many probes
 
 You do not have to repeat a command for every case × intervention.
@@ -467,7 +524,7 @@ evopr evolve examples/traces/tenant_failure.json \
   --receipt-out PROOF_RECEIPT.json
 ```
 
-The receipt fingerprints:
+Proof Receipt v2 freezes:
 
 ```text
 trace SHA256
@@ -477,6 +534,11 @@ observed behavior signatures
 pre-registered expected signatures
 prediction status
 runtime status
+continuous behavior scores
+fitness / diagnostic case roles
+structured metrics
+observations
+artifact references
 eligible survivors
 selected candidate
 diagnostic cases
@@ -740,6 +802,7 @@ See [examples/EVOLUTION_PR.md](examples/EVOLUTION_PR.md).
 | Pre-registered predictions | **TESTED** | Expected PASS/FAIL outcomes are recorded before execution; contradicted predictions can block selection |
 | Active discrimination | **TESTED** | Same cases run across multiple interventions; survivor/falsified/ambiguity states tested |
 | Guarded `evopr evolve` | **TESTED** | Only a unique survivor is automatically selected; ambiguity remains unselected |
+| Structured Probe Result json-v1 | **TESTED** | Process execution is separated from behavioral verdict; adapters can emit continuous scores, metrics, observations and artifact refs |
 | Fitness vs diagnostic roles | **TESTED** | Diagnostic expected FAILs are prediction evidence, not fitness regressions; diagnostic-only experiments cannot promote |
 | Reviewed adapter binding | **TESTED** | Draft scaffold requires reviewer + note + real adapter before becoming ready |
 | Probe Adapter protocol | **TESTED** | One adapter argv can execute many cases/variants via EVOPR_CASE_ID / EVOPR_VARIANT / EVOPR_CASE_JSON |
@@ -919,6 +982,7 @@ examples/
 ├── discrimination_suite.json
 ├── ambiguous_discrimination_suite.json
 ├── adapter_discrimination_suite.json
+├── structured_discrimination_suite.json
 ├── traces/
 │   ├── tenant_failure.json
 │   └── homeai_correction.json
@@ -926,7 +990,8 @@ examples/
     ├── tenant_policy.py
     ├── tenant_discrimination.py
     ├── env_probe_adapter.py
-    └── cross_probe_adapter.py
+    ├── cross_probe_adapter.py
+    └── structured_probe_adapter.py
 
 site/
 ├── index.html
