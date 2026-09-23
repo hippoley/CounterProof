@@ -1,4 +1,4 @@
-"""CLI for the EvoPR prototype."""
+"""CLI for Counterproof."""
 from __future__ import annotations
 
 import json
@@ -78,7 +78,7 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 
 @click.group()
 def cli() -> None:
-    """EvoPR: pull requests for agent behavior."""
+    """Counterproof: falsifiable change control for self-modifying agents."""
 
 
 @cli.command("build")
@@ -546,7 +546,7 @@ def verify_receipt(
 @cli.command("audit")
 @click.option("--json-output", is_flag=True, help="Emit machine-readable JSON.")
 def audit(json_output: bool) -> None:
-    """Show what EvoPR can actually do today, with evidence and limitations."""
+    """Show what Counterproof can actually do today, with evidence and limitations."""
     report = capability_report()
     if json_output:
         click.echo(json.dumps(report, indent=2))
@@ -563,18 +563,24 @@ def audit(json_output: bool) -> None:
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8765, type=int, show_default=True)
 def demo(host: str, port: int) -> None:
-    """Serve the interactive EvoPR playground from site/."""
+    """Serve the interactive Counterproof playground from site/."""
     checkout_site = Path(__file__).resolve().parents[2] / "site"
-    installed_site = Path(sys.prefix) / "share" / "skill-factory" / "site"
-    site_dir = checkout_site if (checkout_site / "index.html").exists() else installed_site
+    installed_site = Path(sys.prefix) / "share" / "counterproof" / "site"
+    legacy_site = Path(sys.prefix) / "share" / "skill-factory" / "site"
+    if (checkout_site / "index.html").exists():
+        site_dir = checkout_site
+    elif (installed_site / "index.html").exists():
+        site_dir = installed_site
+    else:
+        site_dir = legacy_site
     if not (site_dir / "index.html").exists():
         raise click.ClickException(
-            "EvoPR playground assets were not found in the checkout or installed wheel"
+            "Counterproof playground assets were not found in the checkout or installed wheel"
         )
 
     handler = partial(SimpleHTTPRequestHandler, directory=str(site_dir))
     server = ThreadingHTTPServer((host, port), handler)
-    click.echo(f"EvoPR playground: http://{host}:{port}")
+    click.echo(f"Counterproof playground: http://{host}:{port}")
     click.echo("Press Ctrl+C to stop.")
     try:
         server.serve_forever()
