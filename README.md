@@ -443,18 +443,38 @@ Use it for the repository social preview, launch posts, HN/X screenshots, or rel
 
 ---
 
-## Contributing
+## Break Counterproof
 
-The most valuable contributions are not “more AI.”
+The highest-value contribution is a **counterexample**.
 
-They are things that make proof harder to fake:
+Can you make Counterproof:
 
-- a runner adapter that preserves before/after semantics;
-- a real PR fixture that breaks an assumption;
-- an integrity rule with low false-positive cost;
-- a reproduction where Counterproof overclaims;
-- a better discriminating probe;
-- an adapter for a real agent runtime.
+- call weak evidence strong?
+- miss a real regression witness?
+- trust a changed judge?
+- confuse infrastructure failure with behavioral failure?
+- produce a proof that looks convincing but is semantically wrong?
+
+If yes, that is not an edge case we want to hide.
+
+**[Open a Counterexample issue →](https://github.com/hippoley/SkillFactory/issues/new?template=counterexample.yml)**
+
+A great report gives us:
+
+```text
+small reproducible PR
++ expected evidence classification
++ actual Counterproof classification
++ why the difference matters
+```
+
+### Other valuable contributions
+
+- runner adapters that preserve before/after semantics;
+- real PR fixtures that break assumptions;
+- integrity rules with low false-positive cost;
+- better discriminating probes;
+- adapters for real agent runtimes.
 
 If Counterproof labels weak evidence as strong evidence, **that is a bug**.
 
