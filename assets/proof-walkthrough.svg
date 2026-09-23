@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560">
+  <rect width="1440" height="560" rx="28" fill="#f3f0e7"/>
+  <text x="60" y="64" fill="#171815" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">One PR. Four facts.</text>
+  <text x="60" y="98" fill="#70736b" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15">Counterproof replays evidence instead of trusting the patch narrative.</text>
+
+  <g transform="translate(60 140)">
+    <rect width="300" height="280" rx="18" fill="#121310"/>
+    <text x="26" y="38" fill="#7f827a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">01 / PR HEAD</text>
+    <text x="26" y="92" fill="#f4f1e8" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">Run changed tests</text>
+    <rect x="26" y="132" width="122" height="44" rx="22" fill="#dceede"/>
+    <text x="58" y="160" fill="#214a2c" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" font-weight="700">PASS</text>
+    <text x="26" y="220" fill="#a4a79f" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">the fix works now</text>
+  </g>
+
+  <g transform="translate(400 140)">
+    <rect width="300" height="280" rx="18" fill="#121310"/>
+    <text x="26" y="38" fill="#7f827a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">02 / BASE</text>
+    <text x="26" y="92" fill="#f4f1e8" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">Replay same tests</text>
+    <rect x="26" y="132" width="122" height="44" rx="22" fill="#f4c0b4"/>
+    <text x="59" y="160" fill="#742c1d" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" font-weight="700">FAIL</text>
+    <text x="26" y="220" fill="#a4a79f" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">the test catches before</text>
+  </g>
+
+  <g transform="translate(740 140)">
+    <rect width="300" height="280" rx="18" fill="#121310"/>
+    <text x="26" y="38" fill="#7f827a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">03 / JUDGE</text>
+    <text x="26" y="92" fill="#f4f1e8" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">Inspect proof integrity</text>
+    <rect x="26" y="132" width="122" height="44" rx="22" fill="#dceede"/>
+    <text x="53" y="160" fill="#214a2c" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" font-weight="700">CLEAN</text>
+    <text x="26" y="220" fill="#a4a79f" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">the judge did not move</text>
+  </g>
+
+  <g transform="translate(1080 140)">
+    <rect width="300" height="280" rx="18" fill="#111210"/>
+    <text x="26" y="38" fill="#7f827a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">04 / EVIDENCE</text>
+    <text x="26" y="92" fill="#f4f1e8" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">Regression witnessed</text>
+    <rect x="26" y="132" width="188" height="44" rx="22" fill="#f1ede2"/>
+    <text x="49" y="160" fill="#171815" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" font-weight="700">WITNESSED</text>
+    <text x="26" y="220" fill="#a4a79f" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">now the reviewer has proof</text>
+  </g>
+
+  <path d="M367 280 H393" stroke="#85887f" stroke-width="2"/>
+  <path d="M707 280 H733" stroke="#85887f" stroke-width="2"/>
+  <path d="M1047 280 H1073" stroke="#85887f" stroke-width="2"/>
+
+  <rect x="60" y="462" width="1320" height="54" rx="27" fill="#dedacf"/>
+  <text x="88" y="496" fill="#4e514b" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15">GREEN CI SAYS IT PASSES NOW.</text>
+  <text x="388" y="496" fill="#171815" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" font-weight="700">COUNTERPROOF ASKS WHETHER THE SAME EVIDENCE FAILS BEFORE THE FIX.</text>
+</svg>
