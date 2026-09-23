@@ -10,6 +10,7 @@ from click.testing import CliRunner
 from skill_factory.evolution.cli import cli
 from skill_factory.evolution.witness import (
     changed_test_files,
+    changed_test_support_files,
     render_witness_markdown,
     run_regression_witness,
     witness_to_dict,
@@ -207,3 +208,141 @@ def test_changed_test_detection_covers_common_non_python_conventions(tmp_path):
     assert "pkg/thing_test.go" in files
     assert "src/ThingTest.java" in files
     assert "spec/thing_spec.rb" in files
+
+
+def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+
+    (repo / "app.py").write_text("VALUE = 2\n", encoding="utf-8")
+    tests = repo / "tests"
+    tests.mkdir()
+    (tests / "conftest.py").write_text(
+        "import pytest\n\n"
+        "@pytest.fixture\n"
+        "def expected_value():\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    (tests / "test_regression.py").write_text(
+        "from app import VALUE\n\n"
+        "def test_regression(expected_value):\n"
+        "    assert VALUE == expected_value\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "fix with fixture-backed regression test")
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    assert witness.status == "witnessed"
+    assert "tests/conftest.py" in witness.support_files
+    assert "tests/test_regression.py" in witness.support_files
+    baseline_text = (
+        (witness.base_with_head_tests.stdout if witness.base_with_head_tests else "")
+        + (witness.base_with_head_tests.stderr if witness.base_with_head_tests else "")
+    )
+    assert "fixture 'expected_value' not found" not in baseline_text
+    payload = witness_to_dict(witness)
+    assert payload["schema_version"] == 2
+    assert "tests/conftest.py" in payload["support_files"]
+    assert "Test-support closure" in render_witness_markdown(witness)
+
+
+def test_changed_test_support_detection_includes_root_and_nested_conftest(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    (repo / "conftest.py").write_text("ROOT = True\n", encoding="utf-8")
+    tests = repo / "tests"
+    tests.mkdir()
+    (tests / "conftest.py").write_text("NESTED = True\n", encoding="utf-8")
+    (tests / "test_regression.py").write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add test support")
+
+    support = set(changed_test_support_files(repo, base_ref=base))
+
+    assert "conftest.py" in support
+    assert "tests/conftest.py" in support
+    assert "tests/test_regression.py" in support
+
+
+def test_src_layout_replay_imports_base_source_not_head_source(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "counterproof@example.test")
+    _git(repo, "config", "user.name", "Counterproof Test")
+
+    package = repo / "src" / "demo"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "value.py").write_text("VALUE = 1\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base src layout")
+    base = _git(repo, "rev-parse", "HEAD")
+
+    (package / "value.py").write_text("VALUE = 2\n", encoding="utf-8")
+    tests = repo / "tests"
+    tests.mkdir()
+    (tests / "test_regression.py").write_text(
+        "from demo.value import VALUE\n\n"
+        "def test_regression():\n"
+        "    assert VALUE == 2\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "fix src code plus regression test")
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    assert witness.status == "witnessed"
+    assert witness.head is not None and witness.head.returncode == 0
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.returncode == 1
+
+
+def test_pytest_infrastructure_exit_is_inconclusive_not_witnessed(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    tests = repo / "tests"
+    tests.mkdir()
+    (tests / "test_regression.py").write_text(
+        "def test_placeholder():\n"
+        "    assert True\n",
+        encoding="utf-8",
+    )
+
+    fake_pytest = repo / "pytest"
+    fake_pytest.write_text(
+        "#!/usr/bin/env python3\n"
+        "import os\n"
+        "raise SystemExit(2 if os.environ.get('COUNTERPROOF_WITNESS_SIDE') == 'base-with-head-tests' else 0)\n",
+        encoding="utf-8",
+    )
+    fake_pytest.chmod(0o755)
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add regression test and fake pytest harness")
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=str(fake_pytest) + " {tests}",
+        timeout_seconds=30,
+    )
+
+    assert witness.status == "inconclusive"
+    assert witness.witnessed is False
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.returncode == 2
+    assert "Only pytest exit 1" in witness.note
