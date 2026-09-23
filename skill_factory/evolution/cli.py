@@ -30,6 +30,7 @@ from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, wri
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
+from .witness import render_witness_markdown, run_regression_witness, write_witness_json
 
 
 def _packet_from_json(raw: dict) -> EvolutionPacket:
@@ -541,6 +542,64 @@ def verify_receipt(
     click.echo(
         "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
     )
+
+
+@cli.command("witness")
+@click.option(
+    "--base",
+    "base_ref",
+    required=True,
+    help="Git ref for the pre-change code, e.g. origin/main or a PR base SHA.",
+)
+@click.option("--head", "head_ref", default="HEAD", show_default=True)
+@click.option(
+    "--test-command",
+    required=True,
+    help="Command used for changed tests. Use {tests} where paths should be inserted.",
+)
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
+@click.option("--out", "out_file", default="REGRESSION_WITNESS.md", show_default=True)
+@click.option("--json-out", default="REGRESSION_WITNESS.json", show_default=True)
+@click.option(
+    "--require-witness",
+    is_flag=True,
+    help="Exit non-zero unless changed tests fail on base and pass on head.",
+)
+def witness(
+    base_ref: str,
+    head_ref: str,
+    test_command: str,
+    repo_dir: str,
+    timeout_seconds: float,
+    out_file: str,
+    json_out: str,
+    require_witness: bool,
+) -> None:
+    """Prove that changed PR tests fail before the fix and pass after it."""
+    try:
+        result = run_regression_witness(
+            Path(repo_dir),
+            base_ref=base_ref,
+            head_ref=head_ref,
+            test_command=test_command,
+            timeout_seconds=timeout_seconds,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(out_file).write_text(render_witness_markdown(result), encoding="utf-8")
+    write_witness_json(Path(json_out), result)
+
+    click.echo(f"Regression witness: {result.status}")
+    click.echo(f"Changed tests: {len(result.tests)}")
+    click.echo(f"Wrote {out_file}")
+    click.echo(f"Wrote {json_out}")
+
+    if require_witness and not result.witnessed:
+        raise click.ClickException(
+            f"regression witness required, got status={result.status}"
+        )
 
 
 @cli.command("audit")
