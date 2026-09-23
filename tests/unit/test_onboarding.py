@@ -259,6 +259,7 @@ def test_counterproof_init_is_primary_onboarding_alias(tmp_path):
     assert "Detected pytest" in result.output
     assert "Evidence mode: precise" in result.output
     assert "Action ref: v0.2.0" in result.output
+    assert "Gates: witness=required, integrity=advisory" in result.output
     workflow = tmp_path / ".github" / "workflows" / "counterproof.yml"
     assert workflow.exists()
     text = workflow.read_text(encoding="utf-8")
@@ -275,3 +276,20 @@ def test_init_github_remains_compatible_alias(tmp_path):
 
     assert result.exit_code == 0, result.output
     assert "Evidence mode: precise" in result.output
+
+
+
+def test_counterproof_init_defaults_to_advisory_gates(tmp_path):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["init", "--repo", str(tmp_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Gates: witness=advisory, integrity=advisory" in result.output
+    workflow = tmp_path / ".github" / "workflows" / "counterproof.yml"
+    text = workflow.read_text(encoding="utf-8")
+    assert 'require-witness: "false"' in text
+    assert 'require-clean-integrity: "false"' in text
