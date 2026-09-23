@@ -161,3 +161,28 @@ def test_explicit_command_does_not_invent_project_install_steps(tmp_path):
     assert "Install your project's dependencies before Counterproof." in text
     assert "npm ci" not in text
     assert "python -m pip install pytest" not in text
+
+
+def test_init_github_rejects_strong_gate_for_full_suite_runner(tmp_path):
+    (tmp_path / "go.mod").write_text("module example.com/demo\n", encoding="utf-8")
+
+    try:
+        init_github(tmp_path, require_witness=True)
+    except ValueError as exc:
+        message = str(exc)
+        assert "full-suite command" in message
+        assert "--require-witness requires a precise command containing {tests}" in message
+    else:
+        raise AssertionError("expected ValueError for full-suite strong witness gate")
+
+
+def test_init_github_allows_full_suite_reporting_without_strong_gate(tmp_path):
+    (tmp_path / "go.mod").write_text("module example.com/demo\n", encoding="utf-8")
+
+    destination, detection = init_github(tmp_path)
+
+    assert detection is not None
+    assert detection.runner == "go-test"
+    text = destination.read_text(encoding="utf-8")
+    assert 'test-command: "go test ./..."' in text
+    assert 'require-witness: "false"' in text
