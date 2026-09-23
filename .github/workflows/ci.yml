@@ -63,6 +63,46 @@ jobs:
           # Legacy CLI alias remains available for existing integrations.
           /tmp/counterproof-clean/bin/evopr --help
 
+      - name: Run packaged Regression Witness
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-witness-fixture
+          mkdir -p /tmp/counterproof-witness-fixture
+          cd /tmp/counterproof-witness-fixture
+
+          git init
+          git config user.email "counterproof@example.test"
+          git config user.name "Counterproof CI"
+
+          printf 'VALUE = 1\n' > app.py
+          git add app.py
+          git commit -m "base"
+          base_sha="$(git rev-parse HEAD)"
+
+          mkdir -p tests
+          printf 'VALUE = 2\n' > app.py
+          cat > tests/test_regression.py <<'PY'
+          from app import VALUE
+
+          def test_regression():
+              assert VALUE == 2
+          PY
+          git add app.py tests/test_regression.py
+          git commit -m "agent fix plus regression test"
+
+          /tmp/counterproof-clean/bin/pip install pytest
+          /tmp/counterproof-clean/bin/counterproof witness \
+            --base "$base_sha" \
+            --test-command "/tmp/counterproof-clean/bin/python -m pytest -q {tests}" \
+            --out /tmp/REGRESSION_WITNESS.md \
+            --json-out /tmp/REGRESSION_WITNESS.json \
+            --require-witness
+
+          grep -q '"status": "witnessed"' /tmp/REGRESSION_WITNESS.json
+          grep -q '"witnessed": true' /tmp/REGRESSION_WITNESS.json
+          grep -q 'REGRESSION WITNESS' /tmp/REGRESSION_WITNESS.md
+          grep -q 'Base code + PR tests: **FAIL**' /tmp/REGRESSION_WITNESS.md
+
       - name: Run packaged CLI against external packet
         run: |
           cd /tmp
