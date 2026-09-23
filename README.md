@@ -193,12 +193,15 @@ PRECISE WITNESS
 command contains {tests}
 → run exactly the PR's changed tests on HEAD and BASE
 
-FULL-SUITE WITNESS
+SUITE DELTA
 command omits {tests}
-→ overlay changed tests, then run the configured suite verbatim on HEAD and BASE
+→ overlay changed test support, then run the configured suite verbatim on HEAD and BASE
+→ proves a suite-level before/after difference, not that one changed test caused it
 ```
 
-Use the precise mode when your runner accepts explicit paths. Use full-suite mode for runners such as `go test ./...`, `mvn test`, or `./gradlew test`.
+Use the precise mode when your runner accepts explicit paths. Commands such as `go test ./...`, `mvn test`, or `./gradlew test` currently produce **SUITE DELTA**, not **WITNESSED**.
+
+`--require-witness` accepts only precise mode. During `init-github`, Counterproof refuses to create a strong witness gate from a full-suite command instead of silently weakening the proof.
 
 Counterproof currently recognizes common test conventions across Python, JavaScript/TypeScript, Go, Ruby, Java, Kotlin, C#, and C++.
 
