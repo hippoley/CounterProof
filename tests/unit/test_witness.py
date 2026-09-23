@@ -162,3 +162,48 @@ def test_counterproof_witness_cli_can_gate_on_real_regression(tmp_path):
     assert raw["status"] == "witnessed"
     assert raw["head"]["returncode"] == 0
     assert raw["base_with_head_tests"]["returncode"] != 0
+
+
+def test_witness_command_without_placeholder_runs_verbatim(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=f"{sys.executable} -m pytest -q",
+        timeout_seconds=30,
+    )
+
+    assert witness.status == "witnessed"
+    assert witness.head is not None
+    assert "tests/test_regression.py" not in witness.head.argv
+
+
+def test_changed_test_detection_covers_common_non_python_conventions(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    (repo / "pkg").mkdir()
+    (repo / "pkg" / "thing_test.go").write_text(
+        "package pkg\n",
+        encoding="utf-8",
+    )
+    (repo / "src").mkdir()
+    (repo / "src" / "ThingTest.java").write_text(
+        "class ThingTest {}\n",
+        encoding="utf-8",
+    )
+    (repo / "spec").mkdir()
+    (repo / "spec" / "thing_spec.rb").write_text(
+        "describe 'thing' do\nend\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add cross-language tests")
+
+    files = set(changed_test_files(repo, base_ref=base))
+
+    assert "pkg/thing_test.go" in files
+    assert "src/ThingTest.java" in files
+    assert "spec/thing_spec.rb" in files
