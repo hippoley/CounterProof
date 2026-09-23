@@ -2,9 +2,9 @@
 
 <div align="center">
 
-## **Make agent self-improvement falsifiable.**
+## **Your agent says it fixed the bug. Prove it.**
 
-**Active causal debugging and change control for self-modifying AI agents.**
+**Behavioral proof for agent-generated pull requests and self-modifying AI systems.**
 
 [![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -14,52 +14,130 @@
 
 ---
 
-Agents can already rewrite prompts, skills, policies, memory and routing.
+A green CI run proves one thing:
 
-The dangerous part is not **whether they can change**.
+> the code passes **now**.
 
-It is whether they can answer:
+It does **not** prove that the agent's new test would have caught the bug before the fix.
 
-> **Why this change? What evidence would falsify it? What survived the same test? What regressed? Can we prove the evidence still matches the inputs?**
+Counterproof starts there.
 
-Counterproof sits between:
+## Regression Witness
+
+**Take the tests changed by the PR. Run them on the PR. Then replay the exact same tests against the pre-change code.**
 
 ```text
-agent wants to learn
-        ↓
-     COUNTERPROOF
-        ↓
-change is allowed to become permanent
+PR tests on HEAD
+      ↓
+     PASS
+      ↓
+same tests on BASE code
+      ↓
+     FAIL
+      ↓
+REGRESSION WITNESSED
 ```
 
-It turns one failure into a controlled experiment:
+That gives the reviewer something stronger than:
+
+> “the agent says the bug is fixed.”
+
+It gives:
+
+> **this exact test passes after the fix and fails before it.**
+
+### GitHub Action
+
+```yaml
+name: Counterproof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Install your project dependencies before this step.
+      - uses: hippoley/SkillFactory/actions/witness@main
+        with:
+          test-command: "python -m pytest -q {tests}"
+          require-witness: "true"
+```
+
+Counterproof automatically:
 
 ```text
-RAW TRACE
-   ↓
-Decision Capsule + Outcome Receipt
-   ↓
-competing hypotheses
-   ↓
-falsifiable Probe Contracts
-   ↓
+1. finds tests added or modified by the PR
+2. runs them on the PR head
+3. creates a detached worktree at the base commit
+4. overlays the PR's changed tests onto the old code
+5. runs the exact same tests again
+6. emits WITNESSED / NOT WITNESSED / HEAD FAILING / INCONCLUSIVE
+7. updates one sticky PR comment instead of spamming the thread
+```
+
+Example proof:
+
+```text
+COUNTERPROOF · REGRESSION WITNESS
+
+WITNESSED
+
+PR head                  PASS
+Base code + PR tests     FAIL
+
+tests/test_tenant_scope.py
+
+The same changed test fails before the fix and passes after it.
+```
+
+**Green CI says it passes now. Counterproof proves whether the test failed before the fix.**
+
+---
+
+## Why this exists
+
+Agent PR volume is increasing faster than human review capacity. The hard part is no longer generating more code; it is deciding which agent changes deserve trust.
+
+Counterproof does **not** try to become another AI reviewer that comments on style, naming, or likely bugs.
+
+It focuses on a narrower question:
+
+> **What observable evidence would make this change deserve to survive?**
+
+Regression Witness is the fastest entry point.
+
+The deeper runtime goes further:
+
+```text
+failure
+  ↓
+competing explanations
+  ↓
 pre-registered predictions
-   ↓
+  ↓
 same cases × multiple interventions
-   ↓
-fitness evidence + diagnostic evidence
-   ↓
-unique / ambiguous / prediction-blocked
-   ↓
-Next Probe Plan if needed
-   ↓
-reviewed adapter binding
-   ↓
-structured behavior evidence
-   ↓
-Behavior Proof + Proof Receipt
-   ↓
-PROMOTE / HOLD / REJECT
+  ↓
+falsification
+  ↓
+next discriminating probe
+  ↓
+reviewed behavior change
+  ↓
+fingerprinted Proof Receipt
 ```
 
 ## Why this is not Trace → Skill
