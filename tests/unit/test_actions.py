@@ -17,6 +17,7 @@ def test_root_action_is_regression_witness():
     assert action["name"] == "Counterproof Regression Witness"
     assert action["runs"]["using"] == "composite"
     assert action["inputs"]["test-command"]["required"] is True
+    assert action["inputs"]["require-proof-ready"]["default"] == "false"
     assert "integrity-status" in action["outputs"]
     assert "evidence-mode" in action["outputs"]
     assert "proof-status" in action["outputs"]
@@ -54,6 +55,7 @@ def test_regression_witness_action_alias_is_valid_composite_action():
     assert action["inputs"]["test-command"]["required"] is True
     assert action["inputs"]["require-witness"]["default"] == "false"
     assert action["inputs"]["require-clean-integrity"]["default"] == "false"
+    assert action["inputs"]["require-proof-ready"]["default"] == "false"
     assert "integrity-status" in action["outputs"]
     assert "proof-status" in action["outputs"]
     assert "proof-ready" in action["outputs"]
@@ -146,3 +148,12 @@ def test_action_exports_unified_machine_verdict():
         assert "counterproof proof-summary \\" in text
         assert 'echo "proof-status=$proof_status" >> "$GITHUB_OUTPUT"' in text
         assert 'echo "proof-ready=$proof_ready" >> "$GITHUB_OUTPUT"' in text
+
+
+
+def test_strict_action_gate_blocks_on_unready_summary():
+    for path in ("action.yml", "actions/witness/action.yml"):
+        text = Path(path).read_text(encoding="utf-8")
+        assert "REQUIRE_PROOF_READY: ${{ inputs.require-proof-ready }}" in text
+        assert 'if [[ "${REQUIRE_PROOF_READY,,}" == "true" && "$proof_ready" != "true" ]]' in text
+        assert "Counterproof strict gate blocked: proof-status=$proof_status" in text
