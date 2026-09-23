@@ -9,17 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-TEST_PATTERNS = (
-    "tests/**",
-    "test/**",
-    "**/test_*.py",
-    "**/*_test.py",
-    "**/*.test.js",
-    "**/*.test.ts",
-    "**/*.spec.js",
-    "**/*.spec.ts",
-    "**/__tests__/**",
-)
+from .witness import DEFAULT_SUPPORT_PATTERNS, DEFAULT_TEST_PATTERNS
+
+TEST_PATTERNS = DEFAULT_TEST_PATTERNS
+TEST_SUPPORT_PATTERNS = DEFAULT_SUPPORT_PATTERNS
 
 EVIDENCE_CONFIG_PATTERNS = (
     ".github/workflows/**",
@@ -63,6 +56,21 @@ ADDED_LINE_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
         "js-test-skip",
         re.compile(r"\b(?:test|it|describe)\.skip\s*\("),
         "A JavaScript/TypeScript test skip was added.",
+    ),
+    (
+        "go-test-skip",
+        re.compile(r"\bt\.(?:Skip|Skipf|SkipNow)\s*\("),
+        "A Go test skip was added.",
+    ),
+    (
+        "junit-disabled",
+        re.compile(r"@(Disabled|Ignore)\b"),
+        "A Java/Kotlin test disable annotation was added.",
+    ),
+    (
+        "rspec-skip",
+        re.compile(r"\b(?:xit|xdescribe|pending)\b"),
+        "An RSpec skip/pending marker was added.",
     ),
     (
         "pull-request-target",
@@ -197,6 +205,24 @@ def inspect_proof_integrity(
                     path=path,
                     evidence=f"{status} {path}",
                     note="A test file was deleted in the same change being evaluated.",
+                )
+            )
+
+        if (
+            _matches(path, TEST_SUPPORT_PATTERNS)
+            and not _matches(path, TEST_PATTERNS)
+        ):
+            findings.append(
+                IntegrityFinding(
+                    code="test-support-changed",
+                    risk="medium",
+                    path=path,
+                    evidence=f"{status} {path}",
+                    note=(
+                        "A fixture/helper/test-support surface changed. Counterproof replays "
+                        "changed support files with the test, but the proof dependency should "
+                        "remain visible to reviewers."
+                    ),
                 )
             )
 
