@@ -17,6 +17,11 @@ from .discriminate import (
     render_discrimination_markdown,
     run_discrimination_manifest,
 )
+from .integrity import (
+    inspect_proof_integrity,
+    render_integrity_markdown,
+    write_integrity_json,
+)
 from .models import (
     CandidateMutation,
     Evidence,
@@ -542,6 +547,55 @@ def verify_receipt(
     click.echo(
         "VERIFIED: trace and experiment manifest match the stored Proof Receipt."
     )
+
+
+@cli.command("integrity")
+@click.option(
+    "--base",
+    "base_ref",
+    required=True,
+    help="Git ref for the pre-change code, e.g. origin/main or a PR base SHA.",
+)
+@click.option("--head", "head_ref", default="HEAD", show_default=True)
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option("--out", "out_file", default="PROOF_INTEGRITY.md", show_default=True)
+@click.option("--json-out", default="PROOF_INTEGRITY.json", show_default=True)
+@click.option(
+    "--require-clean",
+    is_flag=True,
+    help="Exit non-zero when the PR changes evidence-producing surfaces.",
+)
+def integrity(
+    base_ref: str,
+    head_ref: str,
+    repo_dir: str,
+    out_file: str,
+    json_out: str,
+    require_clean: bool,
+) -> None:
+    """Detect whether a PR changes the tests/CI machinery judging its own evidence."""
+    try:
+        report = inspect_proof_integrity(
+            Path(repo_dir),
+            base_ref=base_ref,
+            head_ref=head_ref,
+        )
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(out_file).write_text(render_integrity_markdown(report), encoding="utf-8")
+    write_integrity_json(Path(json_out), report)
+
+    click.echo(f"Proof integrity: {report.status}")
+    click.echo(f"Findings: {len(report.findings)}")
+    click.echo(f"High risk: {report.high_risk_count}")
+    click.echo(f"Wrote {out_file}")
+    click.echo(f"Wrote {json_out}")
+
+    if require_clean and report.status != "clean":
+        raise click.ClickException(
+            f"proof integrity review required: {len(report.findings)} finding(s)"
+        )
 
 
 @cli.command("witness")
