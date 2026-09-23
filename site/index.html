@@ -11,7 +11,7 @@
   <header class="mast">
     <a class="wordmark" href="https://github.com/hippoley/SkillFactory">COUNTERPROOF</a>
     <div class="mast-center">BEHAVIOR PROOF / 001</div>
-    <div class="mast-right"><span id="build">experimental branch</span><a href="https://github.com/hippoley/SkillFactory/pull/2">source ↗</a></div>
+    <div class="mast-right"><span id="build">experimental branch</span><a href="https://github.com/hippoley/SkillFactory/pull/4">source ↗</a></div>
   </header>
 
   <main>
@@ -25,12 +25,17 @@
     </section>
 
     <section class="witness-hero" aria-label="Regression witness example">
-      <div class="witness-kicker">REGRESSION WITNESS / SAME TEST · TWO WORLDS</div>
+      <div class="witness-kicker">PR PROOF LAB / SAME TEST · TWO WORLDS</div>
+      <div class="witness-controls" role="group" aria-label="Regression Witness scenarios">
+        <button type="button" class="witness-scenario active" data-witness-scenario="witnessed">REAL REGRESSION</button>
+        <button type="button" class="witness-scenario" data-witness-scenario="weak-test">WEAK TEST</button>
+        <button type="button" class="witness-scenario" data-witness-scenario="judge-changed">JUDGE CHANGED</button>
+      </div>
       <div class="witness-grid">
         <div class="witness-side">
           <span>PR HEAD</span>
-          <strong>PASS</strong>
-          <small>tests/test_tenant_scope.py</small>
+          <strong id="witnessHeadVerdict">PASS</strong>
+          <small id="witnessHeadNote">tests/test_tenant_scope.py</small>
         </div>
         <div class="witness-spine">
           <span>same changed test</span>
@@ -38,18 +43,18 @@
         </div>
         <div class="witness-side base">
           <span>BASE CODE + PR TEST</span>
-          <strong>FAIL</strong>
-          <small>pre-change behavior reproduced</small>
+          <strong id="witnessBaseVerdict">FAIL</strong>
+          <small id="witnessBaseNote">pre-change behavior reproduced</small>
         </div>
         <div class="witness-verdict">
           <span>COUNTERPROOF</span>
-          <strong>WITNESSED</strong>
-          <small>proof integrity · CLEAN</small>
+          <strong id="witnessVerdict">WITNESSED</strong>
+          <small id="witnessIntegrity">proof integrity · CLEAN</small>
         </div>
       </div>
       <div class="witness-foot">
-        <span>A green test is a current-state fact.</span>
-        <b>A regression witness is a before/after claim you can replay.</b>
+        <span id="witnessExplanation">A green test is a current-state fact.</span>
+        <b id="witnessTakeaway">A regression witness is a before/after claim you can replay.</b>
       </div>
     </section>
 
@@ -176,7 +181,7 @@
               <button id="rollbackBtn" class="outline-button" type="button" hidden>ROLL BACK</button>
             </div>
           </div>
-          <p class="truth-note">This browser playground visualizes fixture results. Real command replay is available in the CLI via <code>evopr replay</code>; automatic world snapshots and live rollout are not implemented yet.</p>
+          <p class="truth-note">This browser playground visualizes fixture results. Real command replay is available in the CLI via <code>counterproof replay</code>; automatic world snapshots and live rollout are not implemented yet.</p>
         </div>
       </section>
     </article>
