@@ -285,9 +285,9 @@ def init_github(
         runner = detection.runner if detection is not None else "custom"
         raise ValueError(
             f"{runner} is configured as a full-suite command ({test_command!r}). "
-            "--require-witness requires a precise command containing {tests}. "
+            "--require-witness requires a precise command containing {{tests}}. "
             "Either omit --require-witness to report suite-delta, or pass "
-            "--test-command with an explicit {tests} placeholder."
+            "--test-command with an explicit {{tests}} placeholder."
         )
 
     destination = repo_root / ".github" / "workflows" / "counterproof.yml"
