@@ -604,6 +604,11 @@ def _run_init_command(
 
     click.echo(f"Evidence mode: {mode}")
     click.echo(f"Action ref: {action_ref}")
+    click.echo(
+        "Gates: "
+        f"witness={'required' if require_witness else 'advisory'}, "
+        f"integrity={'required' if require_clean_integrity else 'advisory'}"
+    )
     click.echo(f"Wrote {destination}")
     click.echo(
         "Next: review the generated workflow, then commit it. "
