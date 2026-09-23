@@ -26,6 +26,10 @@ inputs:
     description: "Create or update one sticky Regression Witness comment."
     required: false
     default: "true"
+  require-clean-integrity:
+    description: "Fail when the PR changes test/CI evidence surfaces."
+    required: false
+    default: "false"
 
 outputs:
   status:
@@ -37,6 +41,9 @@ outputs:
   json-path:
     description: "Generated Regression Witness JSON path."
     value: ${{ steps.witness.outputs.json-path }}
+  integrity-status:
+    description: "clean or review-required."
+    value: ${{ steps.integrity.outputs.integrity-status }}
 
 runs:
   using: "composite"
@@ -128,6 +135,51 @@ runs:
 
         exit "$command_status"
 
+
+    - name: Check proof integrity
+      id: integrity
+      if: ${{ always() }}
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+        REQUIRE_CLEAN_INTEGRITY: ${{ inputs.require-clean-integrity }}
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
+
+        args=(
+          integrity
+          --base "$BASE_REF"
+          --out .counterproof/out/PROOF_INTEGRITY.md
+          --json-out .counterproof/out/PROOF_INTEGRITY.json
+        )
+        if [[ "${REQUIRE_CLEAN_INTEGRITY,,}" == "true" ]]; then
+          args+=(--require-clean)
+        fi
+
+        set +e
+        counterproof "${args[@]}"
+        command_status=$?
+        set -e
+
+        if [[ -f .counterproof/out/PROOF_INTEGRITY.json ]]; then
+          status="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/PROOF_INTEGRITY.json", encoding="utf-8") as f:
+            print(json.load(f)["status"])
+        PY
+          )"
+          echo "integrity-status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "---"
+            echo
+            cat .counterproof/out/PROOF_INTEGRITY.md
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        exit "$command_status"
+
     - name: Publish sticky witness comment
       if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' && always() }}
       shell: bash
@@ -136,6 +188,7 @@ runs:
       run: |
         set -euo pipefail
         report=".counterproof/out/REGRESSION_WITNESS.md"
+        integrity=".counterproof/out/PROOF_INTEGRITY.md"
         [[ -f "$report" ]] || exit 0
 
         pr_number="$(python - <<'PY'
@@ -149,8 +202,14 @@ runs:
         {
           echo "<!-- counterproof-regression-witness -->"
           cat "$report"
+          if [[ -f "$integrity" ]]; then
+            echo
+            echo "---"
+            echo
+            cat "$integrity"
+          fi
           echo
-          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix."
+          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge."
         } > "$body_file"
 
         existing_id="$(
