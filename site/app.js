@@ -72,7 +72,7 @@ function renderCase() {
   accepted = false;
   activeHypothesis = [...activeCase.hypotheses].sort((a, b) => confidence(b) - confidence(a))[0];
   const number = cases.indexOf(activeCase) + 1;
-  byId("sheetNumber").textContent = "EVO—" + String(number).padStart(3, "0");
+  byId("sheetNumber").textContent = "CP—" + String(number).padStart(3, "0");
   byId("failureTitle").textContent = activeCase.failure_title;
   byId("failureSummary").textContent = activeCase.failure_summary;
   renderEvidence();
@@ -127,7 +127,7 @@ function renderDiscrimination() {
     byId("discriminationStamp").className = "verdict-stamp pass";
     byId("discriminationNote").textContent =
       "Only " + data.unique_survivor +
-      " survives this fixture matrix. That is relative support among tested interventions, not unique causal proof. Real multi-variant execution is available via evopr discriminate / evopr evolve.";
+      " survives this fixture matrix. That is relative support among tested interventions, not unique causal proof. Real multi-variant execution is available via counterproof discriminate / counterproof evolve.";
   } else {
     byId("discriminationStamp").textContent = "AMBIGUOUS";
     byId("discriminationStamp").className = "verdict-stamp";
