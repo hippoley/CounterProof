@@ -23,6 +23,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically.",
     },
     {
+        "id": "regression-witness",
+        "name": "Regression Witness for agent pull requests",
+        "status": "tested",
+        "evidence": "Counterproof detects changed tests, runs them on PR head, overlays the same tests onto a detached base worktree, and distinguishes witnessed fixes from tests that already passed before the change.",
+        "limitation": "The first release relies on repository-local test commands and changed-test filename patterns; dependency setup remains the consuming repository's responsibility.",
+    },
+    {
         "id": "proof-receipt",
         "name": "Reproducible Proof Receipt with source fingerprints",
         "status": "tested",
