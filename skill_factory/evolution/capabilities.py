@@ -54,8 +54,8 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "id": "regression-witness",
         "name": "Regression Witness for agent pull requests",
         "status": "tested",
-        "evidence": "Counterproof detects changed tests, runs them on PR head, overlays the same tests onto a detached base worktree, and distinguishes witnessed fixes from tests that already passed before the change.",
-        "limitation": "The first release relies on repository-local test commands and changed-test filename patterns; dependency setup remains the consuming repository's responsibility.",
+        "evidence": "In precise mode, Counterproof runs the exact changed tests on PR head and on detached base code with changed test support overlaid; only that mode can produce WITNESSED. Full-suite commands are reported separately as SUITE DELTA.",
+        "limitation": "Suite-level deltas are intentionally weaker evidence and cannot satisfy --require-witness. Dependency setup and runner-specific semantics remain the consuming repository's responsibility.",
     },
     {
         "id": "proof-receipt",
