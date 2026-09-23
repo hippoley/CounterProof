@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -95,7 +96,7 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
         scripts = package.get("scripts", {})
         if isinstance(scripts, dict) and isinstance(scripts.get("test"), str):
             return TestRunnerDetection(
-                command="npm test -- {tests}",
+                command="npm test",
                 runner="npm-test",
                 confidence="medium",
                 evidence=("package.json:scripts.test",),
@@ -222,12 +223,29 @@ def _ecosystem_setup_yaml(detection: TestRunnerDetection | None) -> str:
     return "\n".join(chunks)
 
 
+def _validate_action_ref(action_ref: str) -> str:
+    action_ref = action_ref.strip()
+    if (
+        not action_ref
+        or not re.fullmatch(r"[A-Za-z0-9._/-]+", action_ref)
+        or action_ref.startswith("/")
+        or action_ref.endswith("/")
+        or ".." in action_ref
+    ):
+        raise ValueError(
+            "action_ref must be a conservative Git ref such as main, v0.2.0, "
+            "or a commit SHA"
+        )
+    return action_ref
+
+
 def render_github_workflow(
     *,
     test_command: str,
     detection: TestRunnerDetection | None = None,
     require_witness: bool = False,
     require_clean_integrity: bool = False,
+    action_ref: str = "main",
 ) -> str:
     witness = "true" if require_witness else "false"
     integrity = "true" if require_clean_integrity else "false"
@@ -258,7 +276,7 @@ jobs:
           python-version: "3.11"
 
 {setup_yaml}
-      - uses: hippoley/SkillFactory@main
+      - uses: hippoley/SkillFactory@{action_ref}
         with:
           test-command: "{escaped_command}"
           require-witness: "{witness}"
@@ -273,6 +291,7 @@ def init_github(
     force: bool = False,
     require_witness: bool = False,
     require_clean_integrity: bool = False,
+    action_ref: str = "main",
 ) -> tuple[Path, TestRunnerDetection | None]:
     """Create .github/workflows/counterproof.yml without overwriting by default."""
     repo_root = repo_root.resolve()
@@ -303,6 +322,7 @@ def init_github(
             detection=detection,
             require_witness=require_witness,
             require_clean_integrity=require_clean_integrity,
+            action_ref=action_ref,
         ),
         encoding="utf-8",
     )
