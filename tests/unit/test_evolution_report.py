@@ -1374,3 +1374,92 @@ def test_bind_probe_adapter_cli_writes_ready_reviewed_manifest(tmp_path):
     assert raw["status"] == "ready"
     assert raw["adapter"] == ["python", "my_probe_adapter.py"]
     assert raw["review"]["note"] == "Reviewed case semantics."
+
+
+def test_diagnostic_fail_is_evidence_not_fitness_regression():
+    variant = VariantEvidence(
+        surface="policy",
+        replays=(
+            ReplayResult("diag-pass", "diagnostic", "pass", 0.0, 1.0),
+            ReplayResult("diag-fail", "diagnostic", "fail", 0.0, 0.0),
+        ),
+        outcomes=(),
+        predictions=("pass", "fail"),
+        roles=("diagnostic", "diagnostic"),
+    )
+    run = DiscriminationRun(variants=(variant,))
+
+    assert variant.failure_count == 0
+    assert variant.regression_count == 0
+    assert variant.mean_delta == 0.0
+    assert variant.prediction_status == "supported"
+    assert variant.status == "diagnostic-only"
+    assert run.selection_state == "diagnostic-only"
+    assert run.discriminated_surface is None
+
+
+def test_generated_probe_scaffold_marks_crossed_cases_diagnostic():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, run))
+
+    assert scaffold["cases"]
+    assert all(case["role"] == "diagnostic" for case in scaffold["cases"])
+
+
+def test_reviewed_crossed_probe_executes_as_diagnostic_only(tmp_path):
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    ambiguous = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, ambiguous))
+    ready = bind_probe_adapter(
+        scaffold,
+        adapter=("python", str(Path("examples/replay/cross_probe_adapter.py").resolve())),
+        reviewed_by="fixture-reviewer",
+        review_note="Fixture-only adapter validates crossed-probe plumbing.",
+    )
+    path = tmp_path / "ready.json"
+    path.write_text(
+        json.dumps(ready, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    run = run_discrimination_manifest(path, surfaces=("policy", "skill"))
+    by_surface = {item.surface: item for item in run.variants}
+
+    assert run.selection_state == "diagnostic-only"
+    assert run.discriminated_surface is None
+    assert run.declared_diagnostic_cases
+    assert by_surface["policy"].prediction_status == "supported"
+    assert by_surface["skill"].prediction_status == "supported"
+    assert by_surface["policy"].failure_count == 0
+    assert by_surface["skill"].failure_count == 0
+    assert by_surface["policy"].status == "diagnostic-only"
+    assert by_surface["skill"].status == "diagnostic-only"
+
+
+def test_discrimination_payload_exposes_case_roles():
+    variant = VariantEvidence(
+        surface="policy",
+        replays=(
+            ReplayResult("fitness", "regression", "pass", 0.0, 1.0),
+            ReplayResult("diagnostic", "probe", "fail", 0.0, 0.0),
+        ),
+        outcomes=(),
+        predictions=("pass", "fail"),
+        roles=("fitness", "diagnostic"),
+    )
+    payload = discrimination_to_dict(DiscriminationRun(variants=(variant,)))
+    item = payload["variants"][0]
+
+    assert item["roles"] == ["fitness", "diagnostic"]
+    assert item["fitness_case_count"] == 1
+    assert item["diagnostic_case_count"] == 1
+    assert payload["declared_diagnostic_cases"] == ["diagnostic"]
