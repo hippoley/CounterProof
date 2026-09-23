@@ -249,6 +249,7 @@ def render_github_workflow(
 ) -> str:
     witness = "true" if require_witness else "false"
     integrity = "true" if require_clean_integrity else "false"
+    action_ref = _validate_action_ref(action_ref)
     escaped_command = test_command.replace('"', '\\"')
     head_expr = "$" + "{{ github.event.pull_request.head.sha }}"
     setup_yaml = _ecosystem_setup_yaml(detection)
