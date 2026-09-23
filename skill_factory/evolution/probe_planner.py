@@ -1,4 +1,4 @@
-"""Plan the next discriminating probe when EvoPR remains ambiguous."""
+"""Plan the next discriminating probe when Counterproof remains ambiguous."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -133,7 +133,7 @@ def plan_next_probes(
 def render_probe_plan(
     suggestions: tuple[ProbeSuggestion, ...],
 ) -> str:
-    lines = ["# EvoPR Next Probe Plan", ""]
+    lines = ["# Counterproof Next Probe Plan", ""]
     if not suggestions:
         lines.extend(
             [
