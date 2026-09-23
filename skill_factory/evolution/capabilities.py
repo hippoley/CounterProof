@@ -30,6 +30,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect.",
     },
     {
+        "id": "github-onboarding",
+        "name": "One-command GitHub onboarding with test-runner detection",
+        "status": "tested",
+        "evidence": "counterproof init-github detects common test runners and writes a pull-request workflow wired to Regression Witness and Proof Integrity without overwriting existing config by default.",
+        "limitation": "Project dependency installation is repository-specific and remains the consuming repository's responsibility.",
+    },
+    {
         "id": "regression-witness",
         "name": "Regression Witness for agent pull requests",
         "status": "tested",
