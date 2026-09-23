@@ -211,18 +211,81 @@ runs:
         )"
 
         body_file="$(mktemp)"
-        {
-          echo "<!-- counterproof-regression-witness -->"
-          cat "$report"
-          if [[ -f "$integrity" ]]; then
-            echo
-            echo "---"
-            echo
-            cat "$integrity"
-          fi
-          echo
-          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge."
-        } > "$body_file"
+        export COUNTERPROOF_COMMENT_FILE="$body_file"
+        export COUNTERPROOF_WITNESS_JSON=".counterproof/out/REGRESSION_WITNESS.json"
+        export COUNTERPROOF_INTEGRITY_JSON=".counterproof/out/PROOF_INTEGRITY.json"
+        export COUNTERPROOF_WITNESS_MD="$report"
+        export COUNTERPROOF_INTEGRITY_MD="$integrity"
+
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        witness = json.loads(
+            Path(os.environ["COUNTERPROOF_WITNESS_JSON"]).read_text(encoding="utf-8")
+        )
+        integrity_path = Path(os.environ["COUNTERPROOF_INTEGRITY_JSON"])
+        integrity = (
+            json.loads(integrity_path.read_text(encoding="utf-8"))
+            if integrity_path.exists()
+            else {"status": "unknown", "findings": []}
+        )
+
+        head = witness.get("head") or {}
+        base = witness.get("base_with_head_tests") or {}
+        tests = witness.get("tests") or []
+
+        def verdict(command):
+            if not command:
+                return "—"
+            if command.get("timed_out"):
+                return "TIMEOUT"
+            return "PASS" if command.get("returncode") == 0 else "FAIL"
+
+        witness_status = str(witness.get("status", "unknown")).upper().replace("-", " ")
+        integrity_status = str(integrity.get("status", "unknown")).upper().replace("-", " ")
+        changed_tests = "<br>".join(f"`{item}`" for item in tests[:8]) or "—"
+        if len(tests) > 8:
+            changed_tests += f"<br>… +{len(tests) - 8} more"
+
+        detail_parts = []
+        witness_md = Path(os.environ["COUNTERPROOF_WITNESS_MD"])
+        if witness_md.exists():
+            detail_parts.append(witness_md.read_text(encoding="utf-8"))
+        integrity_md = Path(os.environ["COUNTERPROOF_INTEGRITY_MD"])
+        if integrity_md.exists():
+            detail_parts.append(integrity_md.read_text(encoding="utf-8"))
+        details = "\n\n---\n\n".join(detail_parts)
+
+        body = f"""<!-- counterproof-regression-witness -->
+## Counterproof
+
+| Proof | Result |
+|---|---|
+| Regression Witness | **{witness_status}** |
+| PR head + PR tests | **{verdict(head)}** |
+| Base code + same tests | **{verdict(base)}** |
+| Proof Integrity | **{integrity_status}** |
+
+**Changed tests**
+
+{changed_tests}
+
+<details>
+<summary>Evidence details</summary>
+
+{details}
+
+</details>
+
+> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge.
+"""
+        Path(os.environ["COUNTERPROOF_COMMENT_FILE"]).write_text(
+            body,
+            encoding="utf-8",
+        )
+        PY
 
         existing_id="$(
           gh api "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments" --paginate             --jq '.[] | select(.body | contains("<!-- counterproof-regression-witness -->")) | .id'             2>/dev/null | head -n 1 || true
