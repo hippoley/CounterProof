@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from skill_factory.evolution.adapter_binding import bind_probe_adapter
 from skill_factory.evolution.capabilities import capability_report
 from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.discriminate import (
@@ -1276,3 +1277,100 @@ def test_ready_scaffold_still_rejects_unconfigured_adapter_placeholder(tmp_path)
 
     with pytest.raises(ValueError, match="adapter placeholder has not been replaced"):
         run_discrimination_manifest(path, surfaces=("policy", "skill"))
+
+
+def test_bind_probe_adapter_records_review_and_makes_scaffold_ready():
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, run))
+
+    bound = bind_probe_adapter(
+        scaffold,
+        adapter=("python", "my_probe_adapter.py"),
+        reviewed_by="ci-reviewer",
+        review_note="Reviewed fixture semantics and intervention isolation.",
+    )
+
+    assert bound["status"] == "ready"
+    assert bound["review_required"] is False
+    assert bound["adapter"] == ["python", "my_probe_adapter.py"]
+    assert bound["review"]["reviewed_by"] == "ci-reviewer"
+    assert bound["review"]["decision"] == "approved-for-execution"
+    assert scaffold["status"] == "draft"
+    assert scaffold["adapter"] == ["TODO_REPLACE_WITH_ADAPTER"]
+
+
+@pytest.mark.parametrize(
+    ("adapter", "reviewed_by", "review_note", "message"),
+    [
+        (("TODO_REPLACE_WITH_ADAPTER",), "reviewer", "ok", "placeholder"),
+        ((), "reviewer", "ok", "one or more"),
+        (("python", "adapter.py"), "", "ok", "reviewed_by"),
+        (("python", "adapter.py"), "reviewer", "", "review_note"),
+    ],
+)
+def test_bind_probe_adapter_rejects_unreviewed_or_placeholder_binding(
+    adapter,
+    reviewed_by,
+    review_note,
+    message,
+):
+    scaffold = {
+        "status": "draft",
+        "review_required": True,
+        "adapter": ["TODO_REPLACE_WITH_ADAPTER"],
+        "cases": [{"case_id": "probe-1", "variants": {"policy": {"expect": "pass"}}}],
+    }
+
+    with pytest.raises(ValueError, match=message):
+        bind_probe_adapter(
+            scaffold,
+            adapter=adapter,
+            reviewed_by=reviewed_by,
+            review_note=review_note,
+        )
+
+
+def test_bind_probe_adapter_cli_writes_ready_reviewed_manifest(tmp_path):
+    trace = load_trace(Path("examples/traces/tenant_failure.json"))
+    packet = compile_trace(trace)
+    run = run_discrimination_manifest(
+        Path("examples/ambiguous_discrimination_suite.json"),
+        surfaces=("policy", "skill"),
+    )
+    scaffold = build_probe_scaffold(packet, plan_next_probes(packet, run))
+    draft = tmp_path / "draft.json"
+    ready = tmp_path / "ready.json"
+    draft.write_text(
+        json.dumps(scaffold, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        evo_cli,
+        [
+            "bind-probe-adapter",
+            str(draft),
+            "--adapter",
+            "python",
+            "--adapter",
+            "my_probe_adapter.py",
+            "--reviewed-by",
+            "ci-reviewer",
+            "--review-note",
+            "Reviewed case semantics.",
+            "--out",
+            str(ready),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "status=ready" in result.output
+    raw = json.loads(ready.read_text(encoding="utf-8"))
+    assert raw["status"] == "ready"
+    assert raw["adapter"] == ["python", "my_probe_adapter.py"]
+    assert raw["review"]["note"] == "Reviewed case semantics."
