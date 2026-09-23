@@ -23,6 +23,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically.",
     },
     {
+        "id": "unified-proof-verdict",
+        "name": "Unified machine-readable proof verdict",
+        "status": "tested",
+        "evidence": "Counterproof combines Regression Witness and Proof Integrity into PROOF_SUMMARY.json with proof-status and proof-ready; VERIFIED requires a precise witness plus clean integrity.",
+        "limitation": "proof-ready certifies Counterproof's configured evidence contract only; it is not a general claim that the entire pull request is safe to merge.",
+    },
+    {
         "id": "github-pr-proof",
         "name": "Root GitHub Action for Regression Witness + Proof Integrity",
         "status": "tested",
