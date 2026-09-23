@@ -52,8 +52,10 @@ It gives:
 
 ### One-command install
 
+Until the first PyPI release, install the exact repository implementation:
+
 ```bash
-pip install counterproof
+python -m pip install "git+https://github.com/hippoley/SkillFactory.git"
 
 counterproof doctor
 
@@ -184,9 +186,21 @@ Go           go test ./...
 custom       ./scripts/regression-check
 ```
 
-Use `{tests}` when the runner accepts explicit changed-test paths. Omit it when your runner should execute the whole suite; Counterproof still overlays the PR's changed tests onto the base worktree before replay.
+Counterproof supports two witness modes:
 
-Counterproof currently auto-detects common Python, JavaScript/TypeScript, Go, Java, Kotlin and Ruby test filename conventions.
+```text
+PRECISE WITNESS
+command contains {tests}
+→ run exactly the PR's changed tests on HEAD and BASE
+
+FULL-SUITE WITNESS
+command omits {tests}
+→ overlay changed tests, then run the configured suite verbatim on HEAD and BASE
+```
+
+Use the precise mode when your runner accepts explicit paths. Use full-suite mode for runners such as `go test ./...`, `mvn test`, or `./gradlew test`.
+
+Counterproof currently recognizes common test conventions across Python, JavaScript/TypeScript, Go, Ruby, Java, Kotlin, C#, and C++.
 
 ---
 
