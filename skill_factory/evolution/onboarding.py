@@ -258,7 +258,7 @@ jobs:
           python-version: "3.11"
 
 {setup_yaml}
-      - uses: hippoley/SkillFactory/actions/witness@main
+      - uses: hippoley/SkillFactory@main
         with:
           test-command: "{escaped_command}"
           require-witness: "{witness}"
