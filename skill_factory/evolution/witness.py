@@ -20,9 +20,20 @@ DEFAULT_TEST_PATTERNS = (
     "**/*_test.py",
     "**/*.test.js",
     "**/*.test.ts",
+    "**/*.test.jsx",
+    "**/*.test.tsx",
     "**/*.spec.js",
     "**/*.spec.ts",
+    "**/*.spec.jsx",
+    "**/*.spec.tsx",
     "**/__tests__/**",
+    "**/*_test.go",
+    "**/*Test.java",
+    "**/*Tests.java",
+    "**/*Test.kt",
+    "**/*Spec.kt",
+    "spec/**",
+    "**/*_spec.rb",
 )
 
 
@@ -112,8 +123,6 @@ def _build_test_argv(command: str, tests: tuple[str, ...]) -> tuple[str, ...]:
             expanded = True
         else:
             argv.append(part)
-    if not expanded:
-        argv.extend(tests)
     return tuple(argv)
 
 
