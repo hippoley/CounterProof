@@ -239,8 +239,8 @@ def build_probe_scaffold(
                 "Review the intervention design and adapter before changing status to ready."
             ),
             (
-                "The adapter will receive EVOPR_CASE_ID, EVOPR_VARIANT and "
-                "EVOPR_CASE_JSON."
+                "The adapter will receive COUNTERPROOF_CASE_ID, COUNTERPROOF_VARIANT and "
+                "COUNTERPROOF_CASE_JSON."
             ),
         ],
         "cases": cases,
