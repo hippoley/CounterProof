@@ -99,7 +99,7 @@ def changed_test_files(
         "diff",
         "--name-only",
         "--diff-filter=ACMR",
-        f"{base_ref}...{head_ref}",
+        f"{base_ref}..{head_ref}",
         "--",
     )
     files = []
