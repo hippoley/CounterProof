@@ -12,6 +12,8 @@ class TestRunnerDetection:
     runner: str
     confidence: str
     evidence: tuple[str, ...]
+    ecosystem: str = "generic"
+    setup_commands: tuple[str, ...] = ()
 
 
 def _read_json(path: Path) -> dict:
@@ -20,6 +22,34 @@ def _read_json(path: Path) -> dict:
     except (OSError, json.JSONDecodeError):
         return {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _node_setup_commands(repo_root: Path, *, playwright: bool = False) -> tuple[str, ...]:
+    if (repo_root / "pnpm-lock.yaml").is_file():
+        commands = ("corepack enable", "pnpm install --frozen-lockfile")
+    elif (repo_root / "yarn.lock").is_file():
+        commands = ("corepack enable", "yarn install --immutable")
+    elif (repo_root / "package-lock.json").is_file():
+        commands = ("npm ci",)
+    else:
+        commands = ("npm install",)
+    if playwright:
+        commands = (*commands, "npx playwright install --with-deps")
+    return commands
+
+
+def _python_setup_commands(repo_root: Path) -> tuple[str, ...]:
+    commands: list[str] = ["python -m pip install --upgrade pip"]
+    requirements = repo_root / "requirements.txt"
+    pyproject = repo_root / "pyproject.toml"
+    setup_py = repo_root / "setup.py"
+
+    if requirements.is_file():
+        commands.append("python -m pip install -r requirements.txt")
+    if pyproject.is_file() or setup_py.is_file():
+        commands.append("python -m pip install -e .")
+    commands.append("python -m pip install pytest")
+    return tuple(dict.fromkeys(commands))
 
 
 def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
@@ -40,6 +70,8 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                 runner="playwright",
                 confidence="high",
                 evidence=("package.json:@playwright/test",),
+                ecosystem="node",
+                setup_commands=_node_setup_commands(repo_root, playwright=True),
             )
         if "vitest" in deps:
             return TestRunnerDetection(
@@ -47,6 +79,8 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                 runner="vitest",
                 confidence="high",
                 evidence=("package.json:vitest",),
+                ecosystem="node",
+                setup_commands=_node_setup_commands(repo_root),
             )
         if "jest" in deps:
             return TestRunnerDetection(
@@ -54,6 +88,8 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                 runner="jest",
                 confidence="high",
                 evidence=("package.json:jest",),
+                ecosystem="node",
+                setup_commands=_node_setup_commands(repo_root),
             )
 
         scripts = package.get("scripts", {})
@@ -63,6 +99,8 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                 runner="npm-test",
                 confidence="medium",
                 evidence=("package.json:scripts.test",),
+                ecosystem="node",
+                setup_commands=_node_setup_commands(repo_root),
             )
 
     pyproject = repo_root / "pyproject.toml"
@@ -84,10 +122,13 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                     ("pytest.ini", pytest_ini.is_file()),
                     ("tox.ini", tox_ini.is_file()),
                     ("pyproject.toml", pyproject.is_file()),
+                    ("requirements.txt", (repo_root / "requirements.txt").is_file()),
                     ("tests/", (repo_root / "tests").is_dir()),
                 )
                 if exists
             ),
+            ecosystem="python",
+            setup_commands=_python_setup_commands(repo_root),
         )
 
     if (repo_root / "go.mod").is_file():
@@ -96,6 +137,7 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
             runner="go-test",
             confidence="high",
             evidence=("go.mod",),
+            ecosystem="go",
         )
 
     if (repo_root / "Gemfile").is_file():
@@ -106,6 +148,7 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
                 runner="rspec",
                 confidence="high",
                 evidence=("Gemfile:rspec",),
+                ecosystem="ruby",
             )
 
     if (repo_root / "pom.xml").is_file():
@@ -114,6 +157,7 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
             runner="maven-test",
             confidence="medium",
             evidence=("pom.xml",),
+            ecosystem="java",
         )
 
     if (repo_root / "gradlew").is_file():
@@ -122,6 +166,7 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
             runner="gradle-test",
             confidence="medium",
             evidence=("gradlew",),
+            ecosystem="java",
         )
 
     raise ValueError(
@@ -129,9 +174,58 @@ def detect_test_runner(repo_root: Path) -> TestRunnerDetection:
     )
 
 
+def _ecosystem_setup_yaml(detection: TestRunnerDetection | None) -> str:
+    if detection is None:
+        return """      # Install your project's dependencies before Counterproof.
+      # Example: pip install -e .[dev] / npm ci / bundle install
+"""
+
+    chunks: list[str] = []
+    if detection.ecosystem == "node":
+        chunks.append(
+            """      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+"""
+        )
+    elif detection.ecosystem == "go":
+        chunks.append(
+            """      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+"""
+        )
+    elif detection.ecosystem == "ruby":
+        chunks.append(
+            """      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+"""
+        )
+    elif detection.ecosystem == "java":
+        chunks.append(
+            """      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+"""
+        )
+
+    if detection.setup_commands:
+        commands = "\n".join(f"          {command}" for command in detection.setup_commands)
+        chunks.append(
+            "      - name: Install project dependencies\n"
+            "        run: |\n"
+            f"{commands}\n"
+        )
+
+    return "\n".join(chunks)
+
+
 def render_github_workflow(
     *,
     test_command: str,
+    detection: TestRunnerDetection | None = None,
     require_witness: bool = False,
     require_clean_integrity: bool = False,
 ) -> str:
@@ -139,6 +233,7 @@ def render_github_workflow(
     integrity = "true" if require_clean_integrity else "false"
     escaped_command = test_command.replace('"', '\\"')
     head_expr = "$" + "{{ github.event.pull_request.head.sha }}"
+    setup_yaml = _ecosystem_setup_yaml(detection)
 
     return f"""name: Counterproof
 
@@ -162,8 +257,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Install your project's dependencies before Counterproof when needed.
-      # Example: pip install -e .[dev] / npm ci / bundle install
+{setup_yaml}
       - uses: hippoley/SkillFactory/actions/witness@main
         with:
           test-command: "{escaped_command}"
@@ -197,6 +291,7 @@ def init_github(
     destination.write_text(
         render_github_workflow(
             test_command=test_command,
+            detection=detection,
             require_witness=require_witness,
             require_clean_integrity=require_clean_integrity,
         ),
