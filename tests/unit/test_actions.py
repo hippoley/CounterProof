@@ -85,3 +85,27 @@ def test_actions_do_not_execute_pr_text_as_shell():
         assert context not in root
         assert context not in witness
         assert context not in behavior
+
+
+def test_root_and_alias_emit_compact_proof_card():
+    for path in ("action.yml", "actions/witness/action.yml"):
+        text = Path(path).read_text(encoding="utf-8")
+        assert "| Regression Witness | **{witness_status}** |" in text
+        assert "| PR head + PR tests | **{verdict(head)}** |" in text
+        assert "| Base code + same tests | **{verdict(base)}** |" in text
+        assert "| Proof Integrity | **{integrity_status}** |" in text
+        assert "<summary>Evidence details</summary>" in text
+        assert "cat \"$report\"" not in text
+
+
+def test_root_action_is_marketplace_default_not_advanced_causal_entry():
+    root = _load("action.yml")
+    advanced = _load("actions/behavior-proof/action.yml")
+
+    assert root["name"] == "Counterproof Regression Witness"
+    assert "test-command" in root["inputs"]
+    assert "trace" not in root["inputs"]
+
+    assert advanced["name"] == "Counterproof Behavior Proof"
+    assert "trace" in advanced["inputs"]
+    assert "experiment-manifest" in advanced["inputs"]
