@@ -136,6 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/counterproof-witness-fixture
+          base_sha="$(git rev-list --max-parents=0 HEAD)"
 
           /tmp/counterproof-clean/bin/counterproof witness \
             --base "$base_sha" \
