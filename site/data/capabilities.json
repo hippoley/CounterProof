@@ -107,6 +107,13 @@
       "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
     },
     {
+      "id": "reviewed-adapter-binding",
+      "name": "Reviewed draft scaffold -> ready adapter binding",
+      "status": "tested",
+      "evidence": "The bind-probe-adapter CLI requires a draft scaffold, non-placeholder adapter argv, reviewer identity, and review note before changing status to ready.",
+      "limitation": "Binding authorizes execution plumbing; it does not certify that the adapter faithfully models target-domain semantics."
+    },
+    {
       "id": "probe-adapter",
       "name": "Reusable env-driven Probe Adapter protocol",
       "status": "tested",
@@ -171,7 +178,7 @@
     }
   ],
   "summary": {
-    "tested": 15,
+    "tested": 16,
     "partial": 4,
     "demo": 1,
     "planned": 4
