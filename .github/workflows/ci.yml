@@ -63,6 +63,23 @@ jobs:
           # Legacy CLI alias remains available for existing integrations.
           /tmp/counterproof-clean/bin/evopr --help
 
+      - name: Run packaged one-command onboarding
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-onboarding-fixture
+          mkdir -p /tmp/counterproof-onboarding-fixture/tests
+          printf '[pytest]\n' > /tmp/counterproof-onboarding-fixture/pytest.ini
+
+          /tmp/counterproof-clean/bin/counterproof init \
+            --repo /tmp/counterproof-onboarding-fixture
+
+          workflow=/tmp/counterproof-onboarding-fixture/.github/workflows/counterproof.yml
+          test -f "$workflow"
+          grep -Fq 'github.event.pull_request.head.sha' "$workflow"
+          grep -Fq 'python -m pytest -q {tests}' "$workflow"
+          grep -Fq 'require-witness: "false"' "$workflow"
+          grep -Fq 'require-clean-integrity: "false"' "$workflow"
+
       - name: Run packaged Regression Witness
         run: |
           set -euo pipefail
