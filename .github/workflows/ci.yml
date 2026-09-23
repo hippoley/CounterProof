@@ -60,6 +60,10 @@ jobs:
           /tmp/counterproof-clean/bin/pip install /tmp/counterproof-wheel/counterproof-*.whl
           /tmp/counterproof-clean/bin/counterproof --help
           /tmp/counterproof-clean/bin/counterproof audit --json-output
+          /tmp/counterproof-clean/bin/counterproof schema proof-summary-v1 \
+            --out /tmp/proof-summary-v1.schema.json
+          test -f /tmp/proof-summary-v1.schema.json
+          grep -q '"title": "Counterproof Proof Summary v1"' /tmp/proof-summary-v1.schema.json
           # Legacy CLI alias remains available for existing integrations.
           /tmp/counterproof-clean/bin/evopr --help
 
