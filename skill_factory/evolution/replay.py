@@ -69,7 +69,7 @@ def parse_structured_probe_result(stdout: str) -> StructuredProbeResult | None:
         raise ValueError(f"invalid EVOPR_RESULT JSON: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise ValueError("EVOPR_RESULT must be a JSON object")
+        raise TypeError("EVOPR_RESULT must be a JSON object")
 
     verdict = raw.get("verdict")
     if verdict not in {"pass", "fail"}:
@@ -85,7 +85,7 @@ def parse_structured_probe_result(stdout: str) -> StructuredProbeResult | None:
 
     metrics = raw.get("metrics", {})
     if not isinstance(metrics, dict):
-        raise ValueError("EVOPR_RESULT metrics must be an object")
+        raise TypeError("EVOPR_RESULT metrics must be an object")
 
     observations = raw.get("observations", [])
     if (
@@ -223,7 +223,7 @@ def run_command(
         probe_result_error = None
         try:
             probe_result = parse_structured_probe_result(stdout)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             probe_result_error = str(exc)
 
         return CommandOutcome(
