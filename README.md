@@ -59,14 +59,12 @@ python -m pip install "git+https://github.com/hippoley/SkillFactory.git"
 
 counterproof doctor
 
-counterproof init \
-  --require-witness \
-  --require-clean-integrity
+counterproof init
 ```
 
 Counterproof first self-tests its own Git/worktree/integrity mechanics with `counterproof doctor`.
 
-Then `counterproof init` detects the local test runner, adds the matching runtime/dependency setup, and writes:
+Then `counterproof init` detects the local test runner, adds the matching runtime/dependency setup, and writes an **advisory** PR proof workflow:
 
 ```text
 .github/workflows/counterproof.yml
@@ -95,6 +93,16 @@ counterproof init \
 ```
 
 It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
+
+Start advisory. After Counterproof has behaved correctly on a few real PRs, promote it to a merge gate:
+
+```bash
+counterproof init --force \
+  --require-witness \
+  --require-clean-integrity
+```
+
+For full-suite-only runners, Counterproof will refuse `--require-witness` until you provide a precise command containing `{tests}`.
 
 The generated workflow currently targets `@main`, because no Counterproof release tag has been published yet.
 
