@@ -96,13 +96,9 @@ counterproof init \
 
 It never overwrites an existing Counterproof workflow unless you explicitly pass `--force`.
 
-Need a stable Action version instead of floating `main`?
+The generated workflow currently targets `@main`, because no Counterproof release tag has been published yet.
 
-```bash
-counterproof init --action-ref v0.2.0
-```
-
-You can pin a tag, branch, or commit SHA. Counterproof validates the ref before writing it into workflow YAML.
+When a release tag exists, or when your team wants to pin a known commit, use `--action-ref`. Counterproof validates the ref before writing it into workflow YAML.
 
 `counterproof init-github` remains available as a compatibility alias.
 
