@@ -1,4 +1,4 @@
-"""Reproducibility receipts for EvoPR behavior proofs."""
+"""Reproducibility receipts for Counterproof behavior proofs."""
 from __future__ import annotations
 
 import hashlib
