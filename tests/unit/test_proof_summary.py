@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
+from jsonschema import ValidationError, validate
 
 from skill_factory.evolution.cli import cli
 from skill_factory.evolution.proof_summary import (
@@ -145,3 +148,53 @@ def test_proof_summary_cli_gate_rejects_non_verified(tmp_path):
 
     assert result.exit_code != 0
     assert "proof-ready required, got status=suite-delta" in result.output
+
+
+
+def _schema() -> dict:
+    return json.loads(
+        Path("schemas/proof-summary-v1.schema.json").read_text(encoding="utf-8")
+    )
+
+
+def test_proof_summary_v1_schema_accepts_verified_contract():
+    summary = build_proof_summary(
+        _witness("witnessed", "precise"),
+        _integrity("clean"),
+    )
+
+    validate(instance=summary.to_dict(), schema=_schema())
+
+
+def test_proof_summary_v1_schema_rejects_fake_ready_suite_delta():
+    invalid = {
+        "schema_version": 1,
+        "witness_status": "suite-delta",
+        "evidence_mode": "suite",
+        "integrity_status": "clean",
+        "proof_status": "suite-delta",
+        "proof_ready": True,
+        "reasons": ["fake ready state"],
+    }
+
+    with pytest.raises(ValidationError):
+        validate(instance=invalid, schema=_schema())
+
+
+def test_schema_cli_exports_versioned_contract(tmp_path):
+    destination = tmp_path / "proof-summary.schema.json"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "schema",
+            "proof-summary-v1",
+            "--out",
+            str(destination),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(destination.read_text(encoding="utf-8"))
+    assert raw["title"] == "Counterproof Proof Summary v1"
+    assert raw["properties"]["schema_version"]["const"] == 1
