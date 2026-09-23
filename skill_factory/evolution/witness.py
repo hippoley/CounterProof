@@ -285,8 +285,8 @@ def _classify_base_result(
         return (
             "not-witnessed",
             (
-                "Changed tests pass on both base and head. They do not demonstrate "
-                "the claimed behavioral regression."
+                "The configured test command passes on both base and head. "
+                "It does not distinguish the pre-change code from the PR."
             ),
         )
     if _is_pytest_command(argv) and baseline.returncode != 1:
