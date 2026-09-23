@@ -16,14 +16,57 @@ class VariantEvidence:
     replays: tuple[ReplayResult, ...]
     outcomes: tuple[CommandOutcome, ...]
     predictions: tuple[str | None, ...] = ()
+    roles: tuple[str, ...] = ()
 
     @property
     def valid_replays(self) -> tuple[ReplayResult, ...]:
         return tuple(item for item in self.replays if item.verdict != "infra_error")
 
     @property
+    def normalized_roles(self) -> tuple[str, ...]:
+        if self.roles:
+            return self.roles
+        return tuple("fitness" for _ in self.replays)
+
+    @property
+    def fitness_replays(self) -> tuple[ReplayResult, ...]:
+        return tuple(
+            replay
+            for replay, role in zip(
+                self.replays,
+                self.normalized_roles,
+                strict=False,
+            )
+            if role == "fitness" and replay.verdict != "infra_error"
+        )
+
+    @property
+    def diagnostic_replays(self) -> tuple[ReplayResult, ...]:
+        return tuple(
+            replay
+            for replay, role in zip(
+                self.replays,
+                self.normalized_roles,
+                strict=False,
+            )
+            if role == "diagnostic" and replay.verdict != "infra_error"
+        )
+
+    @property
+    def fitness_infra_error_count(self) -> int:
+        return sum(
+            1
+            for replay, role in zip(
+                self.replays,
+                self.normalized_roles,
+                strict=False,
+            )
+            if role == "fitness" and replay.verdict == "infra_error"
+        )
+
+    @property
     def mean_delta(self) -> float:
-        valid = self.valid_replays
+        valid = self.fitness_replays
         if not valid:
             return 0.0
         return sum(item.delta for item in valid) / len(valid)
@@ -32,13 +75,13 @@ class VariantEvidence:
     def regression_count(self) -> int:
         return sum(
             1
-            for item in self.valid_replays
+            for item in self.fitness_replays
             if item.candidate_score < item.baseline_score
         )
 
     @property
     def failure_count(self) -> int:
-        return sum(1 for item in self.valid_replays if item.verdict == "fail")
+        return sum(1 for item in self.fitness_replays if item.verdict == "fail")
 
     @property
     def infra_error_count(self) -> int:
@@ -89,8 +132,10 @@ class VariantEvidence:
 
     @property
     def status(self) -> str:
-        if not self.valid_replays or self.infra_error_count:
+        if self.fitness_infra_error_count:
             return "inconclusive"
+        if not self.fitness_replays:
+            return "diagnostic-only" if self.diagnostic_replays else "inconclusive"
         if self.failure_count or self.regression_count:
             return "falsified"
         if self.mean_delta > 0:
@@ -139,7 +184,24 @@ class DiscriminationRun:
             return "ambiguous"
         if self.prediction_blocked_survivors:
             return "prediction-blocked"
+        if any(item.status == "diagnostic-only" for item in self.variants):
+            return "diagnostic-only"
         return "no-survivor"
+
+    @property
+    def declared_diagnostic_cases(self) -> tuple[str, ...]:
+        if not self.variants:
+            return ()
+        first = self.variants[0]
+        return tuple(
+            replay.case_id
+            for replay, role in zip(
+                first.replays,
+                first.normalized_roles,
+                strict=False,
+            )
+            if role == "diagnostic"
+        )
 
     @property
     def diagnostic_cases(self) -> tuple[str, ...]:
@@ -240,10 +302,18 @@ def run_discrimination_manifest(
     variant_predictions: dict[str, list[str | None]] = {
         surface: [] for surface in selected
     }
+    variant_roles: dict[str, list[str]] = {
+        surface: [] for surface in selected
+    }
 
     for case in cases:
         case_id = str(case["case_id"])
         suite = str(case.get("suite", "discrimination"))
+        role = str(case.get("role", "fitness"))
+        if role not in {"fitness", "diagnostic"}:
+            raise ValueError(
+                f"invalid role for case {case_id!r}: {role!r}; expected fitness or diagnostic"
+            )
         cwd = safe_cwd(root, str(case.get("cwd", ".")))
         timeout = float(case.get("timeout_seconds", default_timeout))
         common_env = {"EVOPR_CASE_ID": case_id, **case.get("env", {})}
@@ -275,6 +345,7 @@ def run_discrimination_manifest(
             variants = case["variants"]
             if surface not in variants:
                 variant_predictions[surface].append(None)
+                variant_roles[surface].append(role)
                 result = ReplayResult(
                     case_id=case_id,
                     suite=suite,
@@ -309,6 +380,7 @@ def run_discrimination_manifest(
                 )
 
             variant_predictions[surface].append(expectation)
+            variant_roles[surface].append(role)
             outcome = run_command(
                 argv,
                 cwd=cwd,
@@ -340,6 +412,7 @@ def run_discrimination_manifest(
             replays=tuple(variant_results[surface]),
             outcomes=tuple(variant_outcomes[surface]),
             predictions=tuple(variant_predictions[surface]),
+            roles=tuple(variant_roles[surface]),
         )
         for surface in selected
     )
@@ -364,6 +437,9 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
                 "regressions": item.regression_count,
                 "failures": item.failure_count,
                 "infra_errors": item.infra_error_count,
+                "fitness_case_count": len(item.fitness_replays),
+                "diagnostic_case_count": len(item.diagnostic_replays),
+                "roles": list(item.normalized_roles),
                 "signature": list(item.signature),
                 "expected_signature": list(item.expected_signature),
                 "prediction_status": item.prediction_status,
@@ -386,6 +462,7 @@ def discrimination_to_dict(run: DiscriminationRun) -> dict[str, Any]:
         ],
         "diagnostic_cases": list(run.diagnostic_cases),
         "preregistered_diagnostic_cases": list(run.preregistered_diagnostic_cases),
+        "declared_diagnostic_cases": list(run.declared_diagnostic_cases),
         "unresolved_pairs": [list(pair) for pair in run.unresolved_pairs],
     }
 
@@ -431,6 +508,27 @@ def render_discrimination_markdown(
                     f"{replay.verdict} ({replay.baseline_score:.1f}->{replay.candidate_score:.1f})"
                 )
         lines.append(f"| {item.surface} | " + " | ".join(cells) + " |")
+
+    if run.declared_diagnostic_cases:
+        lines.extend(
+            [
+                "",
+                "## Case roles",
+                "",
+                (
+                    "Diagnostic cases may intentionally produce a pre-registered FAIL. "
+                    "They contribute to hypothesis discrimination but are excluded from "
+                    "fitness failure/regression counting and cannot by themselves promote "
+                    "a mutation."
+                ),
+                "",
+                "Declared diagnostic cases: "
+                + ", ".join(
+                    f"**{case_id}**" for case_id in run.declared_diagnostic_cases
+                )
+                + ".",
+            ]
+        )
 
     lines.extend(["", "## Prediction registration", ""])
     if run.has_preregistered_predictions:
@@ -487,6 +585,11 @@ def render_discrimination_markdown(
         lines.append(
             f"Multiple hypotheses survived: **{labels}**. The current cases do not "
             "discriminate between them; add a case where their predicted behaviors differ."
+        )
+    elif run.selection_state == "diagnostic-only":
+        lines.append(
+            "The current experiment is diagnostic-only. Its expected PASS/FAIL outcomes "
+            "can test predictions, but it cannot by itself justify mutation promotion."
         )
     elif run.prediction_blocked_survivors:
         blocked = ", ".join(
