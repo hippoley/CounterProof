@@ -3,36 +3,201 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="SkillFactory live review surface, built from real repository skills and validation results.">
-  <title>SkillFactory · Failure to reusable skill</title>
+  <meta name="description" content="Counterproof proves agent PR fixes by replaying changed tests against pre-change code, then protects the evidence from CI/test tampering.">
+  <title>Counterproof · Behavior Proof</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header><a href="https://github.com/hippoley/SkillFactory" class="logo">SKILL<span>FACTORY</span></a><div id="build">VERIFYING BUILD…</div></header>
+  <header class="mast">
+    <a class="wordmark" href="https://github.com/hippoley/SkillFactory">COUNTERPROOF</a>
+    <div class="mast-center">BEHAVIOR PROOF / 001</div>
+    <div class="mast-right"><span id="build">experimental branch</span><a href="https://github.com/hippoley/SkillFactory/pull/2">source ↗</a></div>
+  </header>
+
   <main>
-    <section class="intro">
-      <p class="eyebrow">FAILURE → TRAJECTORY → SKILL → EVAL</p>
-      <h1>Agent skills should be forged from<br><em>what actually went wrong.</em></h1>
-      <p class="lead">Inspect the repository’s real smart-home skills, their trigger boundaries, evaluation cases and static safety checks. GitHub Actions rebuilds this review surface on every change.</p>
-      <div class="summary"><div><strong id="total">—</strong><span>skills</span></div><div><strong id="valid">—</strong><span>passing validation</span></div><div><strong id="cases">—</strong><span>evaluation cases</span></div></div>
+    <section class="opening">
+      <div class="opening-index">01—</div>
+      <div>
+        <p class="overline">PROOF-OF-FIX FOR AGENT PULL REQUESTS</p>
+        <h1>Green says it passes now.<br><em>Prove it failed before the fix.</em></h1>
+        <p class="opening-copy">Counterproof replays the PR’s changed tests against pre-change code, then checks whether the same PR weakened the tests or CI that produced the evidence.</p>
+      </div>
     </section>
 
-    <section class="factory">
-      <aside>
-        <div class="aside-head"><span>REPOSITORY SKILLS</span><input id="search" placeholder="Filter skills"></div>
-        <div id="skills" class="skill-list"><p class="loading">Loading build output…</p></div>
-      </aside>
-      <article id="detail">
-        <div class="blank"><b>Select a skill</b><p>Open its contract, validation result, eval cases and trigger boundary.</p></div>
-      </article>
+    <section class="witness-hero" aria-label="Regression witness example">
+      <div class="witness-kicker">REGRESSION WITNESS / SAME TEST · TWO WORLDS</div>
+      <div class="witness-grid">
+        <div class="witness-side">
+          <span>PR HEAD</span>
+          <strong>PASS</strong>
+          <small>tests/test_tenant_scope.py</small>
+        </div>
+        <div class="witness-spine">
+          <span>same changed test</span>
+          <b>→</b>
+        </div>
+        <div class="witness-side base">
+          <span>BASE CODE + PR TEST</span>
+          <strong>FAIL</strong>
+          <small>pre-change behavior reproduced</small>
+        </div>
+        <div class="witness-verdict">
+          <span>COUNTERPROOF</span>
+          <strong>WITNESSED</strong>
+          <small>proof integrity · CLEAN</small>
+        </div>
+      </div>
+      <div class="witness-foot">
+        <span>A green test is a current-state fact.</span>
+        <b>A regression witness is a before/after claim you can replay.</b>
+      </div>
     </section>
 
-    <section class="pipeline">
-      <p class="eyebrow">THE CONTRACT</p><h2>Not a prompt folder. A controlled learning loop.</h2>
-      <div class="steps"><div><i>01</i><b>Capture failure</b><span>Preserve the task, actions, observation and outcome.</span></div><div><i>02</i><b>Extract pattern</b><span>Generalize the reusable constraint—not the one-off answer.</span></div><div><i>03</i><b>Verify skill</b><span>Check structure, safety, scope and executable resources.</span></div><div><i>04</i><b>Run A/B eval</b><span>Keep only skills that improve behavior under held-out tasks.</span></div></div>
+    <nav id="caseReel" class="case-reel" aria-label="Evolution cases"></nav>
+
+    <article class="proof-sheet">
+      <div class="sheet-number" id="sheetNumber">CP—001</div>
+
+      <section class="incident">
+        <div class="margin-title">INCIDENT</div>
+        <div class="incident-main">
+          <p id="caseEyebrow" class="case-eyebrow">RECORDED FAILURE</p>
+          <h2 id="failureTitle">Loading case…</h2>
+          <p id="failureSummary" class="incident-summary"></p>
+          <button id="evidenceToggle" class="text-action" type="button" aria-expanded="false">show evidence + decision capsule ↓</button>
+          <div id="evidenceDrawer" class="evidence-drawer" hidden>
+            <div class="drawer-grid">
+              <div>
+                <h3>Decision capsule</h3>
+                <dl id="decisionCapsule"></dl>
+              </div>
+              <div>
+                <h3>Outcome receipt</h3>
+                <p id="outcomeReceipt"></p>
+                <h3 class="evidence-heading">Evidence</h3>
+                <div id="evidenceList" class="evidence-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cause-step">
+        <div class="margin-title">CAUSE LENS</div>
+        <div>
+          <div class="instruction-row">
+            <p>Pick the explanation worth testing. Confidence is not truth; it only sets the first probe.</p>
+            <span id="selectedConfidence" class="confidence-readout">—</span>
+          </div>
+          <div id="hypothesisLenses" class="hypothesis-lenses"></div>
+          <div class="cause-actions">
+            <button id="spliceBtn" class="splice-button" type="button">
+              <span>TEST THIS CAUSE</span>
+              <small>fork the same case with one mutation</small>
+            </button>
+            <button id="compareBtn" class="compare-button" type="button">
+              <span>COMPARE ALL CAUSES</span>
+              <small>run the same fixture matrix across every candidate</small>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="discriminationSection" class="discrimination-section" hidden>
+        <div class="margin-title">COMPARE</div>
+        <div>
+          <div class="proof-header">
+            <div>
+              <p class="overline">ACTIVE DISCRIMINATION</p>
+              <h2>Which intervention survives the same cases?</h2>
+            </div>
+            <div id="discriminationStamp" class="verdict-stamp">UNRUN</div>
+          </div>
+          <div id="discriminationMatrix" class="discrimination-matrix"></div>
+          <p id="discriminationNote" class="truth-note"></p>
+        </div>
+      </section>
+
+      <section id="worldlineSection" class="worldline-section muted-stage">
+        <div class="margin-title">WORLDLINE</div>
+        <div class="worldline-main">
+          <div class="worldline-caption">
+            <div><span class="legend-line base"></span> recorded world</div>
+            <div><span class="legend-line candidate"></span> candidate world</div>
+            <span id="surfaceLabel" class="surface-label">select a cause</span>
+          </div>
+          <div class="world-canvas">
+            <svg id="worldSvg" viewBox="0 0 1000 360" role="img" aria-label="Baseline and candidate behavior worldlines"></svg>
+          </div>
+          <div class="run-proof-row">
+            <div id="mutationNote" class="mutation-note">Choose a cause above to prepare a mutation.</div>
+            <button id="runProofBtn" class="proof-button" type="button" disabled>RUN PROOF →</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="proofResult" class="result-section" hidden>
+        <div class="margin-title">PROOF</div>
+        <div>
+          <div class="proof-header">
+            <div>
+              <p class="overline">MEASURED RESULT</p>
+              <h2 id="mutationTitle">Mutation</h2>
+            </div>
+            <div id="verdictStamp" class="verdict-stamp">UNPROVEN</div>
+          </div>
+
+          <div class="behavior-score">
+            <div class="score-column">
+              <span>BEFORE</span>
+              <pre id="beforeDiff"></pre>
+            </div>
+            <div class="score-mark">→</div>
+            <div class="score-column after">
+              <span>AFTER</span>
+              <pre id="afterDiff"></pre>
+            </div>
+          </div>
+
+          <div class="measure-line">
+            <div><span>mean Δ</span><b id="meanDelta">—</b></div>
+            <div><span>regressions</span><b id="regressions">—</b></div>
+            <div><span>risk flags</span><b id="riskFlags">—</b></div>
+            <div><span>rollback ref</span><b id="rollbackRef">local-demo</b></div>
+          </div>
+
+          <div id="replayReceipts" class="replay-receipts"></div>
+
+          <div class="decision-strip">
+            <p id="gateExplanation">Run the proof to evaluate the mutation.</p>
+            <div class="decision-actions">
+              <button id="rejectBtn" class="outline-button" type="button">REJECT</button>
+              <button id="promoteBtn" class="accept-button" type="button" disabled>ACCEPT MUTATION</button>
+              <button id="rollbackBtn" class="outline-button" type="button" hidden>ROLL BACK</button>
+            </div>
+          </div>
+          <p class="truth-note">This browser playground visualizes fixture results. Real command replay is available in the CLI via <code>evopr replay</code>; automatic world snapshots and live rollout are not implemented yet.</p>
+        </div>
+      </section>
+    </article>
+
+    <section class="capability-truth">
+      <div class="opening-index">02—</div>
+      <div>
+        <p class="overline">CAPABILITY TRUTH TABLE</p>
+        <h2>What is real today,<br>and what is still a research target.</h2>
+        <div id="capabilityGrid" class="capability-grid"></div>
+      </div>
     </section>
   </main>
-  <footer><span>SkillFactory</span><span>Forge agent skills from real task failures, not imagination.</span><a href="https://github.com/hippoley/SkillFactory">Source</a></footer>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <footer>
+    <span>COUNTERPROOF / SKILLFACTORY</span>
+    <span>Agents will learn. The question is whether you can review what they learned.</span>
+  </footer>
+
   <script src="app.js"></script>
 </body>
 </html>

@@ -32,6 +32,301 @@ jobs:
       - name: Run tests
         run: pytest --cov=skill_factory --cov-report=term-missing
 
+      - name: Run measured Counterproof replay
+        run: |
+          counterproof replay examples/replay_suite.json --out /tmp/replay-results.json
+          cat /tmp/replay-results.json
+
+      - name: Audit capability truth table
+        run: counterproof audit
+
+  clean-install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel from repository
+        run: |
+          python -m pip install --upgrade pip
+          pip wheel . --wheel-dir /tmp/counterproof-wheel
+
+      - name: Install wheel into clean virtualenv
+        run: |
+          python -m venv /tmp/counterproof-clean
+          /tmp/counterproof-clean/bin/pip install /tmp/counterproof-wheel/counterproof-*.whl
+          /tmp/counterproof-clean/bin/counterproof --help
+          /tmp/counterproof-clean/bin/counterproof audit --json-output
+          # Legacy CLI alias remains available for existing integrations.
+          /tmp/counterproof-clean/bin/evopr --help
+
+      - name: Run packaged Regression Witness
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-witness-fixture
+          mkdir -p /tmp/counterproof-witness-fixture
+          cd /tmp/counterproof-witness-fixture
+
+          git init
+          git config user.email "counterproof@example.test"
+          git config user.name "Counterproof CI"
+
+          printf 'VALUE = 1\n' > app.py
+          git add app.py
+          git commit -m "base"
+          base_sha="$(git rev-parse HEAD)"
+
+          mkdir -p tests
+          printf 'VALUE = 2\n' > app.py
+          cat > tests/test_regression.py <<'PY'
+          from app import VALUE
+
+          def test_regression():
+              assert VALUE == 2
+          PY
+          git add app.py tests/test_regression.py
+          git commit -m "agent fix plus regression test"
+
+          /tmp/counterproof-clean/bin/pip install pytest
+          /tmp/counterproof-clean/bin/counterproof witness \
+            --base "$base_sha" \
+            --test-command "/tmp/counterproof-clean/bin/python -m pytest -q {tests}" \
+            --out /tmp/REGRESSION_WITNESS.md \
+            --json-out /tmp/REGRESSION_WITNESS.json \
+            --require-witness
+
+          grep -q '"status": "witnessed"' /tmp/REGRESSION_WITNESS.json
+          grep -q '"witnessed": true' /tmp/REGRESSION_WITNESS.json
+          grep -q 'Counterproof · Regression Witness' /tmp/REGRESSION_WITNESS.md
+          grep -Fq 'Base code + PR tests: **FAIL**' /tmp/REGRESSION_WITNESS.md
+
+      - name: Run packaged Proof Integrity Guard
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-integrity-fixture
+          mkdir -p /tmp/counterproof-integrity-fixture
+          cd /tmp/counterproof-integrity-fixture
+
+          git init
+          git config user.email "counterproof@example.test"
+          git config user.name "Counterproof CI"
+
+          printf 'VALUE = 1\n' > app.py
+          mkdir -p tests .github/workflows
+          cat > tests/test_value.py <<'PY'
+          from app import VALUE
+
+          def test_value():
+              assert VALUE == 1
+          PY
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: CI
+          on:
+            pull_request:
+            push:
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - run: pytest
+          YAML
+          git add .
+          git commit -m "base evidence"
+          base_sha="$(git rev-parse HEAD)"
+
+          rm tests/test_value.py
+          cat > .github/workflows/ci.yml <<'YAML'
+          name: CI
+          on:
+            push:
+          jobs:
+            test:
+              continue-on-error: true
+              runs-on: ubuntu-latest
+              steps:
+                - run: pytest || true
+          YAML
+          git add -A
+          git commit -m "weaken evidence"
+
+          /tmp/counterproof-clean/bin/counterproof integrity \
+            --base "$base_sha" \
+            --out /tmp/PROOF_INTEGRITY.md \
+            --json-out /tmp/PROOF_INTEGRITY.json
+
+          grep -q '"status": "review-required"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "test-deleted"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "continue-on-error"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "shell-ignore-failure"' /tmp/PROOF_INTEGRITY.json
+          grep -q '"code": "pull-request-trigger-removed"' /tmp/PROOF_INTEGRITY.json
+
+          if /tmp/counterproof-clean/bin/counterproof integrity \
+            --base "$base_sha" \
+            --out /tmp/PROOF_INTEGRITY_GATE.md \
+            --json-out /tmp/PROOF_INTEGRITY_GATE.json \
+            --require-clean; then
+            echo "Expected Proof Integrity Guard to block weakened evidence"
+            exit 1
+          fi
+
+      - name: Run packaged CLI against external packet
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof build "$GITHUB_WORKSPACE/examples/evolution_pr.json" --out /tmp/EVOLUTION_PR.md
+          grep -q "Eligible for promotion" /tmp/EVOLUTION_PR.md
+
+      - name: Run packaged trace-to-proof workflow
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof ingest \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --surface policy \
+            --out /tmp/EVOLUTION_PACKET.json
+          grep -q '"selected_candidate_id": "C1"' /tmp/EVOLUTION_PACKET.json
+          /tmp/counterproof-clean/bin/counterproof prove \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --replay-manifest "$GITHUB_WORKSPACE/examples/replay_suite.json" \
+            --surface policy \
+            --out /tmp/TRACE_PROOF.md
+          grep -q "Discriminating probes" /tmp/TRACE_PROOF.md
+          grep -q "Eligible for promotion" /tmp/TRACE_PROOF.md
+
+      - name: Run packaged active discrimination
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --surface prompt \
+            --out /tmp/DISCRIMINATION.md \
+            --json-out /tmp/DISCRIMINATION.json
+          grep -q '"discriminated_surface": "policy"' /tmp/DISCRIMINATION.json
+          grep -q "Only \*\*policy\*\* survived" /tmp/DISCRIMINATION.md
+
+      - name: Run packaged structured probe result protocol
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/structured_discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --surface prompt \
+            --out /tmp/STRUCTURED_MATRIX.md \
+            --json-out /tmp/STRUCTURED_MATRIX.json
+          grep -q '"discriminated_surface": "policy"' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"score": 0.96' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"safety_score": 0.96' /tmp/STRUCTURED_MATRIX.json
+          grep -q '"prediction_status": "contradicted"' /tmp/STRUCTURED_MATRIX.json
+          grep -q 'fixture://structured/failure/policy' /tmp/STRUCTURED_MATRIX.json
+
+      - name: Run packaged env-driven probe adapter
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/adapter_discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --surface prompt \
+            --out /tmp/ADAPTER_MATRIX.md \
+            --json-out /tmp/ADAPTER_MATRIX.json
+          grep -q '"discriminated_surface": "policy"' /tmp/ADAPTER_MATRIX.json
+          grep -q '"prediction_status": "contradicted"' /tmp/ADAPTER_MATRIX.json
+
+      - name: Run packaged active evolve workflow
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof evolve \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --surface prompt \
+            --out /tmp/EVOLUTION_REVIEW.md \
+            --packet-out /tmp/EVOLVED_PACKET.json \
+            --receipt-out /tmp/PROOF_RECEIPT.json
+          grep -q '"selected_candidate_id": "C1"' /tmp/EVOLVED_PACKET.json
+          grep -q '"discrimination_result": "unique-survivor:policy"' /tmp/EVOLVED_PACKET.json
+          grep -q "Eligible for promotion" /tmp/EVOLUTION_REVIEW.md
+          grep -q "Counterproof Discrimination Matrix" /tmp/EVOLUTION_REVIEW.md
+          /tmp/counterproof-clean/bin/counterproof verify-receipt /tmp/PROOF_RECEIPT.json \
+            --trace "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json"
+          cp "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" /tmp/changed-trace.json
+          printf '\n ' >> /tmp/changed-trace.json
+          if /tmp/counterproof-clean/bin/counterproof verify-receipt /tmp/PROOF_RECEIPT.json \
+            --trace /tmp/changed-trace.json \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/discrimination_suite.json"; then
+            echo "Expected receipt verification to reject changed trace"
+            exit 1
+          fi
+
+      - name: Run packaged ambiguity to next-probe workflow
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof evolve \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest "$GITHUB_WORKSPACE/examples/ambiguous_discrimination_suite.json" \
+            --surface policy \
+            --surface skill \
+            --out /tmp/AMBIGUOUS_REVIEW.md \
+            --packet-out /tmp/AMBIGUOUS_PACKET.json \
+            --probe-plan-out /tmp/NEXT_PROBE.md \
+            --probe-scaffold-out /tmp/NEXT_EXPERIMENT.json
+          grep -q '"selected_candidate_id": null' /tmp/AMBIGUOUS_PACKET.json
+          grep -q '"discrimination_result": "ambiguous"' /tmp/AMBIGUOUS_PACKET.json
+          grep -q "Separate policy from skill" /tmp/NEXT_PROBE.md
+          grep -q "Counterproof Next Probe Plan" /tmp/AMBIGUOUS_REVIEW.md
+          grep -q '"status": "draft"' /tmp/NEXT_EXPERIMENT.json
+          grep -q 'TODO_REPLACE_WITH_ADAPTER' /tmp/NEXT_EXPERIMENT.json
+          /tmp/counterproof-clean/bin/counterproof bind-probe-adapter /tmp/NEXT_EXPERIMENT.json \
+            --adapter python \
+            --adapter "$GITHUB_WORKSPACE/examples/replay/cross_probe_adapter.py" \
+            --reviewed-by ci-reviewer \
+            --review-note "CI fixture review only; domain semantics are not certified." \
+            --out /tmp/READY_EXPERIMENT.json
+          grep -q '"status": "ready"' /tmp/READY_EXPERIMENT.json
+          grep -q '"decision": "approved-for-execution"' /tmp/READY_EXPERIMENT.json
+          grep -q 'ci-reviewer' /tmp/READY_EXPERIMENT.json
+          /tmp/counterproof-clean/bin/counterproof discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest /tmp/READY_EXPERIMENT.json \
+            --surface policy \
+            --surface skill \
+            --out /tmp/DIAGNOSTIC_MATRIX.md \
+            --json-out /tmp/DIAGNOSTIC_MATRIX.json
+          grep -q '"selection_state": "diagnostic-only"' /tmp/DIAGNOSTIC_MATRIX.json
+          grep -q '"prediction_status": "supported"' /tmp/DIAGNOSTIC_MATRIX.json
+          grep -q '"declared_diagnostic_cases"' /tmp/DIAGNOSTIC_MATRIX.json
+          if /tmp/counterproof-clean/bin/counterproof discriminate \
+            "$GITHUB_WORKSPACE/examples/traces/tenant_failure.json" \
+            --experiment-manifest /tmp/NEXT_EXPERIMENT.json \
+            --surface policy \
+            --surface skill \
+            --out /tmp/SHOULD_NOT_RUN.md; then
+            echo "Expected draft probe scaffold execution to be rejected"
+            exit 1
+          fi
+
+      - name: Serve packaged interactive demo
+        run: |
+          test -f /tmp/counterproof-clean/share/counterproof/site/index.html
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof demo --port 8877 >/tmp/counterproof-demo.log 2>&1 &
+          echo $! >/tmp/counterproof-demo.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:8877/ | grep -q "Behavior Proof" && break
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:8877/data/capabilities.json | grep -q "command-replay"
+          kill "$(cat /tmp/counterproof-demo.pid)"
+
   validate-example-skills:
     runs-on: ubuntu-latest
     steps:
@@ -53,3 +348,35 @@ jobs:
             echo "Validating $skill_dir ..."
             skill-factory validate "$skill_dir"
           done
+
+
+  frontend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Check frontend JavaScript syntax
+        run: node --check site/app.js
+
+      - name: Serve Counterproof playground
+        run: |
+          python3 -m http.server 8765 --directory site >/tmp/counterproof-http.log 2>&1 &
+          echo $! >/tmp/counterproof-http.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:8765/ >/dev/null && exit 0
+            sleep 0.5
+          done
+          cat /tmp/counterproof-http.log
+          exit 1
+
+      - name: Exercise worldline proof interaction in Chromium
+        run: node tests/browser/evopr_smoke.mjs

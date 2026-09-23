@@ -1,0 +1,66 @@
+{
+  "trace_id": "homeai-correction-001",
+  "agent": "homeai-interaction-runtime",
+  "task": "Execute a spoken window-control request under streaming ASR",
+  "activation_scope": "window-control/full-duplex",
+  "events": [
+    {
+      "id": "asr-1",
+      "type": "observation",
+      "text": "打开客厅窗，一半",
+      "state": {
+        "asr": "partial",
+        "speaker": "resident-1"
+      }
+    },
+    {
+      "id": "dec-1",
+      "type": "decision",
+      "goal": "execute window control",
+      "world_state": {
+        "semantic_state": "provisional",
+        "room": "living-room",
+        "open_ratio": 0.5
+      },
+      "candidates": [
+        "execute",
+        "wait",
+        "clarify"
+      ],
+      "selected_action": "execute living-room window",
+      "assumptions": [
+        "room target is stable enough"
+      ],
+      "uncertainty": 0.78,
+      "guards": {
+        "semantic_final": false,
+        "correction_window_open": true
+      },
+      "memory": {
+        "previous_target": "living-room"
+      }
+    },
+    {
+      "id": "tool-1",
+      "type": "tool_call",
+      "tool": "window.set_position",
+      "text": "living-room window -> 50%"
+    },
+    {
+      "id": "corr-1",
+      "type": "human_correction",
+      "text": "不对，卧室那个",
+      "confidence": 1,
+      "surface_hint": "policy"
+    },
+    {
+      "id": "comp-1",
+      "type": "compensating_action",
+      "text": "Cancel or redirect the already-started living-room action.",
+      "confidence": 0.98
+    }
+  ],
+  "failure": {
+    "summary": "A provisional living-room command committed before the user finished correcting the target."
+  }
+}

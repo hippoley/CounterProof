@@ -1,0 +1,68 @@
+{
+  "status": "ready",
+  "root": "..",
+  "timeout_seconds": 10,
+  "adapter": [
+    "python",
+    "examples/replay/env_probe_adapter.py"
+  ],
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "suite": "regression",
+      "payload": {
+        "normal": false,
+        "attack": false
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    },
+    {
+      "case_id": "cross-tenant-attack-07",
+      "suite": "security-holdout",
+      "payload": {
+        "normal": false,
+        "attack": true
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    },
+    {
+      "case_id": "normal-lookup-12",
+      "suite": "holdout",
+      "payload": {
+        "normal": true,
+        "attack": false
+      },
+      "variants": {
+        "policy": {
+          "expect": "pass"
+        },
+        "skill": {
+          "expect": "pass"
+        },
+        "prompt": {
+          "expect": "pass"
+        }
+      }
+    }
+  ]
+}

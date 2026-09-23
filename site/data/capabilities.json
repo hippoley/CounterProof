@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "capabilities": [
+    {
+      "id": "packet-model",
+      "name": "Evolution Packet data model",
+      "status": "tested",
+      "evidence": "Unit tests construct evidence, hypotheses, mutations, replay results, and packets.",
+      "limitation": "Decision Capsule and Outcome Receipt are currently free-form strings."
+    },
+    {
+      "id": "promotion-gate",
+      "name": "Promotion gate from replay evidence",
+      "status": "tested",
+      "evidence": "Unit tests verify positive delta + zero regressions + zero risk flags.",
+      "limitation": "The default gate is intentionally simple and does not weight evidence confidence."
+    },
+    {
+      "id": "behavior-pr",
+      "name": "Behavior PR Markdown renderer",
+      "status": "tested",
+      "evidence": "CLI smoke test renders examples/evolution_pr.json into reviewable Markdown.",
+      "limitation": "It renders a review artifact; it does not yet open a GitHub pull request automatically."
+    },
+    {
+      "id": "proof-integrity-guard",
+      "name": "Proof Integrity Guard for changed tests and CI",
+      "status": "tested",
+      "evidence": "Counterproof deterministically flags deleted tests, added skip/xfail markers, shell failure masking, continue-on-error, removed pull-request workflow triggers, and other evidence-surface changes.",
+      "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect."
+    },
+    {
+      "id": "regression-witness",
+      "name": "Regression Witness for agent pull requests",
+      "status": "tested",
+      "evidence": "Counterproof detects changed tests, runs them on PR head, overlays the same tests onto a detached base worktree, and distinguishes witnessed fixes from tests that already passed before the change.",
+      "limitation": "The first release relies on repository-local test commands and changed-test filename patterns; dependency setup remains the consuming repository's responsibility."
+    },
+    {
+      "id": "proof-receipt",
+      "name": "Reproducible Proof Receipt with source fingerprints",
+      "status": "tested",
+      "evidence": "Counterproof can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
+      "limitation": "The receipt fingerprints source artifacts; it does not yet capture a full container image, dependency lock or external service state."
+    },
+    {
+      "id": "packaged-install",
+      "name": "Clean wheel install and packaged playground",
+      "status": "tested",
+      "evidence": "CI builds a wheel, installs it in a fresh virtualenv, runs the CLI, and serves the packaged frontend.",
+      "limitation": "This proves packaging and startup, not compatibility with every third-party agent stack."
+    },
+    {
+      "id": "command-replay",
+      "name": "Deterministic baseline/candidate command replay",
+      "status": "tested",
+      "evidence": "CI executes real subprocess pairs from examples/replay_suite.json and checks outcomes.",
+      "limitation": "It is command-based replay, not yet a captured world-state/time-travel runtime."
+    },
+    {
+      "id": "probe-contract",
+      "name": "Falsifiable probe contracts per hypothesis",
+      "status": "tested",
+      "evidence": "Trace compilation emits intervention, expected result, falsifier, and holdout guidance for each ranked hypothesis.",
+      "limitation": "Probe text is deterministic guidance; only attached replay results provide executable evidence."
+    },
+    {
+      "id": "mutation-surfaces",
+      "name": "Multiple mutation surfaces",
+      "status": "partial",
+      "evidence": "The data model accepts skill, prompt, policy, router, memory, tool, and eval surfaces.",
+      "limitation": "Counterproof does not yet apply each mutation surface to a live agent automatically."
+    },
+    {
+      "id": "evidence-semantics",
+      "name": "Evidence types and confidence",
+      "status": "partial",
+      "evidence": "Evidence kind/verdict/confidence are represented and confidence bounds are validated.",
+      "limitation": "Different evidence kinds are not yet assigned calibrated weights in causal selection."
+    },
+    {
+      "id": "rollback-contract",
+      "name": "Rollback reference and activation scope",
+      "status": "partial",
+      "evidence": "Mutation objects store and render rollback_ref and activation_scope.",
+      "limitation": "No runtime rollback executor or activation enforcer exists yet."
+    },
+    {
+      "id": "playground",
+      "name": "Interactive causal playground",
+      "status": "demo",
+      "evidence": "site/ supports hypothesis selection, branch visualization, replay display, promote/rollback state.",
+      "limitation": "Browser replay values are demo fixtures; Promote/Rollback only change local UI state."
+    },
+    {
+      "id": "trace-ingestion",
+      "name": "Generic JSON / JSONL trace ingestion",
+      "status": "tested",
+      "evidence": "CI compiles raw decision/outcome traces into Evolution Packets with evidence and provenance.",
+      "limitation": "Live GitHub, agent-framework, and observability adapters are not implemented yet."
+    },
+    {
+      "id": "one-command-proof",
+      "name": "Trace -> measured replay -> Behavior Proof",
+      "status": "tested",
+      "evidence": "The prove CLI compiles a trace, selects a candidate, executes real replay commands, and renders the report.",
+      "limitation": "Selection is heuristic unless the user explicitly supplies a mutation surface."
+    },
+    {
+      "id": "preregistered-predictions",
+      "name": "Pre-registered PASS / FAIL predictions for intervention cases",
+      "status": "tested",
+      "evidence": "Experiment manifests can register expected outcomes before execution; contradicted or partial predictions are tracked separately from runtime pass/fail and can block automatic selection.",
+      "limitation": "Prediction quality still depends on the experiment author or adapter; Counterproof does not yet learn calibrated causal predictions."
+    },
+    {
+      "id": "active-discrimination",
+      "name": "Active discrimination across competing interventions",
+      "status": "tested",
+      "evidence": "The discriminate CLI runs the same baseline cases across multiple mutation surfaces and reports survivors, falsified variants, or ambiguity.",
+      "limitation": "It only discriminates among supplied executable interventions; it does not discover arbitrary interventions automatically."
+    },
+    {
+      "id": "diagnostic-case-roles",
+      "name": "Fitness vs diagnostic case-role semantics",
+      "status": "tested",
+      "evidence": "Diagnostic cases may intentionally pre-register FAIL outcomes; they contribute to prediction testing but are excluded from fitness failure/regression counting and cannot alone promote a mutation.",
+      "limitation": "Case roles are declared by the experiment author or scaffold generator; domain correctness still depends on the adapter and review."
+    },
+    {
+      "id": "reviewed-adapter-binding",
+      "name": "Reviewed draft scaffold -> ready adapter binding",
+      "status": "tested",
+      "evidence": "The bind-probe-adapter CLI requires a draft scaffold, non-placeholder adapter argv, reviewer identity, and review note before changing status to ready.",
+      "limitation": "Binding authorizes execution plumbing; it does not certify that the adapter faithfully models target-domain semantics."
+    },
+    {
+      "id": "structured-probe-result",
+      "name": "Structured json-v1 Probe Result protocol",
+      "status": "tested",
+      "evidence": "Adapters can separate process execution from behavioral verdict and emit continuous 0-1 scores, metrics, observations and artifact references via COUNTERPROOF_RESULT JSON.",
+      "limitation": "The protocol records adapter-reported evidence; semantic trust still depends on the adapter, experiment design and review."
+    },
+    {
+      "id": "probe-adapter",
+      "name": "Reusable env-driven Probe Adapter protocol",
+      "status": "tested",
+      "evidence": "A single adapter argv can execute baseline and multiple intervention variants using COUNTERPROOF_CASE_ID, COUNTERPROOF_VARIANT and COUNTERPROOF_CASE_JSON across many cases.",
+      "limitation": "Projects still need to implement an adapter that maps those inputs into their own agent or simulator."
+    },
+    {
+      "id": "probe-scaffold",
+      "name": "Guarded draft experiment scaffold generation",
+      "status": "tested",
+      "evidence": "Ambiguous survivor pairs can be compiled into crossed two-case experiment scaffolds with pre-registered predictions and a shared adapter placeholder.",
+      "limitation": "Generated scaffolds are intentionally status=draft and cannot execute until a human or adapter reviews the assumptions and marks them ready."
+    },
+    {
+      "id": "next-probe-planner",
+      "name": "Next discriminating probe planning for ambiguous survivors",
+      "status": "tested",
+      "evidence": "When survivor behavior signatures are identical, Counterproof emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
+      "limitation": "The planner produces experiment-design guidance, not an automatically instantiated executable domain test."
+    },
+    {
+      "id": "active-evolve",
+      "name": "Trace -> multi-intervention discrimination -> guarded selection",
+      "status": "tested",
+      "evidence": "The evolve CLI compiles a raw trace, runs competing executable interventions on the same cases, selects only a unique survivor, and leaves ambiguous runs unselected.",
+      "limitation": "Candidate interventions still need executable commands supplied by the experiment manifest."
+    },
+    {
+      "id": "causal-selector",
+      "name": "Heuristic causal hypothesis proposals",
+      "status": "partial",
+      "evidence": "Deterministic rules rank candidate mutation surfaces from trace state, corrections, guards, and explicit hints.",
+      "limitation": "This is not learned causal inference and does not prove a unique root cause."
+    },
+    {
+      "id": "external-source-ingestion",
+      "name": "Live PR / review / CI / framework trace adapters",
+      "status": "planned",
+      "evidence": "Roadmap only.",
+      "limitation": "Current ingestion starts from exported JSON or JSONL traces."
+    },
+    {
+      "id": "world-fork",
+      "name": "Captured counterfactual world forks",
+      "status": "planned",
+      "evidence": "Roadmap only.",
+      "limitation": "Command replay can compare executions, but does not snapshot and restore arbitrary worlds."
+    },
+    {
+      "id": "github-change-control",
+      "name": "Automatic Evolution PR open / merge / revert",
+      "status": "planned",
+      "evidence": "Roadmap only.",
+      "limitation": "No GitHub automation is wired into the Counterproof runtime yet."
+    },
+    {
+      "id": "online-rollout",
+      "name": "Shadow / canary / automatic rollback",
+      "status": "planned",
+      "evidence": "Roadmap only.",
+      "limitation": "No online traffic router is implemented."
+    }
+  ],
+  "summary": {
+    "tested": 20,
+    "partial": 4,
+    "demo": 1,
+    "planned": 4
+  }
+}

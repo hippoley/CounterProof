@@ -1,0 +1,239 @@
+name: "Counterproof Regression Witness"
+description: "Prove that a PR's changed tests fail before the fix and pass after it."
+author: "hippoley"
+
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  test-command:
+    description: "Command for changed tests. Use {tests} where test paths should be inserted."
+    required: true
+  base-ref:
+    description: "Pre-change git ref. Defaults to the pull request base SHA."
+    required: false
+    default: ""
+  timeout:
+    description: "Per-side test timeout in seconds."
+    required: false
+    default: "300"
+  require-witness:
+    description: "Fail the Action unless a real regression witness is produced."
+    required: false
+    default: "false"
+  comment-on-pr:
+    description: "Create or update one sticky Regression Witness comment."
+    required: false
+    default: "true"
+  require-clean-integrity:
+    description: "Fail when the PR changes test/CI evidence surfaces."
+    required: false
+    default: "false"
+
+outputs:
+  status:
+    description: "witnessed, not-witnessed, head-failing, no-changed-tests, or inconclusive."
+    value: ${{ steps.witness.outputs.status }}
+  report-path:
+    description: "Generated Regression Witness Markdown path."
+    value: ${{ steps.witness.outputs.report-path }}
+  json-path:
+    description: "Generated Regression Witness JSON path."
+    value: ${{ steps.witness.outputs.json-path }}
+  integrity-status:
+    description: "clean or review-required."
+    value: ${{ steps.integrity.outputs.integrity-status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Counterproof
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m pip install "${{ github.action_path }}/../.."
+
+    - name: Resolve base ref
+      id: base
+      shell: bash
+      env:
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+        if [[ -n "$INPUT_BASE_REF" ]]; then
+          base="$INPUT_BASE_REF"
+        elif [[ -n "$EVENT_BASE_SHA" ]]; then
+          base="$EVENT_BASE_SHA"
+        else
+          echo "Counterproof Regression Witness needs base-ref outside pull_request events." >&2
+          exit 2
+        fi
+        echo "base=$base" >> "$GITHUB_OUTPUT"
+
+    - name: Check PR head checkout
+      if: ${{ github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      run: |
+        set -euo pipefail
+        actual_head="$(git rev-parse HEAD)"
+        if [[ -n "$EXPECTED_HEAD" && "$actual_head" != "$EXPECTED_HEAD" ]]; then
+          echo "::warning::Counterproof is running on $actual_head, not PR head $EXPECTED_HEAD. Checkout github.event.pull_request.head.sha for the cleanest witness."
+        fi
+
+    - name: Fetch base commit
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+      run: |
+        set -euo pipefail
+        if ! git cat-file -e "$BASE_REF^{commit}" 2>/dev/null; then
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+        fi
+
+    - name: Run Regression Witness
+      id: witness
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+        TEST_COMMAND: ${{ inputs.test-command }}
+        TIMEOUT_SECONDS: ${{ inputs.timeout }}
+        REQUIRE_WITNESS: ${{ inputs.require-witness }}
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
+
+        args=(
+          witness
+          --base "$BASE_REF"
+          --test-command "$TEST_COMMAND"
+          --timeout "$TIMEOUT_SECONDS"
+          --out .counterproof/out/REGRESSION_WITNESS.md
+          --json-out .counterproof/out/REGRESSION_WITNESS.json
+        )
+
+        if [[ "${REQUIRE_WITNESS,,}" == "true" ]]; then
+          args+=(--require-witness)
+        fi
+
+        set +e
+        counterproof "${args[@]}"
+        command_status=$?
+        set -e
+
+        if [[ ! -f .counterproof/out/REGRESSION_WITNESS.json ]]; then
+          exit "$command_status"
+        fi
+
+        status="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f)["status"])
+        PY
+        )"
+
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "report-path=.counterproof/out/REGRESSION_WITNESS.md" >> "$GITHUB_OUTPUT"
+        echo "json-path=.counterproof/out/REGRESSION_WITNESS.json" >> "$GITHUB_OUTPUT"
+
+        {
+          echo "## Counterproof · Regression Witness"
+          echo
+          cat .counterproof/out/REGRESSION_WITNESS.md
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        exit "$command_status"
+
+
+    - name: Check proof integrity
+      id: integrity
+      if: ${{ always() }}
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+        REQUIRE_CLEAN_INTEGRITY: ${{ inputs.require-clean-integrity }}
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
+
+        args=(
+          integrity
+          --base "$BASE_REF"
+          --out .counterproof/out/PROOF_INTEGRITY.md
+          --json-out .counterproof/out/PROOF_INTEGRITY.json
+        )
+        if [[ "${REQUIRE_CLEAN_INTEGRITY,,}" == "true" ]]; then
+          args+=(--require-clean)
+        fi
+
+        set +e
+        counterproof "${args[@]}"
+        command_status=$?
+        set -e
+
+        if [[ -f .counterproof/out/PROOF_INTEGRITY.json ]]; then
+          status="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/PROOF_INTEGRITY.json", encoding="utf-8") as f:
+            print(json.load(f)["status"])
+        PY
+          )"
+          echo "integrity-status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "---"
+            echo
+            cat .counterproof/out/PROOF_INTEGRITY.md
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        exit "$command_status"
+
+    - name: Publish sticky witness comment
+      if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' && always() }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        report=".counterproof/out/REGRESSION_WITNESS.md"
+        integrity=".counterproof/out/PROOF_INTEGRITY.md"
+        [[ -f "$report" ]] || exit 0
+
+        pr_number="$(python - <<'PY'
+        import json, os
+        with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as f:
+            print(json.load(f)["pull_request"]["number"])
+        PY
+        )"
+
+        body_file="$(mktemp)"
+        {
+          echo "<!-- counterproof-regression-witness -->"
+          cat "$report"
+          if [[ -f "$integrity" ]]; then
+            echo
+            echo "---"
+            echo
+            cat "$integrity"
+          fi
+          echo
+          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge."
+        } > "$body_file"
+
+        existing_id="$(
+          gh api "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments" --paginate             --jq '.[] | select(.body | contains("<!-- counterproof-regression-witness -->")) | .id'             2>/dev/null | head -n 1 || true
+        )"
+
+        if [[ -n "$existing_id" ]]; then
+          if ! gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing_id"             -F "body=@$body_file" >/dev/null; then
+            echo "::warning::Regression Witness generated, but PR comment update failed. Check pull-requests: write permission."
+          fi
+        else
+          if ! gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments"             -F "body=@$body_file" >/dev/null; then
+            echo "::warning::Regression Witness generated, but PR comment creation failed. Check pull-requests: write permission."
+          fi
+        fi

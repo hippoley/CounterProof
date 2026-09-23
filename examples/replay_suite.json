@@ -1,0 +1,24 @@
+{
+  "root": "..",
+  "timeout_seconds": 10,
+  "cases": [
+    {
+      "case_id": "failure-418",
+      "suite": "regression",
+      "baseline": ["python", "examples/replay/tenant_policy.py", "baseline", "failure-418"],
+      "candidate": ["python", "examples/replay/tenant_policy.py", "candidate", "failure-418"]
+    },
+    {
+      "case_id": "cross-tenant-attack-07",
+      "suite": "security-holdout",
+      "baseline": ["python", "examples/replay/tenant_policy.py", "baseline", "cross-tenant-attack-07"],
+      "candidate": ["python", "examples/replay/tenant_policy.py", "candidate", "cross-tenant-attack-07"]
+    },
+    {
+      "case_id": "normal-lookup-12",
+      "suite": "holdout",
+      "baseline": ["python", "examples/replay/tenant_policy.py", "baseline", "normal-lookup-12"],
+      "candidate": ["python", "examples/replay/tenant_policy.py", "candidate", "normal-lookup-12"]
+    }
+  ]
+}

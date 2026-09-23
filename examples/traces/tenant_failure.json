@@ -1,0 +1,57 @@
+{
+  "trace_id": "tenant-scope-418",
+  "agent": "coding-agent",
+  "task": "Implement account lookup without cross-tenant leakage",
+  "activation_scope": "tenant-data-access",
+  "events": [
+    {
+      "id": "obs-1",
+      "type": "observation",
+      "text": "Request contains tenant_id=t-42; tenant scope has not been validated."
+    },
+    {
+      "id": "dec-1",
+      "type": "decision",
+      "goal": "return account record",
+      "world_state": {
+        "tenant_scope": "provisional",
+        "requested_tenant": "t-42"
+      },
+      "candidates": [
+        "validate_tenant",
+        "query_database",
+        "ask_user"
+      ],
+      "selected_action": "query_database",
+      "assumptions": [
+        "tenant_id from request is trusted"
+      ],
+      "uncertainty": 0.61,
+      "guards": {
+        "tenant_scope_validated": false
+      }
+    },
+    {
+      "id": "tool-1",
+      "type": "tool_call",
+      "tool": "db.lookup",
+      "text": "Query account row using tenant_id=t-42."
+    },
+    {
+      "id": "review-418",
+      "type": "human_correction",
+      "text": "Validate tenant scope before any database access.",
+      "confidence": 0.99,
+      "surface_hint": "policy"
+    },
+    {
+      "id": "test-418",
+      "type": "test_failure",
+      "text": "Cross-tenant regression reproduces when tenant scope is provisional.",
+      "confidence": 1
+    }
+  ],
+  "failure": {
+    "summary": "Agent queried tenant data before validating tenant scope."
+  }
+}
