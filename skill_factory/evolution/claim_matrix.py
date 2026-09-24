@@ -90,6 +90,8 @@ class ClaimMatrixManifest(BaseModel):
     source_pr: str | None = None
     base_sha: str | None = None
     head_sha: str | None = None
+    runner_url: str | None = None
+    evidence_digest: str | None = None
     claims: list[ClaimEvidence] = Field(min_length=1)
 
 
@@ -133,7 +135,17 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         lines.append(f"- BASE: `{manifest.base_sha}`")
     if manifest.head_sha:
         lines.append(f"- HEAD: `{manifest.head_sha}`")
-    if manifest.source_pr or manifest.base_sha or manifest.head_sha:
+    if manifest.runner_url:
+        lines.append(f"- Runner: {manifest.runner_url}")
+    if manifest.evidence_digest:
+        lines.append(f"- Evidence digest: `{manifest.evidence_digest}`")
+    if (
+        manifest.source_pr
+        or manifest.base_sha
+        or manifest.head_sha
+        or manifest.runner_url
+        or manifest.evidence_digest
+    ):
         lines.append("")
 
     lines.extend(
