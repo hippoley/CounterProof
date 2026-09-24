@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hippoley/CounterProof
-          ref: fix/vitest-named-test-discovery
+          ref: fix/monorepo-dependency-closure
           path: counterproof
           persist-credentials: false
 
