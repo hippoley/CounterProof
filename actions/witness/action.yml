@@ -8,7 +8,7 @@ branding:
 
 inputs:
   test-command:
-    description: "Command for changed tests. Use {tests} where test paths should be inserted."
+    description: "Test command. Use {tests} for precise changed-test replay; omit it for suite-level evidence."
     required: true
   base-ref:
     description: "Pre-change git ref. Defaults to the pull request base SHA."
@@ -33,8 +33,11 @@ inputs:
 
 outputs:
   status:
-    description: "witnessed, not-witnessed, head-failing, no-changed-tests, or inconclusive."
+    description: "witnessed, suite-delta, not-witnessed, head-failing, no-changed-tests, or inconclusive."
     value: ${{ steps.witness.outputs.status }}
+  evidence-mode:
+    description: "precise or suite."
+    value: ${{ steps.witness.outputs.evidence-mode }}
   report-path:
     description: "Generated Regression Witness Markdown path."
     value: ${{ steps.witness.outputs.report-path }}
@@ -134,8 +137,15 @@ runs:
             print(json.load(f)["status"])
         PY
         )"
+        mode="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f).get("mode", "unknown"))
+        PY
+        )"
 
         echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "evidence-mode=$mode" >> "$GITHUB_OUTPUT"
         echo "report-path=.counterproof/out/REGRESSION_WITNESS.md" >> "$GITHUB_OUTPUT"
         echo "json-path=.counterproof/out/REGRESSION_WITNESS.json" >> "$GITHUB_OUTPUT"
 
