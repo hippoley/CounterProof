@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import os
 import shlex
@@ -79,6 +80,8 @@ class RegressionWitness:
     note: str
     mode: str = "precise"
     support_files: tuple[str, ...] = ()
+    base_sha: str | None = None
+    head_sha: str | None = None
 
     @property
     def witnessed(self) -> bool:
@@ -323,6 +326,8 @@ def run_regression_witness(
 ) -> RegressionWitness:
     """Replay changed tests against HEAD and base with changed test support overlaid."""
     repo_root = repo_root.resolve()
+    resolved_base_sha = _git(repo_root, "rev-parse", f"{base_ref}^{{commit}}")
+    resolved_head_sha = _git(repo_root, "rev-parse", f"{head_ref}^{{commit}}")
     tests = changed_test_files(
         repo_root,
         base_ref=base_ref,
@@ -353,6 +358,8 @@ def run_regression_witness(
             note="No changed test files matched the configured patterns.",
             mode="precise" if "{tests}" in shlex.split(test_command) else "suite",
             support_files=(),
+            base_sha=resolved_base_sha,
+            head_sha=resolved_head_sha,
         )
 
     argv, mode = _build_test_argv(test_command, tests)
@@ -373,11 +380,13 @@ def run_regression_witness(
             note="Configured tests do not pass on the PR head; no proof-of-fix can be claimed.",
             mode=mode,
             support_files=support_files,
+            base_sha=resolved_base_sha,
+            head_sha=resolved_head_sha,
         )
 
     with tempfile.TemporaryDirectory(prefix="counterproof-witness-") as tmp:
         base_dir = Path(tmp) / "base"
-        _git(repo_root, "worktree", "add", "--detach", str(base_dir), base_ref)
+        _git(repo_root, "worktree", "add", "--detach", str(base_dir), resolved_base_sha)
         try:
             _link_dependency_dirs(repo_root, base_dir)
             for relative in support_files:
@@ -416,6 +425,8 @@ def run_regression_witness(
         note=note,
         mode=mode,
         support_files=support_files,
+        base_sha=resolved_base_sha,
+        head_sha=resolved_head_sha,
     )
 
 
@@ -433,10 +444,12 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
 
 
 def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
-    return {
-        "schema_version": 2,
+    payload: dict[str, Any] = {
+        "schema_version": 3,
         "base_ref": witness.base_ref,
         "head_ref": witness.head_ref,
+        "base_sha": witness.base_sha,
+        "head_sha": witness.head_sha,
         "tests": list(witness.tests),
         "support_files": list(witness.support_files),
         "status": witness.status,
@@ -446,6 +459,14 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
         "head": _command_to_dict(witness.head),
         "base_with_head_tests": _command_to_dict(witness.base_with_head_tests),
     }
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    payload["evidence_digest_sha256"] = hashlib.sha256(canonical).hexdigest()
+    return payload
 
 
 def render_witness_markdown(witness: RegressionWitness) -> str:
@@ -471,6 +492,28 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         f"- Mode: {witness.mode}",
         f"- Test-support files overlaid: {len(witness.support_files)}",
     ]
+
+    receipt = witness_to_dict(witness)
+    lines.extend(
+        [
+            "",
+            "### Execution receipt",
+            "",
+            f"- Head commit: `{witness.head_sha or witness.head_ref}`",
+            f"- Base commit: `{witness.base_sha or witness.base_ref}`",
+        ]
+    )
+    if witness.head is not None:
+        lines.append(f"- Command: `{shlex.join(witness.head.argv)}`")
+        lines.append(f"- HEAD exit: `{witness.head.returncode}`")
+    if witness.base_with_head_tests is not None:
+        lines.append(
+            f"- BASE exit: `{witness.base_with_head_tests.returncode}`"
+        )
+    lines.append(
+        f"- Evidence digest: `sha256:{receipt['evidence_digest_sha256']}`"
+    )
+    lines.append("- Raw stdout/stderr tails are preserved in the JSON artifact.")
 
     if witness.tests:
         lines.extend(["", "### Tests replayed", ""])
