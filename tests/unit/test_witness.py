@@ -214,6 +214,29 @@ def test_changed_test_detection_covers_common_non_python_conventions(tmp_path):
     assert "spec/thing_spec.rb" in files
 
 
+def test_changed_test_detection_covers_node_module_extensions(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    tests = repo / "tests"
+    tests.mkdir()
+    for name in (
+        "runtime.test.mjs",
+        "state.test.cjs",
+        "feature.spec.mts",
+        "legacy.spec.cts",
+    ):
+        (tests / name).write_text("// fixture\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add Node module-format tests")
+
+    files = set(changed_test_files(repo, base_ref=base))
+
+    assert "tests/runtime.test.mjs" in files
+    assert "tests/state.test.cjs" in files
+    assert "tests/feature.spec.mts" in files
+    assert "tests/legacy.spec.cts" in files
+
+
 def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
