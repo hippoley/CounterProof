@@ -19,11 +19,11 @@ This matrix asks one narrow question: did the current head add behavioral eviden
 
 ## Claim / evidence matrix
 
-| Human review claim / failure mode | Exact test | BASE | HEAD | Oracle independently checked? | Status |
-|---|---|---:|---:|---|---|
-| Work-pool default volumes must reach the Docker container when adhoc bundle storage is not separately configured | `test_submit_adhoc_run_uses_work_pool_default_volumes` | **FAIL** | **PASS** | pytest + mocked Docker create-call contract | **WITNESSED** |
-| Customized `job_configuration.volumes` must keep its configured volume **and** the internal `/tmp` bundle mount | `test_submit_adhoc_run_preserves_configured_volumes` | **FAIL** | **PASS** | pytest + mocked Docker create-call contract | **WITNESSED** |
-| Full Docker-daemon / end-to-end runtime behavior | Not exercised by these focused tests | — | — | No live Docker daemon in this receipt | **UNPROVEN** |
+| Human review claim / failure mode | Exact test | BASE | HEAD | Submitted-test evidence | Oracle alignment | Overall claim |
+|---|---|---:|---:|---|---|---|
+| Work-pool default volumes must reach the Docker container when adhoc bundle storage is not separately configured | `test_submit_adhoc_run_uses_work_pool_default_volumes` | **FAIL** | **PASS** | **WITNESSED** | **UNVERIFIED** | **WITNESSED (submitted judge)** |
+| Customized `job_configuration.volumes` must keep its configured volume **and** the internal `/tmp` bundle mount | `test_submit_adhoc_run_preserves_configured_volumes` | **FAIL** | **PASS** | **WITNESSED** | **UNVERIFIED** | **WITNESSED (submitted judge)** |
+| Full Docker-daemon / end-to-end runtime behavior | Not exercised by these focused tests | — | — | **UNPROVEN** | **UNVERIFIED** | **UNPROVEN** |
 
 ## Assertion / failure excerpts
 
@@ -37,8 +37,6 @@ test_submit_adhoc_run_uses_work_pool_default_volumes
 assert 'result-storage:/result-storage' in ['/tmp/...:/tmp/']
 ```
 
-The old implementation mounts only the temporary bundle volume and drops the work-pool default.
-
 HEAD passes the same test.
 
 ### 2. Customized job-configuration volumes + internal bundle mount
@@ -51,18 +49,27 @@ test_submit_adhoc_run_preserves_configured_volumes
 assert any(volume.endswith(':/tmp/') for volume in call_volumes)
 ```
 
-The custom `custom:/custom` volume is present, but the internal temporary `/tmp` bundle mount required by the reviewer is absent.
+The custom `custom:/custom` volume is present, but the internal temporary `/tmp` bundle mount required by the review is absent.
 
 HEAD passes the same test with both properties preserved.
 
 ## Reviewer-facing conclusion
 
 ```text
-default work-pool volume propagation       WITNESSED
-custom template volume + internal /tmp     WITNESSED
-live Docker runtime                        UNPROVEN
+default work-pool volume propagation
+  submitted-test evidence  WITNESSED
+  oracle alignment         UNVERIFIED
+  overall                  WITNESSED (submitted judge)
+
+custom template volume + internal /tmp
+  submitted-test evidence  WITNESSED
+  oracle alignment         UNVERIFIED
+  overall                  WITNESSED (submitted judge)
+
+live Docker runtime
+  submitted-test evidence  UNPROVEN
+  oracle alignment         UNVERIFIED
+  overall                  UNPROVEN
 ```
 
-This does not replace re-review of the implementation.
-
-It answers a narrower question: the current head now contains red-before / green-after behavioral coverage for both concrete failure modes requested in the human review.
+This does not replace re-review of the implementation. It proves only that the submitted judge now distinguishes BASE from HEAD for both concrete review concerns.
