@@ -41,6 +41,6 @@ Those responses decide what gets built next.
 
 If an AI-assisted PR looks plausible but its evidence does not quite earn your trust, add it to:
 
-**[Bring me an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/17)**
+**[Bring me an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)**
 
 No CounterProof installation is required.
