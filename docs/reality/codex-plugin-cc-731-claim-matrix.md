@@ -16,11 +16,17 @@ This matrix is a manual Reality Probe shaped by external reviewer feedback.
 - CounterProof replay: https://github.com/hippoley/CounterProof/actions/runs/35952687043
 - evidence digest: `sha256:01c447fbfca700a6dcbfcec2753ca3c55a0760b5b6200a751d44a948bdbf5c97`
 
+## Evidence vocabulary
+
+- submitted-test evidence: `WITNESSED / NOT WITNESSED / UNPROVEN`
+- oracle alignment: `ALIGNED / CONTRADICTED / UNVERIFIED`
+- a red→green replay with no independent oracle check is `WITNESSED (submitted judge)`, not product-level correctness
+
 ## Claim / evidence matrix
 
 | Review claim / failure mode | Exact evidence | BASE | HEAD | Submitted-test evidence | Oracle alignment | Overall claim |
 |---|---|---:|---:|---|---|---|
-| Cross-`CLAUDE_PLUGIN_DATA` state must not fail open when the durable review gate is read from a different plugin-data location | `tests/runtime.test.mjs`, `tests/state.test.mjs` | **FAIL** | **PASS** | **WITNESSED** | **UNVERIFIED** | **WITNESSED (submitted judge)** |
+| Cross-`CLAUDE_PLUGIN_DATA` state must not fail open when the durable review gate is read from a different plugin-data location | `tests/runtime.test.mjs`, `tests/state.test.mjs` | **FAIL** | **PASS** | **WITNESSED (submitted judge)** | **UNVERIFIED** | **WITNESSED (submitted judge)** |
 | Durable config file should use restrictive permissions such as `0600` | No changed test exercises mode bits | — | — | **UNPROVEN** | **UNVERIFIED** | **UNPROVEN** |
 | Replacement should be atomic / preserve the previous valid config if a write is interrupted or fails | No changed test injects replacement/write failure | — | — | **UNPROVEN** | **UNVERIFIED** | **UNPROVEN** |
 
