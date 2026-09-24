@@ -16,6 +16,7 @@ The rule is simple:
 | [MetrolistGroup/Metrolist#4097](https://github.com/MetrolistGroup/Metrolist/pull/4097) | Does a BASE non-zero exit always count as regression evidence? | **INCONCLUSIVE** | No. The BASE failed during Kotlin test compilation, not at a behavioral assertion. This produced the structured `json-v1` result protocol. |
 | [anthropics/claude-code#89404](https://github.com/anthropics/claude-code/pull/89404) | What if the submitted tests are internally green but disagree with the product's authoritative parser? | **Open Reality Probe** | This is the emerging oracle-alignment problem: red→green evidence can still be weak if the judge does not represent product truth. |
 | [continuedev/continue#12576](https://github.com/continuedev/continue/pull/12576) | Can CounterProof replay a package-local Vitest regression inside a large JS/TS monorepo? | **[WITNESSED](../reality/continue-12576/WITNESS.md)** | The real PR exposed two product gaps first: `*.vitest.ts` discovery and package-local `core/node_modules` closure. After both fixes, HEAD was 5/5 PASS and BASE was 4/5 PASS, 1 FAIL; the BASE failure directly hits the legacy `tabAutocompleteModel` migration claim. |
+| [crewAIInc/crewAI#7721](https://github.com/crewAIInc/crewAI/pull/7721) | What if CI is green and one submitted regression is genuinely witnessed, but adjacent claims still fail independent probes? | **WITNESSED + claim contradiction** | The env-var noninteractive tracing path is red→green, while an independent HEAD probe shows programmatic `tracing=True` still yields sharing=false; malformed persisted consent also needs review. A single green badge would hide that boundary. |
 | [PrefectHQ/prefect#23146](https://github.com/PrefectHQ/prefect/pull/23146) | What if a real regression is witnessed by **existing** tests only under a specific environment? | **NO CHANGED TESTS + environment witness** | Automatic changed-test discovery found 0 tests, but under `TZ=America/Los_Angeles` the same 126 existing tests were BASE 112/126 vs HEAD 126/126. Evidence set and environment can both be first-class proof inputs. |
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
 
@@ -28,6 +29,7 @@ The rule is simple:
 - [#17 — bring an agent PR you do not trust](https://github.com/hippoley/CounterProof/issues/17)
 - [#20 — ownership evidence vs production reproduction](https://github.com/hippoley/CounterProof/issues/20)
 - [#22 — independent Continue #12576 witness](https://github.com/hippoley/CounterProof/issues/22)
+- [#28 — CrewAI #7721 claim/evidence boundary](https://github.com/hippoley/CounterProof/issues/28)
 - [#30 — human-review concerns replayed on Prefect #22698](https://github.com/hippoley/CounterProof/issues/30)
 - [#32 — existing-test + environment evidence on Prefect #23146](https://github.com/hippoley/CounterProof/issues/32)
 
@@ -54,9 +56,22 @@ oracle alignment      aligned / contradicted / unverified
 claim status          proven / contradicted / unproven
 ```
 
-CounterProof has not automatically promoted those requests into a feature yet. Manual matrices are being tested first against the exact PRs that produced the feedback.
+Those requests were first tested as manual matrices against the exact PRs that produced the feedback. After the reviewer confirmed the shape a second time, the smallest mechanical version was merged in [#38](https://github.com/hippoley/CounterProof/pull/38):
 
-That is the Reality Lab contract: **human review feedback becomes a probe before it becomes product code.**
+```bash
+counterproof claim-matrix claims.yml
+```
+
+The command still refuses to invent the hard parts. Claims and oracle authority remain explicit human/upstream inputs. CounterProof validates the evidence vocabulary and mechanically derives the claim boundary.
+
+Current axes:
+
+```text
+submitted-test evidence  WITNESSED / NOT_WITNESSED / UNPROVEN
+oracle alignment         ALIGNED / CONTRADICTED / UNVERIFIED
+```
+
+This is the Reality Lab contract: **human review feedback becomes a probe before it becomes product code, and merged code is not treated as validation until it returns to the reviewer.**
 
 ## What counts as useful feedback
 
