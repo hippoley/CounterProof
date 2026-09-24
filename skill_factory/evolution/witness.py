@@ -569,6 +569,14 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     return payload
 
 
+def _command_behavior_label(command: WitnessCommand) -> str:
+    if command.semantic_error:
+        return "INCONCLUSIVE"
+    if command.semantic_verdict:
+        return command.semantic_verdict.upper()
+    return "PASS" if command.passed else "FAIL"
+
+
 def render_witness_markdown(witness: RegressionWitness) -> str:
     badge = {
         "witnessed": "WITNESSED",
@@ -630,13 +638,13 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
     lines.extend(["", "### Behavior", ""])
     if witness.head is not None:
         lines.append(
-            f"- PR head: **{'PASS' if witness.head.passed else 'FAIL'}** "
+            f"- PR head: **{_command_behavior_label(witness.head)}** "
             f"({witness.head.duration_ms} ms)"
         )
     if witness.base_with_head_tests is not None:
         lines.append(
             "- Base code + PR tests: "
-            f"**{'PASS' if witness.base_with_head_tests.passed else 'FAIL'}** "
+            f"**{_command_behavior_label(witness.base_with_head_tests)}** "
             f"({witness.base_with_head_tests.duration_ms} ms)"
         )
 
@@ -706,6 +714,12 @@ def render_witness_review_note(
             f"- Changed tests: {len(tests)}",
         ]
     )
+    if head.get("semantic_verdict"):
+        lines.append(f"- HEAD behavioral verdict: `{head['semantic_verdict']}`")
+    if base.get("semantic_verdict"):
+        lines.append(f"- BASE behavioral verdict: `{base['semantic_verdict']}`")
+    if base.get("semantic_error"):
+        lines.append("- BASE behavioral verdict: `inconclusive`")
     if argv:
         lines.append(f"- Command: `{shlex.join(argv)}`")
     if tests:
@@ -721,13 +735,20 @@ def render_witness_review_note(
     if links:
         lines.extend(["", " · ".join(links)])
 
+    if status == "witnessed":
+        scope = (
+            "> Scope: this proves the tested before/after regression delta. "
+            "It does not independently prove every claimed root cause or production incident."
+        )
+    else:
+        scope = (
+            "> Scope: this replay did not establish an exact Regression Witness. "
+            "Do not treat it as proof of the claimed fix."
+        )
     lines.extend(
         [
             "",
-            (
-                "> Scope: this proves the tested before/after regression delta. "
-                "It does not independently prove every claimed root cause or production incident."
-            ),
+            scope,
             "",
             (
                 "Would this evidence materially help review this change? "
