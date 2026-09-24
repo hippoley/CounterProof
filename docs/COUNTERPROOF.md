@@ -2,7 +2,7 @@
 
 > **Your agent changed. Show the proof.**
 
-Counterproof is an experimental change-control layer inside SkillFactory.
+Counterproof is an experimental change-control layer for falsifiable agent changes.
 
 The important distinction is:
 
