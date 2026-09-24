@@ -10,8 +10,8 @@ This is a manual CounterProof Reality Probe using the claim/evidence format requ
 - BASE: `bdd1bc62007fcee732c912f0daa093e1f760f3fc`
 - changed test file: `lib/crewai/tests/tracing/test_tracing.py`
 - structured protocol: `json-v1`
-- independent replay: https://github.com/hippoley/CounterProof/actions/runs/35976674576
-- evidence digest: `sha256:15974b0cf5d8d0bdcf12943609344192b3e2ea5fd6a3f981b2c765829dfb8e3a`
+- independent replay: https://github.com/hippoley/CounterProof/actions/runs/35981324820
+- evidence digest: `sha256:b411b35132a778dfef87483b16643c34da575354c8c7e333a759f1574d505da8`
 
 ## Claim / evidence matrix
 
@@ -20,8 +20,9 @@ This is a manual CounterProof Reality Probe using the claim/evidence format requ
 | In a non-interactive process, explicit `CREWAI_TRACING_ENABLED=true` should allow sharing rather than silently discard the trace | parameterized case `tracing was turned on: share it` | **FAIL** | **PASS** | **WITNESSED** | **UNVERIFIED** | **WITNESSED (submitted judge)** |
 | If tracing was not requested, a non-interactive process should still decline sharing | parameterized control `tracing nobody asked for: still no` | **PASS** | **PASS** | **NOT WITNESSED** | **UNVERIFIED** | **CONTROL PRESERVED** |
 | When `sharing=False`, the function should still return false | parameterized control `nothing to share: still no` | **PASS** | **PASS** | **NOT WITNESSED** | **UNVERIFIED** | **CONTROL PRESERVED** |
-| Programmatic `tracing=True` should also count as explicit opt-in in this non-interactive path | No changed test exercises the programmatic override path | — | — | **UNPROVEN** | **UNVERIFIED** | **UNPROVEN** |
-| Persisted consent should enable tracing only under the intended Boolean consent contract | No changed test exercises malformed/non-Boolean persisted `trace_consent` values | — | — | **UNPROVEN** | **UNVERIFIED** | **UNPROVEN** |
+| Programmatic `tracing=True` should also count as explicit opt-in in this non-interactive path | Independent HEAD probe sets tracing context True with no env override and persisted consent False | — | expected `True`, actual **`False`** | No submitted regression | **CONTRADICTED by direct path probe** | **CONTRADICTED** |
+| Explicit persisted Boolean `trace_consent=True` enables tracing | Direct HEAD `should_enable_tracing()` probe | — | **True** | No submitted regression | **SUPPORTED at function level** | **SUPPORTED, not witnessed** |
+| Malformed/non-Boolean persisted consent should not silently enable tracing | Independent HEAD probes with `None` and string `"false"` | — | both evaluate **True** | No submitted regression | **CONTRADICTED by direct function probe** | **REVIEW REQUIRED** |
 
 ## Assertion / failure excerpt
 
@@ -62,3 +63,25 @@ persisted consent semantics
   oracle alignment         UNVERIFIED
   overall                  UNPROVEN
 ```
+
+
+## Independent uncovered-claim probes
+
+The later external run added direct probes for the two review concerns that the submitted regression does not cover:
+
+```json
+{
+  "programmatic_tracing_true": {
+    "expected": true,
+    "actual": false
+  },
+  "persisted_consent": {
+    "None": true,
+    "'false'": true,
+    "True": true,
+    "False": false
+  }
+}
+```
+
+These probes do not replace the Regression Witness. They narrow its boundary: the env-var path is genuinely witnessed, while adjacent consent paths have different evidence states.
