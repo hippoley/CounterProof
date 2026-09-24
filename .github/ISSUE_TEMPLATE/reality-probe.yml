@@ -1,0 +1,59 @@
+name: "Reality Probe: bring an agent PR"
+description: "Submit an AI-assisted PR whose evidence you do not fully trust."
+title: "[reality-probe] "
+labels:
+  - reality-probe
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bring the uncertainty, not a feature request
+
+        CounterProof Reality Lab starts from a real pull request and a concrete review question.
+
+        You do **not** need to install CounterProof first.
+
+  - type: input
+    id: pr
+    attributes:
+      label: Pull request
+      description: "Public PR URL preferred."
+      placeholder: "https://github.com/owner/repo/pull/123"
+    validations:
+      required: true
+
+  - type: textarea
+    id: distrust
+    attributes:
+      label: What claim do you not trust?
+      description: "Be specific: what does the PR or CI claim that still leaves you uncertain?"
+      placeholder: |
+        Example:
+        The new regression test is green, but I do not know whether it would fail before the fix.
+    validations:
+      required: true
+
+  - type: textarea
+    id: convince
+    attributes:
+      label: What evidence would convince you?
+      description: "If you know. 'I don't know yet' is also useful."
+      placeholder: |
+        Example:
+        The exact changed test failing on the base commit and passing on the PR head.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: "Optional: environment, provider behavior, reviewer thread, production symptom, or known test-oracle concern."
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I understand a CounterProof result is evidence about the tested claim, not an automatic merge recommendation.
+          required: true
