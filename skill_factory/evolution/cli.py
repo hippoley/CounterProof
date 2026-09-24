@@ -23,7 +23,6 @@ from .integrity import (
     render_integrity_markdown,
     write_integrity_json,
 )
-from .onboarding import init_github
 from .models import (
     CandidateMutation,
     Evidence,
@@ -32,6 +31,7 @@ from .models import (
     ProbeSpec,
     ReplayResult,
 )
+from .onboarding import init_github
 from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
