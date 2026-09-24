@@ -613,3 +613,36 @@ def test_json_v1_cli_serializes_protocol_and_semantics(tmp_path):
     assert raw["result_protocol"] == "json-v1"
     assert raw["head"]["semantic_verdict"] == "pass"
     assert raw["base_with_head_tests"]["semantic_verdict"] == "fail"
+
+
+def test_inconclusive_review_note_never_claims_proof(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import json, os, sys\n"
+        "if os.environ['COUNTERPROOF_WITNESS_SIDE'] == 'head':\n"
+        "    print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': 'pass', 'metrics': {}}))\n"
+        "else:\n"
+        "    print('compile failed', file=sys.stderr)\n"
+        "    raise SystemExit(1)\n",
+    )
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+    payload = witness_to_dict(witness)
+    note = render_witness_review_note(payload)
+    report = render_witness_markdown(witness)
+
+    assert witness.status == "inconclusive"
+    assert "Counterproof replay: INCONCLUSIVE" in note
+    assert "did not establish an exact Regression Witness" in note
+    assert "this proves the tested before/after regression delta" not in note
+    assert "BASE behavioral verdict: `inconclusive`" in note
+    assert "Base code + PR tests: **INCONCLUSIVE**" in report
