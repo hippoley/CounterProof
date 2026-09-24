@@ -1,0 +1,141 @@
+name: Reality Probe · CrewAI 7721
+
+on:
+  push:
+    branches:
+      - probe/crewai-7721
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counterproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout CrewAI PR head
+        uses: actions/checkout@v4
+        with:
+          repository: crewAIInc/crewAI
+          ref: cf5ca5432f0d473c239194899a29d7c992ca7bae
+          fetch-depth: 0
+          path: target
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.3"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Install CrewAI test environment
+        working-directory: target
+        run: uv sync --package crewai --group dev
+
+      - name: Prepare structured pytest adapter
+        run: |
+          cat > /tmp/crewai_pytest_adapter.py <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+
+          side = os.environ.get("COUNTERPROOF_WITNESS_SIDE", "unknown")
+          xml_path = pathlib.Path(f"/tmp/crewai-7721-{side}.xml")
+          if xml_path.exists():
+              xml_path.unlink()
+
+          argv = [
+              "uv", "run", "--package", "crewai", "pytest",
+              "-q",
+              *sys.argv[1:],
+              "--junitxml", str(xml_path),
+              "-o", "addopts=",
+          ]
+          proc = subprocess.run(argv, text=True, capture_output=True, check=False)
+          print(proc.stdout)
+          print(proc.stderr, file=sys.stderr)
+
+          if not xml_path.exists():
+              print("pytest produced no JUnit XML; refusing behavioral verdict", file=sys.stderr)
+              raise SystemExit(proc.returncode or 2)
+
+          root = ET.parse(xml_path).getroot()
+          suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+          tests = sum(int(s.attrib.get("tests", 0)) for s in suites)
+          failures = sum(int(s.attrib.get("failures", 0)) for s in suites)
+          errors = sum(int(s.attrib.get("errors", 0)) for s in suites)
+          skipped = sum(int(s.attrib.get("skipped", 0)) for s in suites)
+
+          if proc.returncode == 0 and tests > 0:
+              verdict = "pass"
+          elif failures > 0 and errors == 0:
+              verdict = "fail"
+          else:
+              print(
+                  f"pytest did not yield clean behavioral evidence: "
+                  f"rc={proc.returncode} tests={tests} failures={failures} errors={errors}",
+                  file=sys.stderr,
+              )
+              raise SystemExit(proc.returncode or 2)
+
+          print("COUNTERPROOF_RESULT=" + json.dumps({
+              "verdict": verdict,
+              "metrics": {
+                  "returncode": proc.returncode,
+                  "tests": tests,
+                  "failures": failures,
+                  "errors": errors,
+                  "skipped": skipped,
+              },
+              "observations": ["pytest reached test execution and produced JUnit results."],
+          }))
+          raise SystemExit(0)
+          PY
+
+      - name: Replay CrewAI changed test
+        working-directory: target
+        run: |
+          counterproof witness \
+            --base bdd1bc62007fcee732c912f0daa093e1f760f3fc \
+            --test-command "python /tmp/crewai_pytest_adapter.py {tests}" \
+            --result-protocol json-v1 \
+            --timeout 600 \
+            --out /tmp/CREWAI_7721_WITNESS.md \
+            --json-out /tmp/CREWAI_7721_WITNESS.json
+          cat /tmp/CREWAI_7721_WITNESS.md
+          cat /tmp/CREWAI_7721_WITNESS.json
+          echo "=== HEAD JUNIT ==="
+          cat /tmp/crewai-7721-head.xml
+          echo "=== BASE JUNIT ==="
+          cat /tmp/crewai-7721-base-with-head-tests.xml
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crewai-7721-counterproof
+          path: |
+            /tmp/CREWAI_7721_WITNESS.md
+            /tmp/CREWAI_7721_WITNESS.json
+            /tmp/crewai-7721-*.xml
+          if-no-files-found: warn
