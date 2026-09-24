@@ -763,6 +763,16 @@ def integrity(
 )
 @click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
 @click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
+@click.option(
+    "--result-protocol",
+    type=click.Choice(["exit-code", "json-v1"]),
+    default="exit-code",
+    show_default=True,
+    help=(
+        "How to interpret the test command. json-v1 requires a rc=0 adapter "
+        "that emits COUNTERPROOF_RESULT with verdict=pass/fail."
+    ),
+)
 @click.option("--out", "out_file", default="REGRESSION_WITNESS.md", show_default=True)
 @click.option("--json-out", default="REGRESSION_WITNESS.json", show_default=True)
 @click.option(
@@ -776,6 +786,7 @@ def witness(
     test_command: str,
     repo_dir: str,
     timeout_seconds: float,
+    result_protocol: str,
     out_file: str,
     json_out: str,
     require_witness: bool,
@@ -788,6 +799,7 @@ def witness(
             head_ref=head_ref,
             test_command=test_command,
             timeout_seconds=timeout_seconds,
+            result_protocol=result_protocol,
         )
     except (RuntimeError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -797,6 +809,7 @@ def witness(
 
     click.echo(f"Regression witness: {result.status}")
     click.echo(f"Evidence mode: {result.mode}")
+    click.echo(f"Result protocol: {result.result_protocol}")
     click.echo(f"Changed tests: {len(result.tests)}")
     click.echo(f"Wrote {out_file}")
     click.echo(f"Wrote {json_out}")
