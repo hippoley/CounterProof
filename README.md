@@ -207,6 +207,19 @@ Counterproof will:
 
 No hosted service. No API key. No LLM is required for this path.
 
+### Share a witness with a reviewer
+
+A machine receipt is useful for automation; a reviewer needs the small set of facts they can check quickly.
+
+```bash
+counterproof share-witness REGRESSION_WITNESS.json \
+  --source-url https://github.com/owner/repo/pull/123 \
+  --runner-url https://github.com/owner/proof/actions/runs/456 \
+  --out WITNESS_REVIEW_NOTE.md
+```
+
+The note includes the exact HEAD / BASE commits, exit codes, executed changed-test command, evidence digest, links, and the scope limit that a regression witness proves the tested before/after delta — not every claimed production cause.
+
 ---
 
 ## It also checks whether the PR changed the judge
