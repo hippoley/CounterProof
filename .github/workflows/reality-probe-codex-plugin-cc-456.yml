@@ -1,0 +1,109 @@
+name: Reality Probe · codex-plugin-cc 456
+
+on:
+  push:
+    branches:
+      - probe/codex-plugin-cc-456
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  judge-mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout external PR head
+        uses: actions/checkout@v4
+        with:
+          repository: openai/codex-plugin-cc
+          ref: 0615c5db852dc2471092f73fb41291a7a32d3223
+          fetch-depth: 0
+          path: head
+          persist-credentials: false
+
+      - name: Checkout external base
+        uses: actions/checkout@v4
+        with:
+          repository: openai/codex-plugin-cc
+          ref: db52e28f4d9ded852ab3942cea316258ae4ef346
+          path: base
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Install target dependencies
+        run: |
+          (cd head && npm ci --ignore-scripts)
+          (cd base && npm ci --ignore-scripts)
+
+      - name: Emulate live Claude Code environment on pristine BASE
+        id: base-direct
+        working-directory: base
+        shell: bash
+        run: |
+          export CLAUDE_PLUGIN_DATA="$RUNNER_TEMP/live-plugin-data"
+          export CODEX_COMPANION_SESSION_ID="sess-live"
+          mkdir -p "$CLAUDE_PLUGIN_DATA"
+          set +e
+          node --test --test-reporter=tap tests/state.test.mjs > /tmp/BASE_DIRECT.tap 2>&1
+          rc=$?
+          set -e
+          cat /tmp/BASE_DIRECT.tap
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          test "$rc" -ne 0
+
+      - name: Emulate live Claude Code environment on PR HEAD
+        id: head-direct
+        working-directory: head
+        shell: bash
+        run: |
+          export CLAUDE_PLUGIN_DATA="$RUNNER_TEMP/live-plugin-data-head"
+          export CODEX_COMPANION_SESSION_ID="sess-live"
+          mkdir -p "$CLAUDE_PLUGIN_DATA"
+          node --test --test-reporter=tap tests/state.test.mjs | tee /tmp/HEAD_DIRECT.tap
+
+      - name: CounterProof replay with changed judge/support overlaid
+        working-directory: head
+        shell: bash
+        run: |
+          export CLAUDE_PLUGIN_DATA="$RUNNER_TEMP/live-plugin-data-counterproof"
+          export CODEX_COMPANION_SESSION_ID="sess-live"
+          mkdir -p "$CLAUDE_PLUGIN_DATA"
+          counterproof witness             --base db52e28f4d9ded852ab3942cea316258ae4ef346             --test-command "node --test --test-reporter=tap {tests}"             --timeout 300             --out /tmp/COUNTERPROOF_456.md             --json-out /tmp/COUNTERPROOF_456.json
+          cat /tmp/COUNTERPROOF_456.md
+          cat /tmp/COUNTERPROOF_456.json
+          python - <<'PY'
+          import json
+          with open("/tmp/COUNTERPROOF_456.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload["status"] == "not-witnessed", payload
+          assert "tests/state.test.mjs" in payload["tests"], payload
+          assert "tests/helpers.mjs" in payload["support_files"], payload
+          PY
+
+      - name: Upload judge-mutation receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-plugin-cc-456-judge-mutation
+          path: |
+            /tmp/BASE_DIRECT.tap
+            /tmp/HEAD_DIRECT.tap
+            /tmp/COUNTERPROOF_456.md
+            /tmp/COUNTERPROOF_456.json
