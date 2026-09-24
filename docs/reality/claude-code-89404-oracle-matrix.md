@@ -13,6 +13,12 @@ This is a manual Reality Probe for a case where the submitted test suite and the
   - https://github.com/anthropics/claude-code/pull/89404#issuecomment-5530003497
   - https://github.com/anthropics/claude-code/pull/89404#pullrequestreview-5190939241
 
+## Evidence vocabulary
+
+- submitted-test evidence: `WITNESSED / NOT WITNESSED / UNPROVEN`
+- oracle alignment: `ALIGNED / CONTRADICTED / UNVERIFIED`
+- overall claim is derived from those two axes; absence of an oracle challenge is never upgraded to support
+
 ## Claim / evidence matrix
 
 | Review claim / failure mode | Submitted-test evidence | Authoritative oracle probe | Oracle alignment | Overall claim |
