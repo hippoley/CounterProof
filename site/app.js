@@ -2,6 +2,7 @@ const byId = id => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
 let cases = [];
 let capabilities = [];
+let realityCases = [];
 let activeCase = null;
 let activeHypothesis = null;
 let proofRan = false;
@@ -373,6 +374,33 @@ function rejectMutation() {
   toast("Mutation rejected.");
 }
 
+function renderRealityCases() {
+  const grid = byId("realityCaseGrid");
+  if (!grid) return;
+
+  if (!realityCases.length) {
+    grid.innerHTML = '<div class="reality-empty">Reality Lab data is unavailable.</div>';
+    return;
+  }
+
+  grid.innerHTML = realityCases.map((item, index) =>
+    '<article class="reality-card ' + esc(item.result_class) + '">' +
+      '<div class="reality-card-top">' +
+        '<span>FIELD ' + String(index + 1).padStart(2, "0") + '</span>' +
+        '<b>' + esc(item.result) + '</b>' +
+      '</div>' +
+      '<h3>' + esc(item.external_pr) + '</h3>' +
+      '<p class="reality-question">' + esc(item.question) + '</p>' +
+      '<p class="reality-learned">' + esc(item.learned) + '</p>' +
+      '<div class="reality-links">' +
+        '<a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">SOURCE PR ↗</a>' +
+        '<a href="' + esc(item.probe_url) + '" target="_blank" rel="noopener noreferrer">REALITY PROBE ↗</a>' +
+      '</div>' +
+    '</article>'
+  ).join("");
+}
+
+
 function renderCapabilities() {
   byId("capabilityGrid").innerHTML = capabilities.map(item =>
     '<div class="capability-row"><span class="cap-status ' + esc(item.status) + '">' + esc(item.status) + '</span>' +
@@ -382,16 +410,19 @@ function renderCapabilities() {
 
 async function init() {
   try {
-    const [casePayload, capabilityPayload, buildPayload] = await Promise.all([
+    const [casePayload, capabilityPayload, realityPayload, buildPayload] = await Promise.all([
       fetch("data/evolution_cases.json").then(r => { if (!r.ok) throw new Error("case data " + r.status); return r.json(); }),
       fetch("data/capabilities.json").then(r => { if (!r.ok) throw new Error("capabilities " + r.status); return r.json(); }),
+      fetch("data/reality_cases.json").then(r => r.ok ? r.json() : {cases: []}).catch(() => ({cases: []})),
       fetch("data/skills.json").then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
     cases = casePayload.cases;
     capabilities = capabilityPayload.capabilities;
+    realityCases = realityPayload.cases || [];
     activeCase = cases[0];
     if (buildPayload?.commit) byId("build").textContent = "build " + buildPayload.commit;
     renderCase();
+    renderRealityCases();
     renderCapabilities();
   } catch (error) {
     byId("failureTitle").textContent = "Demo data could not be loaded.";
