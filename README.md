@@ -106,9 +106,51 @@ It says the proof is weak.
 
 ---
 
-## Drop it into a PR
+## 30-second onboarding
 
-The simplest production entry point on `main` is the Regression Witness Action:
+Install the current repository build:
+
+```bash
+python -m pip install "git+https://github.com/hippoley/CounterProof.git"
+```
+
+Run a real local self-test first:
+
+```bash
+counterproof doctor
+```
+
+Then let Counterproof inspect the repository and write the pull-request workflow:
+
+```bash
+counterproof init
+```
+
+It detects common test runners, keeps the first install **advisory**, and writes:
+
+```text
+.github/workflows/counterproof.yml
+```
+
+After you have watched it behave correctly on real pull requests, turn on the two hard gates:
+
+```bash
+counterproof init --force --strict
+```
+
+Strict mode means:
+
+```text
+exact changed-test witness required
++
+proof-integrity surface must stay clean
+```
+
+If the project only exposes a full-suite command such as `go test ./...` or generic `npm test`, Counterproof refuses `--strict` instead of pretending suite-level evidence is an exact witness.
+
+### Manual Action setup
+
+If you prefer to write the workflow yourself, the root Action is the same Regression Witness path:
 
 ```yaml
 name: Counterproof
@@ -134,11 +176,20 @@ jobs:
           python-version: "3.11"
 
       # Install your project dependencies first.
-      - uses: hippoley/SkillFactory/actions/witness@main
+      - uses: hippoley/CounterProof@main
         with:
           test-command: "python -m pytest -q {tests}"
           require-witness: "true"
           require-clean-integrity: "true"
+```
+
+For the deeper trace / hypothesis / multi-intervention runtime, use the explicit advanced Action:
+
+```yaml
+- uses: hippoley/CounterProof/actions/behavior-proof@main
+  with:
+    trace: path/to/trace.json
+    experiment-manifest: path/to/experiments.json
 ```
 
 Counterproof will:
@@ -149,15 +200,12 @@ Counterproof will:
 3. create a detached worktree at BASE
 4. overlay the PR test/support files
 5. run the same evidence on old code
-6. inspect whether the PR changed the judge
-7. write one sticky proof comment
+6. classify PRECISE witness vs SUITE DELTA
+7. inspect whether the PR changed the judge
+8. write one sticky proof comment
 ```
 
-No hosted service.
-
-No API key.
-
-No LLM is required for this proof path.
+No hosted service. No API key. No LLM is required for this path.
 
 ---
 
