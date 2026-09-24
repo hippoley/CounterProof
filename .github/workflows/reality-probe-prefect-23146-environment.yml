@@ -1,0 +1,145 @@
+name: Reality Probe · Prefect 23146 · environment evidence
+
+on:
+  push:
+    branches:
+      - probe/prefect-23146-environment
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  environment-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout Prefect PR head
+        uses: actions/checkout@v4
+        with:
+          repository: PrefectHQ/prefect
+          ref: ca08634e3817e67fc525b137965d4c1a75c6ccc5
+          fetch-depth: 0
+          path: head
+          persist-credentials: false
+
+      - name: Checkout Prefect base
+        uses: actions/checkout@v4
+        with:
+          repository: PrefectHQ/prefect
+          ref: 4647d9324933bc83544c3cbd0ebb1e97b4a3f6b3
+          path: base
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.20.0"
+          cache: npm
+          cache-dependency-path: head/ui-v2/package-lock.json
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Install ui-v2 dependencies
+        run: |
+          (cd head/ui-v2 && npm ci --ignore-scripts)
+          (cd base/ui-v2 && npm ci --ignore-scripts)
+
+      - name: Show current auto-discovery boundary
+        working-directory: head
+        run: |
+          counterproof witness \
+            --base 4647d9324933bc83544c3cbd0ebb1e97b4a3f6b3 \
+            --test-command "cd ui-v2 && npx vitest run {tests}" \
+            --out /tmp/PREFECT_23146_COUNTERPROOF.md \
+            --json-out /tmp/PREFECT_23146_COUNTERPROOF.json
+          cat /tmp/PREFECT_23146_COUNTERPROOF.md
+          cat /tmp/PREFECT_23146_COUNTERPROOF.json
+          python - <<'PY'
+          import json
+          with open("/tmp/PREFECT_23146_COUNTERPROOF.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload["status"] == "no-changed-tests", payload
+          PY
+
+      - name: Run existing date tests on BASE under America Los Angeles
+        id: base-direct
+        working-directory: base/ui-v2
+        env:
+          TZ: America/Los_Angeles
+        shell: bash
+        run: |
+          set +e
+          npx vitest run \
+            src/components/schemas/schema-form.snapshot.test.tsx \
+            src/components/flow-runs/flow-run-details-page/flow-run-header.test.tsx \
+            src/components/flow-runs/flow-runs-scatter-plot/flow-runs-scatter-plot.test.tsx \
+            src/components/events/event-details-page/event-details-display.test.tsx \
+            src/components/artifacts/artifact-card.test.tsx \
+            src/components/deployments/deployment-metadata.test.tsx \
+            src/components/ui/run-logs/run-logs.test.tsx \
+            src/components/ui/date-time-picker/date-time-picker.test.tsx \
+            --reporter=json --outputFile=/tmp/PREFECT_23146_BASE.json
+          rc=$?
+          set -e
+          cat /tmp/PREFECT_23146_BASE.json
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          test "$rc" -ne 0
+
+      - name: Run same existing date tests on HEAD under America Los Angeles
+        working-directory: head/ui-v2
+        env:
+          TZ: America/Los_Angeles
+        run: |
+          npx vitest run \
+            src/components/schemas/schema-form.snapshot.test.tsx \
+            src/components/flow-runs/flow-run-details-page/flow-run-header.test.tsx \
+            src/components/flow-runs/flow-runs-scatter-plot/flow-runs-scatter-plot.test.tsx \
+            src/components/events/event-details-page/event-details-display.test.tsx \
+            src/components/artifacts/artifact-card.test.tsx \
+            src/components/deployments/deployment-metadata.test.tsx \
+            src/components/ui/run-logs/run-logs.test.tsx \
+            src/components/ui/date-time-picker/date-time-picker.test.tsx \
+            --reporter=json --outputFile=/tmp/PREFECT_23146_HEAD.json
+          cat /tmp/PREFECT_23146_HEAD.json
+
+      - name: Assert environment-dependent evidence shape
+        run: |
+          python - <<'PY'
+          import json
+          with open("/tmp/PREFECT_23146_BASE.json", encoding="utf-8") as f:
+              base = json.load(f)
+          with open("/tmp/PREFECT_23146_HEAD.json", encoding="utf-8") as f:
+              head = json.load(f)
+          assert base["numFailedTests"] > 0, base
+          assert head["numFailedTests"] == 0, head
+          assert head["numPassedTests"] > 0, head
+          print({
+              "base_failed": base["numFailedTests"],
+              "base_passed": base["numPassedTests"],
+              "head_failed": head["numFailedTests"],
+              "head_passed": head["numPassedTests"],
+          })
+          PY
+
+      - name: Upload environment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prefect-23146-environment-evidence
+          path: |
+            /tmp/PREFECT_23146_COUNTERPROOF.md
+            /tmp/PREFECT_23146_COUNTERPROOF.json
+            /tmp/PREFECT_23146_BASE.json
+            /tmp/PREFECT_23146_HEAD.json
+          if-no-files-found: warn
