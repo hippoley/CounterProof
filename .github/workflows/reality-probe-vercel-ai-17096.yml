@@ -74,6 +74,21 @@ jobs:
               tests.append(str(rel))
 
           side = os.environ.get("COUNTERPROOF_WITNESS_SIDE", "unknown")
+
+          # The harness package extends a tsconfig from sibling workspace package
+          # packages/harness, whose package-local node_modules is not on the changed
+          # test path. For this Reality Probe only, bridge that sibling dependency
+          # closure from the installed HEAD worktree into BASE so the replay can
+          # reach actual test behavior.
+          if side == "base-with-head-tests":
+              head_root = pathlib.Path(os.environ["COUNTERPROOF_HEAD_ROOT"])
+              base_root = pathlib.Path.cwd()
+              source = head_root / "packages/harness/node_modules"
+              destination = base_root / "packages/harness/node_modules"
+              if source.exists() and not destination.exists():
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  destination.symlink_to(source, target_is_directory=True)
+
           result_file = pathlib.Path(f"/tmp/vercel-ai-17096-{side}.json")
           if result_file.exists():
               result_file.unlink()
@@ -135,6 +150,8 @@ jobs:
 
       - name: Replay changed harness tests
         working-directory: target
+        env:
+          COUNTERPROOF_HEAD_ROOT: ${{ github.workspace }}/target
         run: |
           counterproof witness \
             --base 66b71512135a0246a9306e97c8847a5d0bcc57ae \
