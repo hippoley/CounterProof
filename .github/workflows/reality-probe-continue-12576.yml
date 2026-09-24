@@ -14,9 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout CounterProof
+      - name: Checkout CounterProof candidate
         uses: actions/checkout@v4
         with:
+          repository: hippoley/CounterProof
+          ref: fix/vitest-named-test-discovery
           path: counterproof
           persist-credentials: false
 
