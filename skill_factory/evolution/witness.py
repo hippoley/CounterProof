@@ -304,17 +304,34 @@ def _witness_env(cwd: Path, side: str) -> dict[str, str]:
     }
 
 
-def _link_dependency_dirs(head_root: Path, base_root: Path) -> None:
-    """Reuse heavy dependency directories without overlaying HEAD source files."""
-    for name in ("node_modules", ".venv", "venv"):
-        source = head_root / name
-        destination = base_root / name
-        if not source.exists() or destination.exists():
-            continue
-        try:
-            destination.symlink_to(source, target_is_directory=True)
-        except OSError:
-            pass
+def _link_dependency_dirs(
+    head_root: Path,
+    base_root: Path,
+    *,
+    evidence_paths: tuple[str, ...] = (),
+) -> None:
+    """Reuse dependency dirs at repo root and evidence-path package boundaries."""
+    relative_roots: set[Path] = {Path(".")}
+    for raw_path in evidence_paths:
+        parent = Path(raw_path).parent
+        while parent != Path("."):
+            relative_roots.add(parent)
+            parent = parent.parent
+
+    for relative_root in sorted(
+        relative_roots,
+        key=lambda item: (len(item.parts), item.as_posix()),
+    ):
+        for name in ("node_modules", ".venv", "venv"):
+            source = head_root / relative_root / name
+            destination = base_root / relative_root / name
+            if not source.exists() or destination.exists():
+                continue
+            try:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.symlink_to(source, target_is_directory=True)
+            except OSError:
+                pass
 
 
 def _is_pytest_command(argv: tuple[str, ...]) -> bool:
@@ -503,7 +520,11 @@ def run_regression_witness(
         base_dir = Path(tmp) / "base"
         _git(repo_root, "worktree", "add", "--detach", str(base_dir), resolved_base_sha)
         try:
-            _link_dependency_dirs(repo_root, base_dir)
+            _link_dependency_dirs(
+                repo_root,
+                base_dir,
+                evidence_paths=support_files,
+            )
             for relative in support_files:
                 source = _safe_relative_file(repo_root, relative)
                 destination = base_dir / relative
