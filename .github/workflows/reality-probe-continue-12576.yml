@@ -143,6 +143,10 @@ jobs:
             --json-out /tmp/CONTINUE_12576_WITNESS.json
           cat /tmp/CONTINUE_12576_WITNESS.md
           cat /tmp/CONTINUE_12576_WITNESS.json
+          echo "=== HEAD VITEST JSON ==="
+          cat /tmp/continue-vitest-head.json
+          echo "=== BASE VITEST JSON ==="
+          cat /tmp/continue-vitest-base-with-head-tests.json
 
       - name: Upload receipt
         if: always()
