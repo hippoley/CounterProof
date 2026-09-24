@@ -44,7 +44,7 @@ class ClaimEvidence(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def validate_evidence_contract(self) -> "ClaimEvidence":
+    def validate_evidence_contract(self) -> ClaimEvidence:
         if self.submitted_test_evidence in {
             SubmittedTestEvidence.WITNESSED,
             SubmittedTestEvidence.NOT_WITNESSED,
@@ -140,8 +140,10 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         [
             "## Claim / evidence matrix",
             "",
-            "| Claim | Exact test(s) | BASE | HEAD | Submitted-test evidence | "
-            "Oracle alignment | Overall claim |",
+            (
+                "| Claim | Exact test(s) | BASE | HEAD | Submitted-test evidence | "
+                "Oracle alignment | Overall claim |"
+            ),
             "|---|---|---|---|---|---|---|",
         ]
     )
@@ -205,10 +207,14 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             "",
             "- Submitted-test evidence: `WITNESSED / NOT_WITNESSED / UNPROVEN`",
             "- Oracle alignment: `ALIGNED / CONTRADICTED / UNVERIFIED`",
-            "- `WITNESSED (submitted judge)` means the submitted test distinguishes "
-            "BASE from HEAD while product-oracle alignment remains unverified.",
-            "- `PROVEN` requires both a witnessed submitted regression and an aligned "
-            "authoritative oracle.",
+            (
+                "- `WITNESSED (submitted judge)` means the submitted test distinguishes "
+                "BASE from HEAD while product-oracle alignment remains unverified."
+            ),
+            (
+                "- `PROVEN` requires both a witnessed submitted regression and an aligned "
+                "authoritative oracle."
+            ),
             "- `CONTRADICTED` wins whenever the authoritative oracle contradicts the claim.",
             "- Otherwise the overall claim remains `UNPROVEN`.",
             "",
