@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 from pydantic import ValidationError
-import pytest
 
 from skill_factory.evolution.claim_matrix import (
     ClaimEvidence,
