@@ -116,6 +116,8 @@ def test_render_keeps_submitted_judge_scope_explicit():
         source_pr="https://github.com/example/repo/pull/1",
         base_sha="base123",
         head_sha="head456",
+        runner_url="https://github.com/example/proof/actions/runs/9",
+        evidence_digest="sha256:abc123",
         claims=[
             ClaimEvidence(
                 id="authority-boundary",
@@ -139,6 +141,10 @@ def test_render_keeps_submitted_judge_scope_explicit():
     assert "**WITNESSED (submitted judge)**" in markdown
     assert "expected false to be true" in markdown
     assert "discussion_r1" in markdown
+    assert "actions/runs/9" in markdown
+    assert "sha256:abc123" in markdown
+    assert payload["runner_url"] == "https://github.com/example/proof/actions/runs/9"
+    assert payload["evidence_digest"] == "sha256:abc123"
     assert payload["claims"][0]["overall_claim"] == "WITNESSED (submitted judge)"
 
 
