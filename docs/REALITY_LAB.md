@@ -16,6 +16,7 @@ The rule is simple:
 | [MetrolistGroup/Metrolist#4097](https://github.com/MetrolistGroup/Metrolist/pull/4097) | Does a BASE non-zero exit always count as regression evidence? | **INCONCLUSIVE** | No. The BASE failed during Kotlin test compilation, not at a behavioral assertion. This produced the structured `json-v1` result protocol. |
 | [anthropics/claude-code#89404](https://github.com/anthropics/claude-code/pull/89404) | What if the submitted tests are internally green but disagree with the product's authoritative parser? | **Open Reality Probe** | This is the emerging oracle-alignment problem: red→green evidence can still be weak if the judge does not represent product truth. |
 | [continuedev/continue#12576](https://github.com/continuedev/continue/pull/12576) | Can CounterProof replay a package-local Vitest regression inside a large JS/TS monorepo? | **[WITNESSED](../reality/continue-12576/WITNESS.md)** | The real PR exposed two product gaps first: `*.vitest.ts` discovery and package-local `core/node_modules` closure. After both fixes, HEAD was 5/5 PASS and BASE was 4/5 PASS, 1 FAIL; the BASE failure directly hits the legacy `tabAutocompleteModel` migration claim. |
+| [PrefectHQ/prefect#23146](https://github.com/PrefectHQ/prefect/pull/23146) | What if a real regression is witnessed by **existing** tests only under a specific environment? | **NO CHANGED TESTS + environment witness** | Automatic changed-test discovery found 0 tests, but under `TZ=America/Los_Angeles` the same 126 existing tests were BASE 112/126 vs HEAD 126/126. Evidence set and environment can both be first-class proof inputs. |
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
 
 ## Public probes
@@ -27,6 +28,8 @@ The rule is simple:
 - [#17 — bring an agent PR you do not trust](https://github.com/hippoley/CounterProof/issues/17)
 - [#20 — ownership evidence vs production reproduction](https://github.com/hippoley/CounterProof/issues/20)
 - [#22 — independent Continue #12576 witness](https://github.com/hippoley/CounterProof/issues/22)
+- [#30 — human-review concerns replayed on Prefect #22698](https://github.com/hippoley/CounterProof/issues/30)
+- [#32 — existing-test + environment evidence on Prefect #23146](https://github.com/hippoley/CounterProof/issues/32)
 
 ## What counts as useful feedback
 
@@ -58,6 +61,26 @@ human review
 ```
 
 The Reality Lab will prefer integrations and evidence handoffs over inventing another score for work another tool already does well.
+
+## Evidence is not permission
+
+CounterProof evidence never overrides a repository's contribution policy.
+
+Some projects explicitly allow AI as a coding aid while requiring the human contributor to write their own issue, PR and review communication, understand the work, and avoid autonomous-agent contributions. Astral's public [AI policy](https://github.com/astral-sh/.github/blob/main/AI_POLICY.md) is one concrete example.
+
+CounterProof should help a human reviewer inspect evidence **inside the community's rules**, not act as a technical argument for bypassing those rules.
+
+A useful ordering is:
+
+```text
+community contribution policy
+        ↓
+ownership / intake gate
+        ↓
+claim / evidence boundary
+        ↓
+human review
+```
 
 ## Submit a case
 
