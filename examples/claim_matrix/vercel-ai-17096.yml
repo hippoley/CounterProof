@@ -1,0 +1,34 @@
+schema_version: 1
+title: "Claim / Evidence Matrix — vercel/ai #17096"
+source_pr: "https://github.com/vercel/ai/pull/17096"
+base_sha: "66b71512135a0246a9306e97c8847a5d0bcc57ae"
+head_sha: "da4b91f82c8ccb3eb15ed5abe5217607539cc504"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/35986126197"
+evidence_digest: "sha256:fe2dac513057c98dd17985e6e6be759559a49a8013a0412ec80e07d9efa89bb1"
+claims:
+  - id: host-to-bridge-forwarding
+    claim: "Configured sandbox settings are forwarded from createClaudeCode into the bridge start message"
+    tests:
+      - "packages/harness-claude-code/src/claude-code-harness.test.ts::createClaudeCode adapter forwards the sandbox settings to the bridge start message"
+    base_result: "FAIL"
+    head_result: "PASS"
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    assertion_excerpt: "BASE: expected the start message to match an object containing sandbox settings; actual start message omitted sandbox. HEAD passes."
+    note: "This witnesses host-to-bridge forwarding only; it does not prove Claude Agent SDK enforcement."
+  - id: protocol-schema-sandbox-field
+    claim: "The bridge inbound schema specifically validates the new sandbox field"
+    tests:
+      - "packages/harness-claude-code/src/claude-code-bridge-protocol.test.ts::inboundMessageSchema accepts a start message with sandbox settings"
+    base_result: "PASS"
+    head_result: "PASS"
+    submitted_test_evidence: NOT_WITNESSED
+    oracle_alignment: UNVERIFIED
+    assertion_excerpt: "The new test passes on both BASE and HEAD; it only asserts parse() does not throw."
+    note: "The submitted test does not distinguish the schema change from the old revision."
+  - id: sandbox-enforcement
+    claim: "Forwarded Claude Agent SDK sandbox settings actually enforce fail-closed Bash, network allowlists, and filesystem restrictions in production"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    oracle_source_url: "https://github.com/vercel/ai/pull/17096"
+    note: "The PR reports production verification, but CounterProof did not independently execute a real Claude Agent SDK sandbox oracle."
