@@ -16,8 +16,23 @@ from typing import Any
 DEFAULT_TEST_PATTERNS = (
     "tests/**",
     "test/**",
+    "spec/**",
+    "src/test/**",
     "**/test_*.py",
     "**/*_test.py",
+    "**/*_test.go",
+    "**/*_spec.rb",
+    "**/*Test.java",
+    "**/*Tests.java",
+    "**/*Test.kt",
+    "**/*Tests.kt",
+    "**/*Spec.kt",
+    "**/*Test.cs",
+    "**/*Tests.cs",
+    "**/*_test.cc",
+    "**/*_test.cpp",
+    "**/test_*.cc",
+    "**/test_*.cpp",
     "**/*.test.js",
     "**/*.test.ts",
     "**/*.test.jsx",
@@ -27,13 +42,19 @@ DEFAULT_TEST_PATTERNS = (
     "**/*.spec.jsx",
     "**/*.spec.tsx",
     "**/__tests__/**",
-    "**/*_test.go",
-    "**/*Test.java",
-    "**/*Tests.java",
-    "**/*Test.kt",
-    "**/*Spec.kt",
+)
+
+DEFAULT_SUPPORT_PATTERNS = (
+    "tests/**",
+    "test/**",
     "spec/**",
-    "**/*_spec.rb",
+    "src/test/**",
+    "**/__tests__/**",
+    "**/testdata/**",
+    "**/fixtures/**",
+    "**/__fixtures__/**",
+    "conftest.py",
+    "**/conftest.py",
 )
 
 
@@ -60,6 +81,8 @@ class RegressionWitness:
     base_with_head_tests: WitnessCommand | None
     status: str
     note: str
+    mode: str = "precise"
+    support_files: tuple[str, ...] = ()
 
     @property
     def witnessed(self) -> bool:
@@ -81,9 +104,26 @@ def _git(repo: Path, *args: str) -> str:
     return proc.stdout.strip()
 
 
-def _is_test_file(path: str, patterns: tuple[str, ...]) -> bool:
+def _matches(path: str, patterns: tuple[str, ...]) -> bool:
     normalized = path.replace("\\", "/")
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
+
+
+def _changed_files(
+    repo_root: Path,
+    *,
+    base_ref: str,
+    head_ref: str,
+) -> tuple[str, ...]:
+    raw = _git(
+        repo_root,
+        "diff",
+        "--name-only",
+        "--diff-filter=ACMR",
+        f"{base_ref}..{head_ref}",
+        "--",
+    )
+    return tuple(line.strip() for line in raw.splitlines() if line.strip())
 
 
 def changed_test_files(
@@ -94,34 +134,52 @@ def changed_test_files(
     patterns: tuple[str, ...] = DEFAULT_TEST_PATTERNS,
 ) -> tuple[str, ...]:
     """Return changed/added test files between base and head."""
-    raw = _git(
-        repo_root,
-        "diff",
-        "--name-only",
-        "--diff-filter=ACMR",
-        f"{base_ref}..{head_ref}",
-        "--",
+    return tuple(
+        path
+        for path in _changed_files(
+            repo_root,
+            base_ref=base_ref,
+            head_ref=head_ref,
+        )
+        if _matches(path, patterns)
     )
-    files = []
-    for line in raw.splitlines():
-        path = line.strip()
-        if path and _is_test_file(path, patterns):
-            files.append(path)
-    return tuple(dict.fromkeys(files))
 
 
-def _build_test_argv(command: str, tests: tuple[str, ...]) -> tuple[str, ...]:
+def changed_test_support_files(
+    repo_root: Path,
+    *,
+    base_ref: str,
+    head_ref: str = "HEAD",
+    patterns: tuple[str, ...] = DEFAULT_SUPPORT_PATTERNS,
+) -> tuple[str, ...]:
+    """Return changed support files needed to replay changed tests on base."""
+    return tuple(
+        path
+        for path in _changed_files(
+            repo_root,
+            base_ref=base_ref,
+            head_ref=head_ref,
+        )
+        if _matches(path, patterns)
+    )
+
+
+def _build_test_argv(
+    command: str,
+    tests: tuple[str, ...],
+) -> tuple[tuple[str, ...], str]:
     parts = shlex.split(command)
     if not parts:
         raise ValueError("test command must not be empty")
 
+    precise = "{tests}" in parts
     argv: list[str] = []
     for part in parts:
         if part == "{tests}":
             argv.extend(tests)
         else:
             argv.append(part)
-    return tuple(argv)
+    return tuple(argv), ("precise" if precise else "suite")
 
 
 def _run(
@@ -169,10 +227,93 @@ def _safe_relative_file(repo_root: Path, relative: str) -> Path:
     try:
         target.relative_to(root)
     except ValueError as exc:
-        raise ValueError(f"test path escapes repository: {relative}") from exc
+        raise ValueError(f"overlay path escapes repository: {relative}") from exc
     if not target.is_file():
-        raise ValueError(f"changed test file does not exist at head: {relative}")
+        raise ValueError(f"overlay file does not exist at head: {relative}")
     return target
+
+
+def _witness_env(cwd: Path, side: str) -> dict[str, str]:
+    python_paths: list[str] = []
+    src = cwd / "src"
+    if src.is_dir():
+        python_paths.append(str(src))
+    python_paths.append(str(cwd))
+    existing = os.environ.get("PYTHONPATH")
+    if existing:
+        python_paths.append(existing)
+    return {
+        "COUNTERPROOF_WITNESS_SIDE": side,
+        "PYTHONPATH": os.pathsep.join(python_paths),
+    }
+
+
+def _link_dependency_dirs(head_root: Path, base_root: Path) -> None:
+    """Reuse heavy dependency directories without overlaying HEAD source files."""
+    for name in ("node_modules", ".venv", "venv"):
+        source = head_root / name
+        destination = base_root / name
+        if not source.exists() or destination.exists():
+            continue
+        try:
+            destination.symlink_to(source, target_is_directory=True)
+        except OSError:
+            pass
+
+
+def _is_pytest_command(argv: tuple[str, ...]) -> bool:
+    for index, part in enumerate(argv):
+        if Path(part).name == "pytest":
+            return True
+        if part == "-m" and index + 1 < len(argv) and argv[index + 1] == "pytest":
+            return True
+    return False
+
+
+def _classify_base_result(
+    baseline: WitnessCommand,
+    *,
+    argv: tuple[str, ...],
+    mode: str,
+) -> tuple[str, str]:
+    if baseline.timed_out:
+        return (
+            "inconclusive",
+            "Base-with-head-tests timed out; witness is inconclusive.",
+        )
+    if baseline.returncode == 0:
+        return (
+            "not-witnessed",
+            (
+                "The configured test command passes on both base and head. "
+                "It does not distinguish the pre-change code from the PR."
+            ),
+        )
+    if _is_pytest_command(argv) and baseline.returncode != 1:
+        return (
+            "inconclusive",
+            (
+                f"Base pytest exited with code {baseline.returncode}. "
+                "Only pytest exit 1 is accepted as an actual test-failure witness; "
+                "collection, usage, internal, interruption, and no-tests exits are inconclusive."
+            ),
+        )
+    if mode == "suite":
+        return (
+            "suite-delta",
+            (
+                "The configured full suite passes on head and fails on base with the PR's "
+                "changed test support overlaid. This proves a suite-level before/after delta, "
+                "but not that the changed test itself caused the base failure."
+            ),
+        )
+    return (
+        "witnessed",
+        (
+            "The PR's changed tests pass on head and fail when replayed against base code. "
+            "This is a regression witness for the tested behavior."
+        ),
+    )
 
 
 def run_regression_witness(
@@ -184,7 +325,7 @@ def run_regression_witness(
     timeout_seconds: float = 300,
     patterns: tuple[str, ...] = DEFAULT_TEST_PATTERNS,
 ) -> RegressionWitness:
-    """Run changed head tests on head and on base code with those tests overlaid."""
+    """Replay changed tests against HEAD and base with changed test support overlaid."""
     repo_root = repo_root.resolve()
     tests = changed_test_files(
         repo_root,
@@ -192,6 +333,19 @@ def run_regression_witness(
         head_ref=head_ref,
         patterns=patterns,
     )
+    support_files = tuple(
+        dict.fromkeys(
+            (
+                *tests,
+                *changed_test_support_files(
+                    repo_root,
+                    base_ref=base_ref,
+                    head_ref=head_ref,
+                ),
+            )
+        )
+    )
+
     if not tests:
         return RegressionWitness(
             base_ref=base_ref,
@@ -201,14 +355,16 @@ def run_regression_witness(
             base_with_head_tests=None,
             status="no-changed-tests",
             note="No changed test files matched the configured patterns.",
+            mode="precise" if "{tests}" in shlex.split(test_command) else "suite",
+            support_files=(),
         )
 
-    argv = _build_test_argv(test_command, tests)
+    argv, mode = _build_test_argv(test_command, tests)
     head = _run(
         argv,
         cwd=repo_root,
         timeout_seconds=timeout_seconds,
-        env={"COUNTERPROOF_WITNESS_SIDE": "head"},
+        env=_witness_env(repo_root, "head"),
     )
     if not head.passed:
         return RegressionWitness(
@@ -218,14 +374,17 @@ def run_regression_witness(
             head=head,
             base_with_head_tests=None,
             status="head-failing",
-            note="Changed tests do not pass on the PR head; no proof-of-fix can be claimed.",
+            note="Configured tests do not pass on the PR head; no proof-of-fix can be claimed.",
+            mode=mode,
+            support_files=support_files,
         )
 
     with tempfile.TemporaryDirectory(prefix="counterproof-witness-") as tmp:
         base_dir = Path(tmp) / "base"
         _git(repo_root, "worktree", "add", "--detach", str(base_dir), base_ref)
         try:
-            for relative in tests:
+            _link_dependency_dirs(repo_root, base_dir)
+            for relative in support_files:
                 source = _safe_relative_file(repo_root, relative)
                 destination = base_dir / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -235,7 +394,7 @@ def run_regression_witness(
                 argv,
                 cwd=base_dir,
                 timeout_seconds=timeout_seconds,
-                env={"COUNTERPROOF_WITNESS_SIDE": "base-with-head-tests"},
+                env=_witness_env(base_dir, "base-with-head-tests"),
             )
         finally:
             subprocess.run(
@@ -246,22 +405,11 @@ def run_regression_witness(
                 check=False,
             )
 
-    if baseline.timed_out:
-        status = "inconclusive"
-        note = "Base-with-head-tests timed out; witness is inconclusive."
-    elif baseline.returncode == 0:
-        status = "not-witnessed"
-        note = (
-            "Changed tests pass on both base and head. They do not demonstrate the claimed "
-            "behavioral regression."
-        )
-    else:
-        status = "witnessed"
-        note = (
-            "The PR's changed tests pass on head and fail when replayed against base code. "
-            "This is a regression witness for the tested behavior."
-        )
-
+    status, note = _classify_base_result(
+        baseline,
+        argv=argv,
+        mode=mode,
+    )
     return RegressionWitness(
         base_ref=base_ref,
         head_ref=head_ref,
@@ -270,6 +418,8 @@ def run_regression_witness(
         base_with_head_tests=baseline,
         status=status,
         note=note,
+        mode=mode,
+        support_files=support_files,
     )
 
 
@@ -288,11 +438,13 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
 
 def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "base_ref": witness.base_ref,
         "head_ref": witness.head_ref,
         "tests": list(witness.tests),
+        "support_files": list(witness.support_files),
         "status": witness.status,
+        "mode": witness.mode,
         "witnessed": witness.witnessed,
         "note": witness.note,
         "head": _command_to_dict(witness.head),
@@ -307,6 +459,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         "head-failing": "HEAD FAILING",
         "no-changed-tests": "NO CHANGED TESTS",
         "inconclusive": "INCONCLUSIVE",
+        "suite-delta": "SUITE DELTA",
     }.get(witness.status, witness.status.upper())
 
     lines = [
@@ -316,14 +469,23 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         "",
         witness.note,
         "",
-        f"- **Base:** `{witness.base_ref}`",
-        f"- **Head:** `{witness.head_ref}`",
-        f"- **Changed tests:** {len(witness.tests)}",
+        f"- Base: {witness.base_ref}",
+        f"- Head: {witness.head_ref}",
+        f"- Changed tests: {len(witness.tests)}",
+        f"- Mode: {witness.mode}",
+        f"- Test-support files overlaid: {len(witness.support_files)}",
     ]
 
     if witness.tests:
         lines.extend(["", "### Tests replayed", ""])
-        lines.extend(f"- `{path}`" for path in witness.tests)
+        lines.extend(f"- {path}" for path in witness.tests)
+
+    extra_support = tuple(
+        path for path in witness.support_files if path not in witness.tests
+    )
+    if extra_support:
+        lines.extend(["", "### Test-support closure", ""])
+        lines.extend(f"- {path}" for path in extra_support)
 
     lines.extend(["", "### Behavior", ""])
     if witness.head is not None:
@@ -344,6 +506,14 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
                 "",
                 "> The same changed tests fail before the fix and pass after it.",
                 "> This proves the tested regression delta; it does not prove every claimed cause.",
+            ]
+        )
+    elif witness.status == "suite-delta":
+        lines.extend(
+            [
+                "",
+                "> The full configured suite distinguishes base from head.",
+                "> Because the runner did not target changed tests directly, this is not labeled a Regression Witness.",
             ]
         )
     return "\n".join(lines) + "\n"
