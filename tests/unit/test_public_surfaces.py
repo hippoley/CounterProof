@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 PUBLIC_SURFACES = (
     Path("README.md"),
     Path("docs/COUNTERPROOF.md"),
