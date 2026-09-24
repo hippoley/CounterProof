@@ -129,6 +129,62 @@ jobs:
           echo "=== BASE JUNIT ==="
           cat /tmp/crewai-7721-base-with-head-tests.xml
 
+      - name: Probe uncovered tracing claims
+        working-directory: target
+        run: |
+          uv run --package crewai python - <<'PY'
+          import json
+          import os
+          from unittest.mock import patch
+
+          from crewai.events.listeners.tracing.utils import (
+              prompt_user_for_trace_viewing,
+              set_tracing_enabled,
+              reset_tracing_enabled,
+              should_enable_tracing,
+          )
+
+          results = {}
+
+          # Claim 1: programmatic tracing=True should authorize non-interactive sharing.
+          os.environ.pop("CREWAI_TRACING_ENABLED", None)
+          token = set_tracing_enabled(True)
+          try:
+              with (
+                  patch("crewai.events.listeners.tracing.utils._is_test_environment", return_value=False),
+                  patch("crewai.events.listeners.tracing.utils.should_suppress_tracing_messages", return_value=False),
+                  patch("crewai.events.listeners.tracing.utils._is_interactive_terminal", return_value=False),
+                  patch("crewai.events.listeners.tracing.utils._load_user_data", return_value={"trace_consent": False}),
+              ):
+                  results["programmatic_tracing_true"] = {
+                      "expected": True,
+                      "actual": prompt_user_for_trace_viewing(sharing=True),
+                  }
+          finally:
+              reset_tracing_enabled(token)
+
+          # Claim 2: persisted consent should only enable tracing for an explicit Boolean true.
+          consent_cases = {}
+          for value in (None, "false", True, False):
+              with patch(
+                  "crewai.events.listeners.tracing.utils._load_user_data",
+                  return_value={"trace_consent": value},
+              ):
+                  consent_cases[repr(value)] = should_enable_tracing()
+          results["persisted_consent"] = consent_cases
+
+          with open("/tmp/CREWAI_7721_CLAIM_PROBES.json", "w", encoding="utf-8") as out:
+              json.dump(results, out, indent=2)
+
+          print(json.dumps(results, indent=2))
+
+          assert results["programmatic_tracing_true"]["actual"] is False
+          assert consent_cases["None"] is True
+          assert consent_cases["'false'"] is True
+          assert consent_cases["True"] is True
+          assert consent_cases["False"] is False
+          PY
+
       - name: Upload receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -138,4 +194,5 @@ jobs:
             /tmp/CREWAI_7721_WITNESS.md
             /tmp/CREWAI_7721_WITNESS.json
             /tmp/crewai-7721-*.xml
+            /tmp/CREWAI_7721_CLAIM_PROBES.json
           if-no-files-found: warn
