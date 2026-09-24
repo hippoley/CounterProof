@@ -18,6 +18,7 @@ def test_root_action_is_regression_witness():
     assert action["runs"]["using"] == "composite"
     assert action["inputs"]["test-command"]["required"] is True
     assert action["inputs"]["require-witness"]["default"] == "false"
+    assert action["inputs"]["result-protocol"]["default"] == "exit-code"
     assert action["inputs"]["require-clean-integrity"]["default"] == "false"
     assert "evidence-mode" in action["outputs"]
     assert "integrity-status" in action["outputs"]
@@ -39,6 +40,7 @@ def test_legacy_witness_subpath_remains_compatible():
 
     assert action["name"] == "Counterproof Regression Witness"
     assert action["inputs"]["test-command"]["required"] is True
+    assert action["inputs"]["result-protocol"]["default"] == "exit-code"
     assert "suite-delta" in action["outputs"]["status"]["description"]
     assert "evidence-mode" in action["outputs"]
 
@@ -64,6 +66,13 @@ def test_root_and_subpath_install_from_correct_action_paths():
     assert 'python -m pip install "${{ github.action_path }}"' in root
     assert 'python -m pip install "${{ github.action_path }}/../.."' in witness
     assert 'python -m pip install "${{ github.action_path }}/../.."' in advanced
+
+
+def test_witness_actions_forward_result_protocol_to_cli():
+    for path in ("action.yml", "actions/witness/action.yml"):
+        text = Path(path).read_text(encoding="utf-8")
+        assert "RESULT_PROTOCOL: ${{ inputs.result-protocol }}" in text
+        assert '--result-protocol "$RESULT_PROTOCOL"' in text
 
 
 def test_actions_do_not_execute_untrusted_pr_text_as_shell():

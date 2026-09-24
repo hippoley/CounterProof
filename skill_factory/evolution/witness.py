@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .replay import parse_structured_probe_result
+
 DEFAULT_TEST_PATTERNS = (
     "**/test_*.py",
     "**/*_test.py",
@@ -63,9 +65,15 @@ class WitnessCommand:
     stdout: str
     stderr: str
     timed_out: bool = False
+    semantic_verdict: str | None = None
+    semantic_error: str | None = None
 
     @property
     def passed(self) -> bool:
+        if self.semantic_error is not None:
+            return False
+        if self.semantic_verdict is not None:
+            return self.semantic_verdict == "pass"
         return not self.timed_out and self.returncode == 0
 
 
@@ -82,6 +90,7 @@ class RegressionWitness:
     support_files: tuple[str, ...] = ()
     base_sha: str | None = None
     head_sha: str | None = None
+    result_protocol: str = "exit-code"
 
     @property
     def witnessed(self) -> bool:
@@ -187,7 +196,10 @@ def _run(
     cwd: Path,
     timeout_seconds: float,
     env: dict[str, str] | None = None,
+    result_protocol: str = "exit-code",
 ) -> WitnessCommand:
+    if result_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown witness result protocol: {result_protocol}")
     started = time.perf_counter()
     try:
         proc = subprocess.run(
@@ -208,15 +220,44 @@ def _run(
             stdout=(exc.stdout or "")[-4000:] if isinstance(exc.stdout, str) else "",
             stderr=(exc.stderr or "")[-4000:] if isinstance(exc.stderr, str) else "",
             timed_out=True,
+            semantic_error=(
+                "json-v1 witness adapter timed out before producing behavioral evidence"
+                if result_protocol == "json-v1"
+                else None
+            ),
         )
 
     duration_ms = int((time.perf_counter() - started) * 1000)
+    stdout = proc.stdout[-4000:]
+    semantic_verdict: str | None = None
+    semantic_error: str | None = None
+    if result_protocol == "json-v1":
+        if proc.returncode != 0:
+            semantic_error = (
+                f"json-v1 witness adapter exited non-zero rc={proc.returncode}; "
+                "treating this as infrastructure/integration failure, not behavioral evidence."
+            )
+        else:
+            try:
+                structured = parse_structured_probe_result(stdout)
+            except (TypeError, ValueError) as exc:
+                semantic_error = str(exc)
+            else:
+                if structured is None:
+                    semantic_error = (
+                        "json-v1 witness adapter did not emit COUNTERPROOF_RESULT"
+                    )
+                else:
+                    semantic_verdict = structured.verdict
+
     return WitnessCommand(
         argv=argv,
         returncode=proc.returncode,
         duration_ms=duration_ms,
-        stdout=proc.stdout[-4000:],
+        stdout=stdout,
         stderr=proc.stderr[-4000:],
+        semantic_verdict=semantic_verdict,
+        semantic_error=semantic_error,
     )
 
 
@@ -274,12 +315,49 @@ def _classify_base_result(
     *,
     argv: tuple[str, ...],
     mode: str,
+    result_protocol: str,
 ) -> tuple[str, str]:
     if baseline.timed_out:
         return (
             "inconclusive",
             "Base-with-head-tests timed out; witness is inconclusive.",
         )
+    if result_protocol == "json-v1":
+        if baseline.semantic_error:
+            return (
+                "inconclusive",
+                "Base replay did not produce behavioral evidence: "
+                + baseline.semantic_error,
+            )
+        if baseline.semantic_verdict == "pass":
+            return (
+                "not-witnessed",
+                (
+                    "The structured adapter reports PASS on both base and head. "
+                    "It does not distinguish the pre-change code from the PR."
+                ),
+            )
+        if baseline.semantic_verdict != "fail":
+            return (
+                "inconclusive",
+                "Base replay did not emit a valid pass/fail behavioral verdict.",
+            )
+        if mode == "suite":
+            return (
+                "suite-delta",
+                (
+                    "The structured adapter reports a suite-level FAIL on base and PASS on head. "
+                    "Because changed tests were not targeted directly, this is not an exact witness."
+                ),
+            )
+        return (
+            "witnessed",
+            (
+                "The structured adapter reports FAIL for the changed tests on base and PASS on head. "
+                "This is a regression witness for the tested behavior."
+            ),
+        )
+
     if baseline.returncode == 0:
         return (
             "not-witnessed",
@@ -323,8 +401,11 @@ def run_regression_witness(
     test_command: str,
     timeout_seconds: float = 300,
     patterns: tuple[str, ...] = DEFAULT_TEST_PATTERNS,
+    result_protocol: str = "exit-code",
 ) -> RegressionWitness:
     """Replay changed tests against HEAD and base with changed test support overlaid."""
+    if result_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown witness result protocol: {result_protocol}")
     repo_root = repo_root.resolve()
     resolved_base_sha = _git(repo_root, "rev-parse", f"{base_ref}^{{commit}}")
     resolved_head_sha = _git(repo_root, "rev-parse", f"{head_ref}^{{commit}}")
@@ -360,6 +441,7 @@ def run_regression_witness(
             support_files=(),
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
         )
 
     argv, mode = _build_test_argv(test_command, tests)
@@ -368,7 +450,23 @@ def run_regression_witness(
         cwd=repo_root,
         timeout_seconds=timeout_seconds,
         env=_witness_env(repo_root, "head"),
+        result_protocol=result_protocol,
     )
+    if result_protocol == "json-v1" and head.semantic_error:
+        return RegressionWitness(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            tests=tests,
+            head=head,
+            base_with_head_tests=None,
+            status="inconclusive",
+            note="PR-head replay did not produce behavioral evidence: " + head.semantic_error,
+            mode=mode,
+            support_files=support_files,
+            base_sha=resolved_base_sha,
+            head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
+        )
     if not head.passed:
         return RegressionWitness(
             base_ref=base_ref,
@@ -382,6 +480,7 @@ def run_regression_witness(
             support_files=support_files,
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
         )
 
     with tempfile.TemporaryDirectory(prefix="counterproof-witness-") as tmp:
@@ -400,6 +499,7 @@ def run_regression_witness(
                 cwd=base_dir,
                 timeout_seconds=timeout_seconds,
                 env=_witness_env(base_dir, "base-with-head-tests"),
+                result_protocol=result_protocol,
             )
         finally:
             subprocess.run(
@@ -414,6 +514,7 @@ def run_regression_witness(
         baseline,
         argv=argv,
         mode=mode,
+        result_protocol=result_protocol,
     )
     return RegressionWitness(
         base_ref=base_ref,
@@ -427,6 +528,7 @@ def run_regression_witness(
         support_files=support_files,
         base_sha=resolved_base_sha,
         head_sha=resolved_head_sha,
+        result_protocol=result_protocol,
     )
 
 
@@ -440,12 +542,14 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
         "timed_out": command.timed_out,
         "stdout": command.stdout,
         "stderr": command.stderr,
+        "semantic_verdict": command.semantic_verdict,
+        "semantic_error": command.semantic_error,
     }
 
 
 def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "schema_version": 3,
+        "schema_version": 4,
         "base_ref": witness.base_ref,
         "head_ref": witness.head_ref,
         "base_sha": witness.base_sha,
@@ -454,6 +558,7 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
         "support_files": list(witness.support_files),
         "status": witness.status,
         "mode": witness.mode,
+        "result_protocol": witness.result_protocol,
         "witnessed": witness.witnessed,
         "note": witness.note,
         "head": _command_to_dict(witness.head),
@@ -467,6 +572,14 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     ).encode("utf-8")
     payload["evidence_digest_sha256"] = hashlib.sha256(canonical).hexdigest()
     return payload
+
+
+def _command_behavior_label(command: WitnessCommand) -> str:
+    if command.semantic_error:
+        return "INCONCLUSIVE"
+    if command.semantic_verdict:
+        return command.semantic_verdict.upper()
+    return "PASS" if command.passed else "FAIL"
 
 
 def render_witness_markdown(witness: RegressionWitness) -> str:
@@ -490,6 +603,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         f"- Head: {witness.head_ref}",
         f"- Changed tests: {len(witness.tests)}",
         f"- Mode: {witness.mode}",
+        f"- Result protocol: {witness.result_protocol}",
         f"- Test-support files overlaid: {len(witness.support_files)}",
     ]
 
@@ -529,13 +643,13 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
     lines.extend(["", "### Behavior", ""])
     if witness.head is not None:
         lines.append(
-            f"- PR head: **{'PASS' if witness.head.passed else 'FAIL'}** "
+            f"- PR head: **{_command_behavior_label(witness.head)}** "
             f"({witness.head.duration_ms} ms)"
         )
     if witness.base_with_head_tests is not None:
         lines.append(
             "- Base code + PR tests: "
-            f"**{'PASS' if witness.base_with_head_tests.passed else 'FAIL'}** "
+            f"**{_command_behavior_label(witness.base_with_head_tests)}** "
             f"({witness.base_with_head_tests.duration_ms} ms)"
         )
 
@@ -605,6 +719,12 @@ def render_witness_review_note(
             f"- Changed tests: {len(tests)}",
         ]
     )
+    if head.get("semantic_verdict"):
+        lines.append(f"- HEAD behavioral verdict: `{head['semantic_verdict']}`")
+    if base.get("semantic_verdict"):
+        lines.append(f"- BASE behavioral verdict: `{base['semantic_verdict']}`")
+    if base.get("semantic_error"):
+        lines.append("- BASE behavioral verdict: `inconclusive`")
     if argv:
         lines.append(f"- Command: `{shlex.join(argv)}`")
     if tests:
@@ -620,13 +740,20 @@ def render_witness_review_note(
     if links:
         lines.extend(["", " · ".join(links)])
 
+    if status == "witnessed":
+        scope = (
+            "> Scope: this proves the tested before/after regression delta. "
+            "It does not independently prove every claimed root cause or production incident."
+        )
+    else:
+        scope = (
+            "> Scope: this replay did not establish an exact Regression Witness. "
+            "Do not treat it as proof of the claimed fix."
+        )
     lines.extend(
         [
             "",
-            (
-                "> Scope: this proves the tested before/after regression delta. "
-                "It does not independently prove every claimed root cause or production incident."
-            ),
+            scope,
             "",
             (
                 "Would this evidence materially help review this change? "

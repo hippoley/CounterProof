@@ -253,7 +253,7 @@ def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
     )
     assert "fixture 'expected_value' not found" not in baseline_text
     payload = witness_to_dict(witness)
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 4
     assert "tests/conftest.py" in payload["support_files"]
     assert "Test-support closure" in render_witness_markdown(witness)
 
@@ -481,3 +481,194 @@ def test_share_witness_cli_writes_review_note(tmp_path):
     text = output.read_text(encoding="utf-8")
     assert "Counterproof replay: WITNESSED" in text
     assert "Would this evidence materially help review this change?" in text
+
+
+def _write_json_v1_adapter(path: Path, body: str) -> str:
+    path.write_text(body, encoding="utf-8")
+    return f"{sys.executable} {path} {{tests}}"
+
+
+def test_json_v1_witness_requires_behavioral_fail_not_process_failure(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import json, os\n"
+        "side = os.environ['COUNTERPROOF_WITNESS_SIDE']\n"
+        "verdict = 'pass' if side == 'head' else 'fail'\n"
+        "print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': verdict, 'metrics': {}}))\n",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "witnessed"
+    assert witness.result_protocol == "json-v1"
+    assert witness.head is not None
+    assert witness.head.semantic_verdict == "pass"
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.semantic_verdict == "fail"
+
+
+def test_json_v1_nonzero_base_adapter_is_inconclusive(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import json, os, sys\n"
+        "side = os.environ['COUNTERPROOF_WITNESS_SIDE']\n"
+        "if side == 'head':\n"
+        "    print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': 'pass', 'metrics': {}}))\n"
+        "else:\n"
+        "    print('compile failed', file=sys.stderr)\n"
+        "    raise SystemExit(1)\n",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "inconclusive"
+    assert witness.witnessed is False
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.semantic_error is not None
+    assert "infrastructure/integration failure" in witness.note
+
+
+def test_json_v1_missing_structured_result_on_head_is_inconclusive(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "print('ordinary successful process without structured evidence')\n",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "inconclusive"
+    assert witness.base_with_head_tests is None
+    assert witness.head is not None
+    assert witness.head.semantic_error == (
+        "json-v1 witness adapter did not emit COUNTERPROOF_RESULT"
+    )
+
+
+def test_json_v1_cli_serializes_protocol_and_semantics(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import json, os\n"
+        "verdict = 'pass' if os.environ['COUNTERPROOF_WITNESS_SIDE'] == 'head' else 'fail'\n"
+        "print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': verdict, 'metrics': {}}))\n",
+    )
+    payload = tmp_path / "witness.json"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "witness",
+            "--repo",
+            str(repo),
+            "--base",
+            base,
+            "--test-command",
+            command,
+            "--result-protocol",
+            "json-v1",
+            "--json-out",
+            str(payload),
+            "--out",
+            str(tmp_path / "witness.md"),
+            "--require-witness",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    raw = json.loads(payload.read_text(encoding="utf-8"))
+    assert raw["schema_version"] == 4
+    assert raw["result_protocol"] == "json-v1"
+    assert raw["head"]["semantic_verdict"] == "pass"
+    assert raw["base_with_head_tests"]["semantic_verdict"] == "fail"
+
+
+def test_inconclusive_review_note_never_claims_proof(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import json, os, sys\n"
+        "if os.environ['COUNTERPROOF_WITNESS_SIDE'] == 'head':\n"
+        "    print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': 'pass', 'metrics': {}}))\n"
+        "else:\n"
+        "    print('compile failed', file=sys.stderr)\n"
+        "    raise SystemExit(1)\n",
+    )
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+    payload = witness_to_dict(witness)
+    note = render_witness_review_note(payload)
+    report = render_witness_markdown(witness)
+
+    assert witness.status == "inconclusive"
+    assert "Counterproof replay: INCONCLUSIVE" in note
+    assert "did not establish an exact Regression Witness" in note
+    assert "this proves the tested before/after regression delta" not in note
+    assert "BASE behavioral verdict: `inconclusive`" in note
+    assert "Base code + PR tests: **INCONCLUSIVE**" in report
+
+
+def test_json_v1_head_timeout_is_inconclusive(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import time\n"
+        "time.sleep(2)\n",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=0.05,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "inconclusive"
+    assert witness.head is not None
+    assert witness.head.timed_out is True
+    assert witness.head.semantic_error is not None
+    assert "timed out" in witness.note
