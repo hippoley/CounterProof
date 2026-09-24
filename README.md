@@ -207,6 +207,33 @@ Counterproof will:
 
 No hosted service. No API key. No LLM is required for this path.
 
+### When a non-zero exit does not mean “the test failed”
+
+Some build/test wrappers use the same exit code for assertion failures, compilation failures, missing SDKs, setup errors, and other infrastructure problems. In that situation, **do not mint a witness from exit code alone**.
+
+Use the structured result protocol:
+
+```bash
+counterproof witness \
+  --base origin/main \
+  --test-command "python my_test_adapter.py {tests}" \
+  --result-protocol json-v1
+```
+
+The adapter exits successfully only after it has determined a behavioral result and emits one final line:
+
+```text
+COUNTERPROOF_RESULT={"verdict":"pass","metrics":{}}
+```
+
+or:
+
+```text
+COUNTERPROOF_RESULT={"verdict":"fail","metrics":{}}
+```
+
+If the adapter itself exits non-zero, times out, or fails to emit a valid result, Counterproof reports **INCONCLUSIVE**. A compiler error is therefore not silently upgraded into regression evidence.
+
 ### Share a witness with a reviewer
 
 A machine receipt is useful for automation; a reviewer needs the small set of facts they can check quickly.
