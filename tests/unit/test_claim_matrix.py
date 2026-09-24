@@ -211,3 +211,34 @@ claims:
 
     assert result.exit_code != 0
     assert "invalid claim matrix manifest" in result.output
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        (
+            Path("examples/claim_matrix/codex-plugin-cc-731.yml"),
+            [
+                "WITNESSED (submitted judge)",
+                "UNPROVEN",
+                "UNPROVEN",
+            ],
+        ),
+        (
+            Path("examples/claim_matrix/claude-code-89404.yml"),
+            [
+                "CONTRADICTED",
+                "UNPROVEN",
+            ],
+        ),
+    ],
+)
+def test_real_reviewer_cases_fit_mechanical_matrix(path: Path, expected: list[str]):
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(path)
+    payload = claim_matrix_to_dict(manifest)
+    markdown = render_claim_matrix_markdown(manifest)
+
+    assert [item["overall_claim"] for item in payload["claims"]] == expected
+    assert "SUPPORTED" not in markdown
