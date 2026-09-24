@@ -37,7 +37,12 @@ from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, wri
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
-from .witness import render_witness_markdown, run_regression_witness, write_witness_json
+from .witness import (
+    render_witness_markdown,
+    render_witness_review_note,
+    run_regression_witness,
+    write_witness_json,
+)
 
 
 def _packet_from_json(raw: dict) -> EvolutionPacket:
@@ -800,6 +805,35 @@ def witness(
         raise click.ClickException(
             f"regression witness required, got status={result.status}"
         )
+
+
+@cli.command("share-witness")
+@click.argument("witness_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--source-url", default=None, help="Optional source pull-request URL.")
+@click.option("--runner-url", default=None, help="Optional execution-run URL.")
+@click.option("--out", "out_file", default="WITNESS_REVIEW_NOTE.md", show_default=True)
+def share_witness(
+    witness_file: str,
+    source_url: str | None,
+    runner_url: str | None,
+    out_file: str,
+) -> None:
+    """Turn a witness JSON receipt into a concise reviewer-facing note."""
+    try:
+        payload = json.loads(Path(witness_file).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"could not read witness receipt: {exc}") from exc
+    if not isinstance(payload, dict) or "status" not in payload:
+        raise click.ClickException("witness receipt must be a JSON object with status")
+
+    note = render_witness_review_note(
+        payload,
+        source_url=source_url,
+        runner_url=runner_url,
+    )
+    Path(out_file).write_text(note, encoding="utf-8")
+    click.echo(f"Review note: {payload.get('status', 'unknown')}")
+    click.echo(f"Wrote {out_file}")
 
 
 @cli.command("audit")

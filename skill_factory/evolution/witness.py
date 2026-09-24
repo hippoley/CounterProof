@@ -558,6 +558,85 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_witness_review_note(
+    payload: dict[str, Any],
+    *,
+    source_url: str | None = None,
+    runner_url: str | None = None,
+) -> str:
+    """Render a concise reviewer-facing note from a stored witness payload."""
+    status = str(payload.get("status", "unknown"))
+    tests = [str(item) for item in payload.get("tests", [])]
+    head = payload.get("head") or {}
+    base = payload.get("base_with_head_tests") or {}
+    head_sha = str(payload.get("head_sha") or payload.get("head_ref") or "unknown")
+    base_sha = str(payload.get("base_sha") or payload.get("base_ref") or "unknown")
+    digest = str(payload.get("evidence_digest_sha256") or "")
+    argv = tuple(str(item) for item in head.get("argv", []))
+
+    labels = {
+        "witnessed": "WITNESSED",
+        "suite-delta": "SUITE DELTA",
+        "not-witnessed": "NOT WITNESSED",
+        "head-failing": "HEAD FAILING",
+        "no-changed-tests": "NO CHANGED TESTS",
+        "inconclusive": "INCONCLUSIVE",
+    }
+    title = labels.get(status, status.upper())
+
+    lines = [
+        f"### Counterproof replay: {title}",
+        "",
+    ]
+    if status == "witnessed":
+        lines.append(
+            "The same changed regression test(s) pass on the PR head and fail "
+            "when replayed against the pre-change base."
+        )
+    else:
+        note = str(payload.get("note") or "").strip()
+        lines.append(note or "The replay did not produce an exact regression witness.")
+
+    lines.extend(
+        [
+            "",
+            f"- HEAD: `{head_sha}` — exit `{head.get('returncode')}`",
+            f"- BASE: `{base_sha}` — exit `{base.get('returncode')}`",
+            f"- Changed tests: {len(tests)}",
+        ]
+    )
+    if argv:
+        lines.append(f"- Command: `{shlex.join(argv)}`")
+    if tests:
+        lines.append("- Tests: " + ", ".join(f"`{item}`" for item in tests))
+    if digest:
+        lines.append(f"- Evidence digest: `sha256:{digest}`")
+
+    links = []
+    if source_url:
+        links.append(f"[source PR]({source_url})")
+    if runner_url:
+        links.append(f"[runner]({runner_url})")
+    if links:
+        lines.extend(["", " · ".join(links)])
+
+    lines.extend(
+        [
+            "",
+            (
+                "> Scope: this proves the tested before/after regression delta. "
+                "It does not independently prove every claimed root cause or production incident."
+            ),
+            "",
+            (
+                "Would this evidence materially help review this change? "
+                "If not, what evidence is still missing?"
+            ),
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def write_witness_json(path: Path, witness: RegressionWitness) -> None:
     path.write_text(
         json.dumps(witness_to_dict(witness), indent=2, ensure_ascii=False),
