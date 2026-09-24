@@ -1,0 +1,62 @@
+name: Reality Probe · codex-plugin-cc 731
+
+on:
+  push:
+    branches:
+      - probe/codex-plugin-cc-731
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counterproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout external PR head
+        uses: actions/checkout@v4
+        with:
+          repository: openai/codex-plugin-cc
+          ref: a81f52f9c2c366d7d5e095179d2473a9f7e12798
+          fetch-depth: 0
+          path: target
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Probe changed-test discovery
+        working-directory: target
+        run: |
+          counterproof witness \
+            --base db52e28f4d9ded852ab3942cea316258ae4ef346 \
+            --test-command "node --test {tests}" \
+            --out /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md \
+            --json-out /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
+          cat /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md
+          cat /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
+          python - <<'PY'
+          import json
+          with open("/tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload["status"] == "no-changed-tests", payload
+          PY
+
+      - name: Upload discovery receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-plugin-cc-731-discovery
+          path: |
+            /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md
+            /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
