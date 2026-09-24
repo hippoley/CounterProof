@@ -83,11 +83,23 @@ jobs:
           if side == "base-with-head-tests":
               head_root = pathlib.Path(os.environ["COUNTERPROOF_HEAD_ROOT"])
               base_root = pathlib.Path.cwd()
-              source = head_root / "packages/harness/node_modules"
-              destination = base_root / "packages/harness/node_modules"
-              if source.exists() and not destination.exists():
-                  destination.parent.mkdir(parents=True, exist_ok=True)
-                  destination.symlink_to(source, target_is_directory=True)
+
+              # Vercel's pnpm workspace gives multiple sibling packages their own
+              # node_modules trees containing workspace tsconfig/runtime links.
+              # This is Reality-Probe-only: preserve BASE source while reusing
+              # HEAD's installed dependency closure so the old code can reach tests.
+              packages_root = head_root / "packages"
+              if packages_root.is_dir():
+                  for package_dir in packages_root.iterdir():
+                      source = package_dir / "node_modules"
+                      if not source.exists():
+                          continue
+                      relative = source.relative_to(head_root)
+                      destination = base_root / relative
+                      if destination.exists():
+                          continue
+                      destination.parent.mkdir(parents=True, exist_ok=True)
+                      destination.symlink_to(source, target_is_directory=True)
 
           result_file = pathlib.Path(f"/tmp/vercel-ai-17096-{side}.json")
           if result_file.exists():
