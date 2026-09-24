@@ -69,10 +69,12 @@ addopts = "-v --tb=short"
 [tool.setuptools.data-files]
 "share/counterproof/site" = [
     "site/index.html",
+    "site/standalone.html",
     "site/app.js",
     "site/styles.css",
 ]
 "share/counterproof/site/data" = [
     "site/data/evolution_cases.json",
     "site/data/capabilities.json",
+    "site/data/reality_cases.json",
 ]
