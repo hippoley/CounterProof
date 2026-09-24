@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .witness import DEFAULT_SUPPORT_PATTERNS, DEFAULT_TEST_PATTERNS
+
 TEST_PATTERNS = (
     "tests/**",
     "test/**",
@@ -189,6 +191,25 @@ def inspect_proof_integrity(
     changed = _name_status(repo_root, base_ref, head_ref)
 
     for status, path in changed:
+        if (
+            not status.startswith("A")
+            and _matches(path, DEFAULT_SUPPORT_PATTERNS)
+            and not _matches(path, DEFAULT_TEST_PATTERNS)
+        ):
+            findings.append(
+                IntegrityFinding(
+                    code="test-support-changed",
+                    risk="medium",
+                    path=path,
+                    evidence=f"{status} {path}",
+                    note=(
+                        "Existing non-test support used by the test harness changed. "
+                        "Witness replay overlays changed support onto BASE, so this "
+                        "evidence surface is not held fixed."
+                    ),
+                )
+            )
+
         if status.startswith("D") and _matches(path, TEST_PATTERNS):
             findings.append(
                 IntegrityFinding(
