@@ -100,6 +100,11 @@ try {
     throw new Error("Reality Lab did not expose the reality-to-product feedback loop");
   }
 
+  const realityCta = await page.locator(".reality-cta a").getAttribute("href");
+  if (!realityCta || !realityCta.includes("issues/new?template=reality-probe.yml")) {
+    throw new Error("Reality Lab intake does not use the structured Reality Probe issue form");
+  }
+
   const productChangeText = await page.locator(".reality-lab").textContent();
   for (const expected of [
     "Node .test.mjs/.cjs discovery",
