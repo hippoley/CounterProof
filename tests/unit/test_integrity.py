@@ -92,6 +92,59 @@ def test_integrity_flags_deleted_test(tmp_path):
     assert report.high_risk_count >= 1
 
 
+def test_integrity_flags_existing_non_test_support_change(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo)
+    helper = repo / "tests" / "helpers.mjs"
+    helper.write_text("export const mode = 'base';\n", encoding="utf-8")
+    _commit(repo, "add helper")
+    base = _git(repo, "rev-parse", "HEAD")
+
+    helper.write_text("export const mode = 'head';\n", encoding="utf-8")
+    _commit(repo, "change helper")
+
+    report = inspect_proof_integrity(repo, base_ref=base)
+    findings = {item.code: item for item in report.findings}
+
+    assert report.status == "review-required"
+    assert findings["test-support-changed"].path == "tests/helpers.mjs"
+    assert findings["test-support-changed"].risk == "medium"
+
+
+def test_integrity_does_not_flag_new_regression_test_or_new_support(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo)
+    (repo / "tests" / "new_regression.test.mjs").write_text(
+        "import test from 'node:test';\n",
+        encoding="utf-8",
+    )
+    (repo / "tests" / "fixture.json").write_text("{}\n", encoding="utf-8")
+    _commit(repo, "add regression evidence")
+
+    report = inspect_proof_integrity(repo, base_ref=base)
+    codes = {item.code for item in report.findings}
+
+    assert "test-support-changed" not in codes
+
+
+def test_integrity_does_not_flag_modified_test_as_support_change(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo)
+    test_file = repo / "tests" / "test_value.py"
+    test_file.write_text(
+        "from app import VALUE\n\n"
+        "def test_value():\n"
+        "    assert VALUE in {1, 2}\n",
+        encoding="utf-8",
+    )
+    _commit(repo, "tighten regression test")
+
+    report = inspect_proof_integrity(repo, base_ref=base)
+    codes = {item.code for item in report.findings}
+
+    assert "test-support-changed" not in codes
+
+
 def test_integrity_flags_added_skip_marker(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo)
