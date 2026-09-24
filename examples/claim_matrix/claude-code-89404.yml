@@ -1,0 +1,16 @@
+schema_version: 1
+title: "Oracle Alignment Matrix — anthropics/claude-code #89404"
+source_pr: "https://github.com/anthropics/claude-code/pull/89404"
+claims:
+  - id: fixture-validity
+    claim: "Agent fixtures labeled valid by the submitted validator are valid to Claude Code"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: CONTRADICTED
+    oracle_probe: "claude plugin validate rejects fixtures that the submitted validator treats as valid"
+    oracle_source_url: "https://github.com/anthropics/claude-code/pull/89404"
+    note: "Reviewer evidence establishes product-oracle contradiction; CounterProof has not independently replayed BASE/HEAD for this row."
+  - id: multiline-description-regression
+    claim: "The submitted suite protects the multi-line description extraction behavior"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    note: "Reviewer reports the suite stays green when the extraction fix is reverted."

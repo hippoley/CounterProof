@@ -12,6 +12,11 @@ import click
 
 from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
+from .claim_matrix import (
+    claim_matrix_to_dict,
+    load_claim_matrix,
+    render_claim_matrix_markdown,
+)
 from .discriminate import (
     discrimination_to_dict,
     render_discrimination_markdown,
@@ -92,6 +97,39 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("claim-matrix")
+@click.argument("manifest_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--out", "out_file", default="CLAIM_EVIDENCE_MATRIX.md", show_default=True)
+@click.option(
+    "--json-out",
+    default="CLAIM_EVIDENCE_MATRIX.json",
+    show_default=True,
+    type=click.Path(dir_okay=False),
+)
+def claim_matrix(manifest_file: str, out_file: str, json_out: str) -> None:
+    """Render an explicit reviewer claim/evidence manifest.
+
+    Claims are supplied by a human or upstream review system. CounterProof does
+    not infer claims or oracle authority in this command.
+    """
+    try:
+        manifest = load_claim_matrix(Path(manifest_file))
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(out_file).write_text(
+        render_claim_matrix_markdown(manifest),
+        encoding="utf-8",
+    )
+    Path(json_out).write_text(
+        json.dumps(claim_matrix_to_dict(manifest), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    click.echo(f"Claims: {len(manifest.claims)}")
+    click.echo(f"Wrote {out_file}")
+    click.echo(f"Wrote {json_out}")
 
 
 @cli.command("build")

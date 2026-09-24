@@ -1,0 +1,29 @@
+schema_version: 1
+title: "Claim / Evidence Matrix — openai/codex-plugin-cc #731"
+source_pr: "https://github.com/openai/codex-plugin-cc/pull/731"
+base_sha: "db52e28f4d9ded852ab3942cea316258ae4ef346"
+head_sha: "a81f52f9c2c366d7d5e095179d2473a9f7e12798"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/35952687043"
+evidence_digest: "sha256:01c447fbfca700a6dcbfcec2753ca3c55a0760b5b6200a751d44a948bdbf5c97"
+claims:
+  - id: authority-boundary
+    claim: "Cross-CLAUDE_PLUGIN_DATA durable review state must not fail open"
+    tests:
+      - "tests/runtime.test.mjs"
+      - "tests/state.test.mjs"
+    base_result: "FAIL"
+    head_result: "PASS"
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    assertion_excerpt: "The submitted changed tests fail on BASE and pass on HEAD for the authority-boundary behavior."
+    note: "This witness is scoped to the submitted judge; no independent product oracle was run."
+  - id: restrictive-permissions
+    claim: "Durable config should use restrictive file permissions such as 0600"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    note: "No changed test exercises file mode bits."
+  - id: atomic-replacement
+    claim: "Failed or interrupted replacement should preserve the previous valid config"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    note: "No changed test injects replacement/write failure."
