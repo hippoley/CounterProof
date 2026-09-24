@@ -1,0 +1,162 @@
+name: Reality Probe · Metrolist 4097 · structured
+
+on:
+  push:
+    branches:
+      - fix/witness-structured-result-protocol
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counterproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout external PR head
+        uses: actions/checkout@v4
+        with:
+          repository: MetrolistGroup/Metrolist
+          ref: 5cf7319678723c7bc690873045ba3d138591fe4c
+          fetch-depth: 0
+          path: target
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Prepare structured Gradle adapter
+        run: |
+          cat > /tmp/metrolist_witness_adapter.py <<'PY'
+          from __future__ import annotations
+
+          import json
+          import pathlib
+          import shutil
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+
+          paths = [pathlib.PurePosixPath(value) for value in sys.argv[1:]]
+          prefix = pathlib.PurePosixPath("app/src/test/kotlin")
+          classes = []
+          for path in paths:
+              try:
+                  rel = path.relative_to(prefix)
+              except ValueError:
+                  print(f"unsupported changed test path: {path}", file=sys.stderr)
+                  raise SystemExit(2)
+              if rel.suffix != ".kt":
+                  print(f"unsupported changed test extension: {path}", file=sys.stderr)
+                  raise SystemExit(2)
+              classes.append(".".join(rel.with_suffix("").parts))
+
+          results_dir = pathlib.Path("app/build/test-results/testFossDebugUnitTest")
+          shutil.rmtree(results_dir, ignore_errors=True)
+
+          argv = [
+              "./gradlew",
+              "--console=plain",
+              ":app:testFossDebugUnitTest",
+              "--warning-mode",
+              "summary",
+          ]
+          for class_name in classes:
+              argv.extend(["--tests", class_name])
+
+          proc = subprocess.run(argv, text=True, capture_output=True, check=False)
+          print(proc.stdout[-12000:])
+          print(proc.stderr[-12000:], file=sys.stderr)
+
+          if proc.returncode == 0:
+              payload = {
+                  "verdict": "pass",
+                  "metrics": {"gradle_returncode": 0, "changed_test_classes": len(classes)},
+                  "observations": ["Gradle selected-test task completed successfully."],
+              }
+              print("COUNTERPROOF_RESULT=" + json.dumps(payload))
+              raise SystemExit(0)
+
+          xml_files = list(results_dir.glob("*.xml"))
+          tests = failures = errors = 0
+          for xml_file in xml_files:
+              root = ET.parse(xml_file).getroot()
+              tests += int(root.attrib.get("tests", 0))
+              failures += int(root.attrib.get("failures", 0))
+              errors += int(root.attrib.get("errors", 0))
+
+          if xml_files and tests > 0 and (failures > 0 or errors > 0):
+              payload = {
+                  "verdict": "fail",
+                  "metrics": {
+                      "gradle_returncode": proc.returncode,
+                      "tests": tests,
+                      "failures": failures,
+                      "errors": errors,
+                  },
+                  "observations": ["Gradle reached test execution and produced failing JUnit results."],
+              }
+              print("COUNTERPROOF_RESULT=" + json.dumps(payload))
+              raise SystemExit(0)
+
+          print(
+              "Gradle failed before producing failing test results; refusing behavioral verdict.",
+              file=sys.stderr,
+          )
+          raise SystemExit(proc.returncode or 2)
+          PY
+
+      - name: Structured CounterProof replay
+        working-directory: target
+        run: |
+          chmod +x gradlew
+          set +e
+          counterproof witness \
+            --base f579f73bd4060b7997fb5fb9e302f9e3a2404947 \
+            --test-command "python /tmp/metrolist_witness_adapter.py {tests}" \
+            --result-protocol json-v1 \
+            --timeout 1200 \
+            --out /tmp/METROLIST_4097_STRUCTURED.md \
+            --json-out /tmp/METROLIST_4097_STRUCTURED.json \
+            --require-witness
+          rc=$?
+          set -e
+          cat /tmp/METROLIST_4097_STRUCTURED.md
+          cat /tmp/METROLIST_4097_STRUCTURED.json
+          python - <<'PY'
+          import json
+          with open("/tmp/METROLIST_4097_STRUCTURED.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload["status"] == "inconclusive", payload
+          assert payload["witnessed"] is False, payload
+          assert payload["base_with_head_tests"]["semantic_error"], payload
+          PY
+          test "$rc" -ne 0
+
+      - name: Upload structured receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrolist-4097-structured-counterproof
+          path: |
+            /tmp/METROLIST_4097_STRUCTURED.md
+            /tmp/METROLIST_4097_STRUCTURED.json
