@@ -19,6 +19,8 @@
 
 .reality-lab{display:grid;grid-template-columns:90px 1fr;gap:0;padding-top:100px;border-top:1px solid var(--ink);margin-top:100px}.reality-heading{display:flex;justify-content:space-between;gap:48px;align-items:end}.reality-heading h2{font-size:clamp(34px,4.2vw,58px);letter-spacing:-.05em;line-height:1.02;margin:12px 0 0}.reality-heading p{max-width:620px;margin:0;color:#64675e;font-size:14px;line-height:1.65}.reality-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:30px;padding:11px 0;border-block:1px solid var(--rule);font:9px DM Mono,monospace;text-transform:uppercase;color:var(--muted)}.reality-legend span{display:flex;align-items:center;gap:7px}.reality-legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#888}.reality-legend .dot.witnessed{background:var(--green)}.reality-legend .dot.boundary{background:var(--blue)}.reality-legend .dot.review{background:var(--red)}.reality-legend .dot.inconclusive{background:#a37524}.reality-legend .dot.open{background:#8b8d86}.reality-case-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ink);margin-top:24px}.reality-card{padding:24px 24px 24px 0;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);min-height:260px;display:flex;flex-direction:column}.reality-card:nth-child(even){padding-left:24px;border-right:0}.reality-card:nth-child(odd){padding-right:24px}.reality-card-top{display:flex;justify-content:space-between;gap:16px;align-items:center;font:9px DM Mono,monospace;color:var(--muted);text-transform:uppercase}.reality-card-top b{font-weight:500}.reality-card.witnessed .reality-card-top b{color:var(--green)}.reality-card.boundary .reality-card-top b{color:var(--blue)}.reality-card.review .reality-card-top b{color:var(--red)}.reality-card.inconclusive .reality-card-top b{color:#966b1e}.reality-card.open .reality-card-top b{color:var(--muted)}.reality-card h3{font-size:20px;margin:26px 0 8px;letter-spacing:-.025em}.reality-question{font-size:15px;line-height:1.45;margin:0 0 16px}.reality-learned{font-size:12px;line-height:1.6;color:#65685f;margin:0}.reality-links{display:flex;gap:16px;margin-top:auto;padding-top:22px}.reality-links a,.reality-cta a{font:9px DM Mono,monospace;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--ink);padding-bottom:2px}.reality-links a:hover,.reality-cta a:hover{opacity:.55}.reality-cta{margin-top:24px;background:var(--ink);color:var(--paper);padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:28px}.reality-cta .overline{color:#989b92}.reality-cta p{margin:6px 0 0;color:#d0cdc3;font-size:13px}.reality-cta a{color:var(--paper);border-bottom-color:var(--paper);white-space:nowrap}.reality-empty{padding:24px 0;color:var(--muted);font:11px DM Mono,monospace}
 @media(max-width:800px){.reality-lab{grid-template-columns:38px 1fr;padding-top:55px;margin-top:55px}.reality-heading{display:block}.reality-heading p{margin-top:18px}.reality-case-grid{grid-template-columns:1fr}.reality-card,.reality-card:nth-child(even),.reality-card:nth-child(odd){padding:20px 0;border-right:0}.reality-cta{align-items:flex-start;flex-direction:column}.reality-links{flex-wrap:wrap}}
+
+.reality-change{margin-top:18px;padding:11px 12px;border-left:3px solid var(--ink);background:#ebe7dc;color:var(--ink);text-decoration:none;display:flex;flex-direction:column;gap:4px}.reality-change span{font:8px DM Mono,monospace;letter-spacing:.1em;color:var(--muted)}.reality-change b{font-size:11px;font-weight:500}.reality-card.open .reality-change{border-left-color:var(--muted);background:#efede7}.reality-change:hover{background:#e2ded2}
 </style>
 </head>
 <body>
@@ -1132,7 +1134,9 @@ const __COUNTERPROOF_REALITY__={
       "result_class": "witnessed",
       "learned": "The exact changed test passed on HEAD and failed on BASE. Before/after replay is useful when the reviewer uncertainty is genuinely behavioral.",
       "source_url": "https://github.com/rundef/async_rithmic/pull/53",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/11"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/11",
+      "counterproof_change": "Reviewer-ready witness notes",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/9"
     },
     {
       "id": "codex-plugin-cc-731",
@@ -1142,7 +1146,9 @@ const __COUNTERPROOF_REALITY__={
       "result_class": "boundary",
       "learned": "The tests genuinely witness the original fail-open bug, but do not prove later file-permission or atomic-write requirements. Proof must not silently expand its claim.",
       "source_url": "https://github.com/openai/codex-plugin-cc/pull/731",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/13"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/13",
+      "counterproof_change": "Node .test.mjs/.cjs discovery",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/12"
     },
     {
       "id": "codex-plugin-cc-456",
@@ -1152,7 +1158,9 @@ const __COUNTERPROOF_REALITY__={
       "result_class": "review",
       "learned": "Direct reproduction supports the bug, but ordinary Regression Witness is withheld because changed test-support is part of the fix. This case exposed and fixed a CounterProof integrity gap.",
       "source_url": "https://github.com/openai/codex-plugin-cc/pull/456",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/15"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/15",
+      "counterproof_change": "Changed test-support integrity finding",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/14"
     },
     {
       "id": "metrolist-4097",
@@ -1162,7 +1170,9 @@ const __COUNTERPROOF_REALITY__={
       "result_class": "inconclusive",
       "learned": "No. Kotlin test compilation failed before a behavioral assertion ran. This field case forced CounterProof to separate infrastructure failure from behavioral failure.",
       "source_url": "https://github.com/MetrolistGroup/Metrolist/pull/4097",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/17"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/17",
+      "counterproof_change": "Infrastructure failure no longer mints a witness",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/10"
     },
     {
       "id": "claude-code-89404",
@@ -1172,7 +1182,9 @@ const __COUNTERPROOF_REALITY__={
       "result_class": "open",
       "learned": "This is not implemented as a product feature yet. The real case suggests red→green can still be weak when the submitted judge is misaligned with product truth.",
       "source_url": "https://github.com/anthropics/claude-code/pull/89404",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/16"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
+      "counterproof_change": "Not built yet — waiting for reviewer validation",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/issues/16"
     }
   ]
 }
@@ -1183,7 +1195,7 @@ window.fetch=async function(url,options){
   if(u.endsWith("data/evolution_cases.json")) return new Response(JSON.stringify(__COUNTERPROOF_CASES__),{status:200,headers:{"Content-Type":"application/json"}});
   if(u.endsWith("data/capabilities.json")) return new Response(JSON.stringify(__COUNTERPROOF_CAPS__),{status:200,headers:{"Content-Type":"application/json"}});
   if(u.endsWith("data/reality_cases.json")) return new Response(JSON.stringify(__COUNTERPROOF_REALITY__),{status:200,headers:{"Content-Type":"application/json"}});
-  if(u.endsWith("data/skills.json")) return new Response(JSON.stringify({commit:"counterproof-reality-lab"}),{status:200,headers:{"Content-Type":"application/json"}});
+  if(u.endsWith("data/skills.json")) return new Response(JSON.stringify({commit:"counterproof-reality-feedback-loop"}),{status:200,headers:{"Content-Type":"application/json"}});
   if(__nativeFetch) return __nativeFetch(url,options);
   throw new Error("Network unavailable");
 };
@@ -1581,6 +1593,7 @@ function renderRealityCases() {
       '<h3>' + esc(item.external_pr) + '</h3>' +
       '<p class="reality-question">' + esc(item.question) + '</p>' +
       '<p class="reality-learned">' + esc(item.learned) + '</p>' +
+      (item.counterproof_change ? '<a class="reality-change" href="' + esc(item.counterproof_change_url) + '" target="_blank" rel="noopener noreferrer"><span>CHANGED COUNTERPROOF</span><b>' + esc(item.counterproof_change) + ' ↗</b></a>' : '') +
       '<div class="reality-links">' +
         '<a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">SOURCE PR ↗</a>' +
         '<a href="' + esc(item.probe_url) + '" target="_blank" rel="noopener noreferrer">REALITY PROBE ↗</a>' +
