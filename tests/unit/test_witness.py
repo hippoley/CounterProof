@@ -646,3 +646,29 @@ def test_inconclusive_review_note_never_claims_proof(tmp_path):
     assert "this proves the tested before/after regression delta" not in note
     assert "BASE behavioral verdict: `inconclusive`" in note
     assert "Base code + PR tests: **INCONCLUSIVE**" in report
+
+
+def test_json_v1_head_timeout_is_inconclusive(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    adapter = tmp_path / "adapter.py"
+    command = _write_json_v1_adapter(
+        adapter,
+        "import time\n"
+        "time.sleep(2)\n",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=command,
+        timeout_seconds=0.05,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "inconclusive"
+    assert witness.head is not None
+    assert witness.head.timed_out is True
+    assert witness.head.semantic_error is not None
+    assert "timed out" in witness.note
