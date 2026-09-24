@@ -14,10 +14,6 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_TEST_PATTERNS = (
-    "tests/**",
-    "test/**",
-    "spec/**",
-    "src/test/**",
     "**/test_*.py",
     "**/*_test.py",
     "**/*_test.go",
