@@ -56,7 +56,7 @@ jobs:
           import subprocess
           import sys
 
-          argv = ["node", "--test", *sys.argv[1:]]
+          argv = ["node", "--test", "--test-reporter=tap", *sys.argv[1:]]
           proc = subprocess.run(argv, text=True, capture_output=True, check=False)
           print(proc.stdout)
           print(proc.stderr, file=sys.stderr)
