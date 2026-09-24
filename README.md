@@ -6,15 +6,15 @@
 
 **Behavioral proof for agent-generated pull requests.**
 
-[![CI](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/SkillFactory/actions/workflows/ci.yml)
+[![CI](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-black.svg)](LICENSE)
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#drop-it-into-a-pr) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
+### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#drop-it-into-a-pr) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
 
-[![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)
+[![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
 **Click the panel. Break the proof. Change the judge. See what survives.**
 
@@ -50,7 +50,7 @@ into:
 
 ## See it before you install it
 
-### **[Launch the interactive Proof Lab →](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)**
+### **[Launch the interactive Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
 
 The browser experience lets you play with different evidence situations instead of reading another architecture diagram.
 
@@ -78,7 +78,7 @@ The browser scenarios are fixtures. **Real evidence comes from the CLI / GitHub 
 
 ---
 
-[![Counterproof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)
+[![Counterproof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
 > **Click the walkthrough to open the live Proof Lab.**
 
@@ -239,7 +239,7 @@ It does not care who wrote the patch.
 ## Run the playground locally
 
 ```bash
-python -m pip install "git+https://github.com/hippoley/SkillFactory.git"
+python -m pip install "git+https://github.com/hippoley/CounterProof.git"
 
 counterproof demo
 ```
@@ -252,7 +252,7 @@ http://127.0.0.1:8765
 
 Or just use the public version:
 
-### **[Open Live Proof Lab →](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)**
+### **[Open Live Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
 
 ---
 
@@ -457,7 +457,7 @@ Can you make Counterproof:
 
 If yes, that is not an edge case we want to hide.
 
-**[Open a Counterexample issue →](https://github.com/hippoley/SkillFactory/issues/new?template=counterexample.yml)**
+**[Open a Counterexample issue →](https://github.com/hippoley/CounterProof/issues/new?template=counterexample.yml)**
 
 A great report gives us:
 
@@ -494,6 +494,6 @@ Apache-2.0.
 
 *Claim nothing you can't replay.*
 
-### **[▶ Open the Live Proof Lab](https://raw.githack.com/hippoley/SkillFactory/main/site/standalone.html)**
+### **[▶ Open the Live Proof Lab](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
 
 </div>
