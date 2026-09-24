@@ -1,0 +1,41 @@
+schema_version: 1
+title: "Claim / Evidence Matrix — crewAIInc/crewAI #7721"
+source_pr: "https://github.com/crewAIInc/crewAI/pull/7721"
+base_sha: "bdd1bc62007fcee732c912f0daa093e1f760f3fc"
+head_sha: "cf5ca5432f0d473c239194899a29d7c992ca7bae"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/35981324820"
+evidence_digest: "sha256:b411b35132a778dfef87483b16643c34da575354c8c7e333a759f1574d505da8"
+claims:
+  - id: env-var-noninteractive-sharing
+    claim: "Non-interactive sharing with CREWAI_TRACING_ENABLED=true should share instead of silently discarding traces"
+    tests:
+      - "lib/crewai/tests/tracing/test_tracing.py::TestTraceListenerSetup::test_a_process_with_no_terminal_answers_with_the_tracing_switch[tracing was turned on: share it]"
+    base_result: "FAIL"
+    head_result: "PASS"
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    assertion_excerpt: "BASE: assert False is True, where False = prompt_user_for_trace_viewing(sharing=True). HEAD: the changed test passes."
+    note: "Exact changed test is a genuine regression witness; no independent product oracle was run."
+  - id: programmatic-tracing-context
+    claim: "Programmatic tracing=True should authorize non-interactive sharing"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: CONTRADICTED
+    oracle_probe: "Set tracing context True with no env override and persisted consent False; prompt_user_for_trace_viewing(sharing=True) returned False on the PR HEAD."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/35981324820"
+    assertion_excerpt: "expected=true, actual=false"
+    note: "Independent path probe contradicts this adjacent claim; it is not part of the submitted changed-test witness."
+  - id: explicit-boolean-persisted-consent
+    claim: "Explicit persisted Boolean trace_consent=True enables tracing"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: ALIGNED
+    oracle_probe: "Direct should_enable_tracing() probe with trace_consent=True returned True."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/35981324820"
+    note: "Function-level oracle probe only; no submitted regression witness for this claim."
+  - id: malformed-persisted-consent
+    claim: "Malformed or non-Boolean persisted consent must not enable tracing"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: CONTRADICTED
+    oracle_probe: "Direct should_enable_tracing() probes returned True for trace_consent=None and for the string 'false'."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/35981324820"
+    assertion_excerpt: "None -> True; 'false' -> True; True -> True; False -> False"
+    note: "This is a direct current-HEAD contradiction of the safety expectation, not a BASE/HEAD regression witness."
