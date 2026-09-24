@@ -1,0 +1,31 @@
+schema_version: 1
+title: "Claim / Evidence Matrix — topoteretes/cognee #5161"
+source_pr: "https://github.com/topoteretes/cognee/pull/5161"
+base_sha: "7c1d5a36ca1c5b6ac8e88ed1c35ee6da84589b02"
+head_sha: "2f61edbec0047a627f77bbf04e942aaf4f5a582b"
+claims:
+  - id: shared-vector-db-refusal
+    claim: "PGVector prune refuses to drop a shared relational database when the vector adapter does not own the engine"
+    tests:
+      - "cognee/tests/unit/infrastructure/databases/vector/test_pgvector_prune.py::test_prune_refuses_to_drop_a_shared_relational_database"
+    base_result: null
+    head_result: "PASS in PR test run"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    assertion_excerpt: "HEAD test asserts SharedDatabasePruneError and that metadata.clear/delete_database are not called."
+    note: "The submitted test supports the local adapter guard, but CounterProof has not independently replayed BASE vs HEAD for this row."
+  - id: no-partial-prune-before-refusal
+    claim: "A refused vector-only prune leaves the rest of the system untouched before the error propagates"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: CONTRADICTED
+    oracle_probe: "Human reviewer reproduced graph deletion before SharedDatabasePruneError propagates when graph=True, vector=True, metadata=False."
+    oracle_source_url: "https://github.com/topoteretes/cognee/pull/5161#discussion_r4085018739"
+    assertion_excerpt: "HEAD calls graph_engine.delete_graph() before vector_engine.prune(); reviewer reports the graph is gone when the vector refusal is raised."
+    note: "Existing changed test uses graph=False, so it does not exercise this end-to-end failure mode."
+  - id: upgrade-data-location
+    claim: "Changing engine ownership for distinct vector DB names is safe for existing deployments"
+    submitted_test_evidence: UNPROVEN
+    oracle_alignment: UNVERIFIED
+    oracle_probe: null
+    oracle_source_url: "https://github.com/topoteretes/cognee/pull/5161#pullrequestreview-5294033080"
+    note: "Reviewer identifies upgrade scenarios where existing vectors can remain in the relational DB or the newly selected vector DB may not exist; no migration/compatibility proof is present."
