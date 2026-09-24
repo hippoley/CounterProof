@@ -14,9 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout CounterProof
+      - name: Checkout CounterProof candidate
         uses: actions/checkout@v4
         with:
+          repository: hippoley/CounterProof
+          ref: fix/integrity-test-support-mutation
           path: counterproof
           persist-credentials: false
 
@@ -107,6 +109,18 @@ jobs:
             --json-out /tmp/PROOF_INTEGRITY_456.json
           cat /tmp/PROOF_INTEGRITY_456.md
           cat /tmp/PROOF_INTEGRITY_456.json
+          python - <<'PY'
+          import json
+          with open("/tmp/PROOF_INTEGRITY_456.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload["status"] == "review-required", payload
+          findings = payload["findings"]
+          assert any(
+              item["code"] == "test-support-changed"
+              and item["path"] == "tests/helpers.mjs"
+              for item in findings
+          ), payload
+          PY
 
       - name: Upload judge-mutation receipt
         uses: actions/upload-artifact@v4
