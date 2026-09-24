@@ -9,7 +9,9 @@
       "result_class": "witnessed",
       "learned": "The exact changed test passed on HEAD and failed on BASE. Before/after replay is useful when the reviewer uncertainty is genuinely behavioral.",
       "source_url": "https://github.com/rundef/async_rithmic/pull/53",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/11"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/11",
+      "counterproof_change": "Reviewer-ready witness notes",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/9"
     },
     {
       "id": "codex-plugin-cc-731",
@@ -19,7 +21,9 @@
       "result_class": "boundary",
       "learned": "The tests genuinely witness the original fail-open bug, but do not prove later file-permission or atomic-write requirements. Proof must not silently expand its claim.",
       "source_url": "https://github.com/openai/codex-plugin-cc/pull/731",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/13"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/13",
+      "counterproof_change": "Node .test.mjs/.cjs discovery",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/12"
     },
     {
       "id": "codex-plugin-cc-456",
@@ -29,7 +33,9 @@
       "result_class": "review",
       "learned": "Direct reproduction supports the bug, but ordinary Regression Witness is withheld because changed test-support is part of the fix. This case exposed and fixed a CounterProof integrity gap.",
       "source_url": "https://github.com/openai/codex-plugin-cc/pull/456",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/15"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/15",
+      "counterproof_change": "Changed test-support integrity finding",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/14"
     },
     {
       "id": "metrolist-4097",
@@ -39,7 +45,9 @@
       "result_class": "inconclusive",
       "learned": "No. Kotlin test compilation failed before a behavioral assertion ran. This field case forced CounterProof to separate infrastructure failure from behavioral failure.",
       "source_url": "https://github.com/MetrolistGroup/Metrolist/pull/4097",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/17"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/17",
+      "counterproof_change": "Infrastructure failure no longer mints a witness",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/10"
     },
     {
       "id": "claude-code-89404",
@@ -49,7 +57,9 @@
       "result_class": "open",
       "learned": "This is not implemented as a product feature yet. The real case suggests red→green can still be weak when the submitted judge is misaligned with product truth.",
       "source_url": "https://github.com/anthropics/claude-code/pull/89404",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/16"
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
+      "counterproof_change": "Not built yet — waiting for reviewer validation",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/issues/16"
     }
   ]
 }
