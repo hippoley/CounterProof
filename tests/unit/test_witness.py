@@ -252,7 +252,7 @@ def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
     )
     assert "fixture 'expected_value' not found" not in baseline_text
     payload = witness_to_dict(witness)
-    assert payload["schema_version"] == 2
+    assert payload["schema_version"] == 3
     assert "tests/conftest.py" in payload["support_files"]
     assert "Test-support closure" in render_witness_markdown(witness)
 
@@ -400,3 +400,15 @@ def test_precise_witness_serializes_mode(tmp_path):
     assert witness.mode == "precise"
     assert payload["mode"] == "precise"
     assert payload["witnessed"] is True
+    assert payload["base_sha"] == base
+    assert payload["head_sha"] == _git(repo, "rev-parse", "HEAD")
+    assert len(payload["evidence_digest_sha256"]) == 64
+
+    report = render_witness_markdown(witness)
+    assert "### Execution receipt" in report
+    assert f"Head commit: `{payload['head_sha']}`" in report
+    assert f"Base commit: `{base}`" in report
+    assert "HEAD exit: `0`" in report
+    assert "BASE exit: `1`" in report
+    assert f"sha256:{payload['evidence_digest_sha256']}" in report
+    assert "Raw stdout/stderr tails are preserved in the JSON artifact." in report
