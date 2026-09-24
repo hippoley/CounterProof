@@ -60,8 +60,36 @@ jobs:
           /tmp/counterproof-clean/bin/pip install /tmp/counterproof-wheel/counterproof-*.whl
           /tmp/counterproof-clean/bin/counterproof --help
           /tmp/counterproof-clean/bin/counterproof audit --json-output
+          /tmp/counterproof-clean/bin/counterproof doctor
           # Legacy CLI alias remains available for existing integrations.
           /tmp/counterproof-clean/bin/evopr --help
+
+      - name: Run packaged onboarding
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-init-fixture
+          mkdir -p /tmp/counterproof-init-fixture/tests
+          cat > /tmp/counterproof-init-fixture/pytest.ini <<'INI'
+          [pytest]
+          INI
+
+          /tmp/counterproof-clean/bin/counterproof init \
+            --repo /tmp/counterproof-init-fixture \
+            --action-ref main \
+            --strict
+
+          workflow=/tmp/counterproof-init-fixture/.github/workflows/counterproof.yml
+          test -f "$workflow"
+          grep -q 'uses: hippoley/CounterProof@main' "$workflow"
+          grep -q 'python -m pytest -q {tests}' "$workflow"
+          grep -q 'require-witness: "true"' "$workflow"
+          grep -q 'require-clean-integrity: "true"' "$workflow"
+
+          if /tmp/counterproof-clean/bin/counterproof init \
+            --repo /tmp/counterproof-init-fixture; then
+            echo "Expected init to refuse overwriting an existing workflow"
+            exit 1
+          fi
 
       - name: Run packaged Regression Witness
         run: |

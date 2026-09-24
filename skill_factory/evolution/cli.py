@@ -17,6 +17,7 @@ from .discriminate import (
     render_discrimination_markdown,
     run_discrimination_manifest,
 )
+from .doctor import doctor_json, render_doctor, run_doctor
 from .integrity import (
     inspect_proof_integrity,
     render_integrity_markdown,
@@ -30,6 +31,7 @@ from .models import (
     ProbeSpec,
     ReplayResult,
 )
+from .onboarding import init_github
 from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
@@ -549,6 +551,149 @@ def verify_receipt(
     )
 
 
+def _run_init(
+    *,
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    force: bool,
+    strict: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    effective_witness = strict or require_witness
+    effective_integrity = strict or require_clean_integrity
+    try:
+        destination, detection = init_github(
+            Path(repo_dir),
+            test_command=test_command,
+            action_ref=action_ref,
+            force=force,
+            require_witness=effective_witness,
+            require_clean_integrity=effective_integrity,
+        )
+    except (ValueError, FileExistsError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    command = detection.command if detection is not None else (test_command or "")
+    mode = "precise" if "{tests}" in command else "suite"
+
+    if detection is not None:
+        click.echo(
+            f"Detected {detection.runner} ({detection.confidence} confidence): "
+            f"{detection.command}"
+        )
+        if detection.evidence:
+            click.echo("Evidence: " + ", ".join(detection.evidence))
+    else:
+        click.echo(f"Using explicit test command: {test_command}")
+
+    click.echo(f"Evidence mode: {mode}")
+    click.echo(f"Action ref: {action_ref}")
+    if strict:
+        click.echo("Gate mode: strict (exact witness + clean integrity required)")
+    else:
+        click.echo(
+            "Gate mode: advisory"
+            if not effective_witness and not effective_integrity
+            else "Gate mode: custom"
+        )
+    click.echo(f"Wrote {destination}")
+    click.echo("Next: review and commit the generated workflow.")
+
+
+@cli.command("init")
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option(
+    "--test-command",
+    default=None,
+    help="Override runner detection. Use {tests} for precise changed-test replay.",
+)
+@click.option(
+    "--action-ref",
+    default="main",
+    show_default=True,
+    help="CounterProof Action ref, e.g. main, a future tag, or a commit SHA.",
+)
+@click.option("--force", is_flag=True, help="Replace an existing Counterproof workflow.")
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Require an exact Regression Witness and clean Proof Integrity.",
+)
+@click.option(
+    "--require-witness",
+    is_flag=True,
+    help="Require only the exact Regression Witness gate.",
+)
+@click.option(
+    "--require-clean-integrity",
+    is_flag=True,
+    help="Require only a clean Proof Integrity result.",
+)
+def init_cmd(
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    force: bool,
+    strict: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    """Install a Counterproof pull-request workflow into a repository."""
+    _run_init(
+        repo_dir=repo_dir,
+        test_command=test_command,
+        action_ref=action_ref,
+        force=force,
+        strict=strict,
+        require_witness=require_witness,
+        require_clean_integrity=require_clean_integrity,
+    )
+
+
+@cli.command("init-github", hidden=True)
+@click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option("--test-command", default=None)
+@click.option("--action-ref", default="main", show_default=True)
+@click.option("--force", is_flag=True)
+@click.option("--strict", is_flag=True)
+@click.option("--require-witness", is_flag=True)
+@click.option("--require-clean-integrity", is_flag=True)
+def init_github_cmd(
+    repo_dir: str,
+    test_command: str | None,
+    action_ref: str,
+    force: bool,
+    strict: bool,
+    require_witness: bool,
+    require_clean_integrity: bool,
+) -> None:
+    """Compatibility alias for counterproof init."""
+    _run_init(
+        repo_dir=repo_dir,
+        test_command=test_command,
+        action_ref=action_ref,
+        force=force,
+        strict=strict,
+        require_witness=require_witness,
+        require_clean_integrity=require_clean_integrity,
+    )
+
+
+@cli.command("doctor")
+@click.option("--json-output", is_flag=True, help="Emit machine-readable JSON.")
+def doctor(json_output: bool) -> None:
+    """Run a local real-Git self-test of Counterproof's core mechanics."""
+    report = run_doctor()
+    if json_output:
+        click.echo(doctor_json(report))
+    else:
+        click.echo(render_doctor(report))
+    if not report.ok:
+        raise click.ClickException("Counterproof self-test failed")
+
+
 @cli.command("integrity")
 @click.option(
     "--base",
@@ -609,7 +754,7 @@ def integrity(
 @click.option(
     "--test-command",
     required=True,
-    help="Command used for changed tests. Use {tests} where paths should be inserted.",
+    help="Test command. Use {tests} for precise replay; omit it for suite-level evidence.",
 )
 @click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
 @click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
@@ -646,6 +791,7 @@ def witness(
     write_witness_json(Path(json_out), result)
 
     click.echo(f"Regression witness: {result.status}")
+    click.echo(f"Evidence mode: {result.mode}")
     click.echo(f"Changed tests: {len(result.tests)}")
     click.echo(f"Wrote {out_file}")
     click.echo(f"Wrote {json_out}")
