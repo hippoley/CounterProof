@@ -1,0 +1,160 @@
+name: Reality Probe · Vercel AI 17096
+
+on:
+  push:
+    branches:
+      - probe/vercel-ai-17096
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counterproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout Vercel AI PR head
+        uses: actions/checkout@v4
+        with:
+          repository: vercel/ai
+          ref: da4b91f82c8ccb3eb15ed5abe5217607539cc504
+          fetch-depth: 0
+          path: target
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+          run_install: false
+
+      - name: Install CounterProof
+        run: python -m pip install ./counterproof
+
+      - name: Install harness package dependency closure
+        working-directory: target
+        run: pnpm install --frozen-lockfile --filter @ai-sdk/harness-claude-code...
+
+      - name: Prepare structured Vitest adapter
+        run: |
+          cat > /tmp/vercel_harness_vitest_adapter.py <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import sys
+
+          package_prefix = pathlib.PurePosixPath("packages/harness-claude-code")
+          tests = []
+          for raw in sys.argv[1:]:
+              path = pathlib.PurePosixPath(raw)
+              try:
+                  rel = path.relative_to(package_prefix)
+              except ValueError:
+                  print(f"unsupported changed test outside harness package: {raw}", file=sys.stderr)
+                  raise SystemExit(2)
+              tests.append(str(rel))
+
+          side = os.environ.get("COUNTERPROOF_WITNESS_SIDE", "unknown")
+          result_file = pathlib.Path(f"/tmp/vercel-ai-17096-{side}.json")
+          if result_file.exists():
+              result_file.unlink()
+
+          argv = [
+              "pnpm",
+              "exec",
+              "vitest",
+              "--config",
+              "vitest.node.config.js",
+              "--run",
+              *tests,
+              "--reporter=json",
+              f"--outputFile={result_file}",
+          ]
+          proc = subprocess.run(
+              argv,
+              cwd="packages/harness-claude-code",
+              text=True,
+              capture_output=True,
+              check=False,
+          )
+          print(proc.stdout)
+          print(proc.stderr, file=sys.stderr)
+
+          if not result_file.exists():
+              print("Vitest produced no structured result file.", file=sys.stderr)
+              raise SystemExit(proc.returncode or 2)
+
+          payload = json.loads(result_file.read_text(encoding="utf-8"))
+          failed = int(payload.get("numFailedTests", 0))
+          passed = int(payload.get("numPassedTests", 0))
+          total = int(payload.get("numTotalTests", passed + failed))
+
+          if failed > 0:
+              verdict = "fail"
+          elif proc.returncode == 0 and total > 0:
+              verdict = "pass"
+          else:
+              print(
+                  f"Vitest did not yield behavioral evidence: "
+                  f"rc={proc.returncode} total={total} failed={failed}",
+                  file=sys.stderr,
+              )
+              raise SystemExit(proc.returncode or 2)
+
+          print("COUNTERPROOF_RESULT=" + json.dumps({
+              "verdict": verdict,
+              "metrics": {
+                  "returncode": proc.returncode,
+                  "total": total,
+                  "passed": passed,
+                  "failed": failed,
+              },
+              "observations": ["Package-local Vitest JSON reached test execution."],
+          }))
+          raise SystemExit(0)
+          PY
+
+      - name: Replay changed harness tests
+        working-directory: target
+        run: |
+          counterproof witness \
+            --base 66b71512135a0246a9306e97c8847a5d0bcc57ae \
+            --test-command "python /tmp/vercel_harness_vitest_adapter.py {tests}" \
+            --result-protocol json-v1 \
+            --timeout 600 \
+            --out /tmp/VERCEL_AI_17096_WITNESS.md \
+            --json-out /tmp/VERCEL_AI_17096_WITNESS.json
+          cat /tmp/VERCEL_AI_17096_WITNESS.md
+          cat /tmp/VERCEL_AI_17096_WITNESS.json
+          echo "=== HEAD VITEST JSON ==="
+          cat /tmp/vercel-ai-17096-head.json
+          echo "=== BASE VITEST JSON ==="
+          cat /tmp/vercel-ai-17096-base-with-head-tests.json
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-ai-17096-counterproof
+          path: |
+            /tmp/VERCEL_AI_17096_WITNESS.md
+            /tmp/VERCEL_AI_17096_WITNESS.json
+            /tmp/vercel-ai-17096-*.json
+          if-no-files-found: warn
