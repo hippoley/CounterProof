@@ -18,6 +18,10 @@ inputs:
     description: "Per-side test timeout in seconds."
     required: false
     default: "300"
+  result-protocol:
+    description: "exit-code or json-v1. Use json-v1 when build/test wrappers can fail before tests execute."
+    required: false
+    default: "exit-code"
   require-witness:
     description: "Fail the Action unless a real regression witness is produced."
     required: false
@@ -104,6 +108,7 @@ runs:
         BASE_REF: ${{ steps.base.outputs.base }}
         TEST_COMMAND: ${{ inputs.test-command }}
         TIMEOUT_SECONDS: ${{ inputs.timeout }}
+        RESULT_PROTOCOL: ${{ inputs.result-protocol }}
         REQUIRE_WITNESS: ${{ inputs.require-witness }}
       run: |
         set -euo pipefail
@@ -114,6 +119,7 @@ runs:
           --base "$BASE_REF"
           --test-command "$TEST_COMMAND"
           --timeout "$TIMEOUT_SECONDS"
+          --result-protocol "$RESULT_PROTOCOL"
           --out .counterproof/out/REGRESSION_WITNESS.md
           --json-out .counterproof/out/REGRESSION_WITNESS.json
         )
