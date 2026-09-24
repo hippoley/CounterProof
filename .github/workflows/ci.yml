@@ -345,6 +345,8 @@ jobs:
       - name: Serve packaged interactive demo
         run: |
           test -f /tmp/counterproof-clean/share/counterproof/site/index.html
+          test -f /tmp/counterproof-clean/share/counterproof/site/standalone.html
+          test -f /tmp/counterproof-clean/share/counterproof/site/data/reality_cases.json
           cd /tmp
           /tmp/counterproof-clean/bin/counterproof demo --port 8877 >/tmp/counterproof-demo.log 2>&1 &
           echo $! >/tmp/counterproof-demo.pid
@@ -353,6 +355,7 @@ jobs:
             sleep 0.5
           done
           curl -fsS http://127.0.0.1:8877/data/capabilities.json | grep -q "command-replay"
+          curl -fsS http://127.0.0.1:8877/data/reality_cases.json | grep -q "async-rithmic-53"
           kill "$(cat /tmp/counterproof-demo.pid)"
 
   validate-example-skills:
