@@ -67,6 +67,34 @@ try {
     throw new Error("Regression Witness hero is missing the before/after proof");
   }
 
+  // Reality Lab must expose real external PR cases and keep their proof boundaries visible.
+  await page.waitForSelector(".reality-card");
+  const realityCards = await page.locator(".reality-card").count();
+  if (realityCards < 5) {
+    throw new Error(`expected at least 5 Reality Lab cases, got ${realityCards}`);
+  }
+
+  const realityText = await page.locator(".reality-lab").textContent();
+  for (const expected of [
+    "rundef/async_rithmic#53",
+    "openai/codex-plugin-cc#731",
+    "openai/codex-plugin-cc#456",
+    "MetrolistGroup/Metrolist#4097",
+    "anthropics/claude-code#89404",
+    "WITNESSED",
+    "INCONCLUSIVE",
+    "OPEN PROBE",
+  ]) {
+    if (!realityText.includes(expected)) {
+      throw new Error(`Reality Lab is missing ${expected}`);
+    }
+  }
+
+  const sourceLinks = await page.locator('.reality-links a').count();
+  if (sourceLinks < 10) {
+    throw new Error("Reality Lab did not render both source and probe links");
+  }
+
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
@@ -78,7 +106,7 @@ try {
     throw new Error("capability truth table is missing");
   }
 
-  console.log("EvoPR browser smoke: PASS");
+  console.log("CounterProof browser smoke: PASS");
 } finally {
   await browser.close();
 }
