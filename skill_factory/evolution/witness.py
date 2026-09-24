@@ -623,11 +623,15 @@ def render_witness_review_note(
     lines.extend(
         [
             "",
-            "> Scope: this proves the tested before/after regression delta. "
-            "It does not independently prove every claimed root cause or production incident.",
+            (
+                "> Scope: this proves the tested before/after regression delta. "
+                "It does not independently prove every claimed root cause or production incident."
+            ),
             "",
-            "Would this evidence materially help review this change? "
-            "If not, what evidence is still missing?",
+            (
+                "Would this evidence materially help review this change? "
+                "If not, what evidence is still missing?"
+            ),
         ]
     )
     return "\n".join(lines) + "\n"
