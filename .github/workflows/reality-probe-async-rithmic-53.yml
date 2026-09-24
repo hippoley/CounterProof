@@ -38,6 +38,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ./counterproof
           python -m pip install -e './target[test]'
+          python -m pip install pytest-asyncio
 
       - name: Run CounterProof against external Claude-assisted PR
         working-directory: target
