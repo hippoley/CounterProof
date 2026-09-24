@@ -232,7 +232,7 @@
             <span class="overline">HAVE A PR YOU DON'T TRUST?</span>
             <p>Drop the PR and the claim you do not trust. No CounterProof install required.</p>
           </div>
-          <a href="https://github.com/hippoley/CounterProof/issues/17" target="_blank" rel="noopener noreferrer">BRING A REAL PR →</a>
+          <a href="https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml" target="_blank" rel="noopener noreferrer">BRING A REAL PR →</a>
         </div>
       </div>
     </section>
@@ -1195,7 +1195,7 @@ window.fetch=async function(url,options){
   if(u.endsWith("data/evolution_cases.json")) return new Response(JSON.stringify(__COUNTERPROOF_CASES__),{status:200,headers:{"Content-Type":"application/json"}});
   if(u.endsWith("data/capabilities.json")) return new Response(JSON.stringify(__COUNTERPROOF_CAPS__),{status:200,headers:{"Content-Type":"application/json"}});
   if(u.endsWith("data/reality_cases.json")) return new Response(JSON.stringify(__COUNTERPROOF_REALITY__),{status:200,headers:{"Content-Type":"application/json"}});
-  if(u.endsWith("data/skills.json")) return new Response(JSON.stringify({commit:"counterproof-reality-feedback-loop"}),{status:200,headers:{"Content-Type":"application/json"}});
+  if(u.endsWith("data/skills.json")) return new Response(JSON.stringify({commit:"counterproof-reality-intake"}),{status:200,headers:{"Content-Type":"application/json"}});
   if(__nativeFetch) return __nativeFetch(url,options);
   throw new Error("Network unavailable");
 };
