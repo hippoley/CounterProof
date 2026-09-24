@@ -1,7 +1,9 @@
 """Reviewer-facing claim/evidence matrices with mechanical proof semantics."""
 from __future__ import annotations
 
+import ipaddress
 import json
+import re
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,43 @@ class OverallClaim(str, Enum):
     CONTRADICTED = "CONTRADICTED"
     WITNESSED_SUBMITTED_JUDGE = "WITNESSED (submitted judge)"
     UNPROVEN = "UNPROVEN"
+
+
+# RFC 3986 absolute http(s) URI with a non-empty host.
+_UNRESERVED = r"A-Za-z0-9\-._~"
+_SUB_DELIMS = r"!$&'()*+,;="
+_PCT_ENCODED = r"%[0-9A-Fa-f]{2}"
+_PCHAR = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}:@]|{_PCT_ENCODED})"
+_HTTP_URL = re.compile(
+    r"[Hh][Tt][Tt][Pp][Ss]?://"
+    rf"(?:(?:[{_UNRESERVED}{_SUB_DELIMS}:]|{_PCT_ENCODED})*@)?"
+    rf"(?P<host>\[[^\]]*\]|(?:[{_UNRESERVED}{_SUB_DELIMS}]|{_PCT_ENCODED})+)"
+    r"(?::(?P<port>[0-9]*))?"
+    rf"(?:/{_PCHAR}*)*"
+    rf"(?:\?(?:{_PCHAR}|[/?])*)?"
+    rf"(?:#(?:{_PCHAR}|[/?])*)?"
+)
+_IPV_FUTURE = re.compile(rf"[Vv][0-9A-Fa-f]+\.[{_UNRESERVED}{_SUB_DELIMS}:]+")
+
+
+def _is_absolute_http_url(value: str | None) -> bool:
+    match = _HTTP_URL.fullmatch(value) if value else None
+    if match is None:
+        return False
+    host, port_digits = match.group("host"), (match.group("port") or "").lstrip("0")
+    if len(port_digits) > 5 or int(port_digits or "0") > 65535:
+        return False
+    if host.startswith("["):
+        literal = host[1:-1]
+        if _IPV_FUTURE.fullmatch(literal):
+            return True
+        if "%" in literal:
+            return False
+        try:
+            ipaddress.IPv6Address(literal)
+        except ValueError:
+            return False
+    return True
 
 
 class ClaimEvidence(BaseModel):
@@ -58,13 +97,24 @@ class ClaimEvidence(BaseModel):
                     "WITNESSED / NOT_WITNESSED claims require BASE and HEAD results"
                 )
 
+        if self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED and (
+            self.base_result != "FAIL" or self.head_result != "PASS"
+        ):
+            raise ValueError("WITNESSED claims require BASE=FAIL and HEAD=PASS")
+
         if self.oracle_alignment in {
             OracleAlignment.ALIGNED,
             OracleAlignment.CONTRADICTED,
-        } and not self.oracle_probe:
-            raise ValueError(
-                "ALIGNED / CONTRADICTED oracle status requires an explicit oracle_probe"
-            )
+        }:
+            if not self.oracle_probe or not self.oracle_probe.strip():
+                raise ValueError(
+                    "ALIGNED / CONTRADICTED oracle status requires an explicit oracle_probe"
+                )
+            if not _is_absolute_http_url(self.oracle_source_url):
+                raise ValueError(
+                    "ALIGNED / CONTRADICTED oracle status requires oracle_source_url "
+                    "as an absolute http(s) URL with a host"
+                )
         return self
 
     @property
