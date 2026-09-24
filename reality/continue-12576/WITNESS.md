@@ -18,6 +18,28 @@ The PR's changed Vitest file passes on the PR head and fails when the exact same
 - BASE + same changed test: behavioral **FAIL** — 4/5 passed, 1 failed
 - Evidence digest: `sha256:23b69b350eb966d65faf9616af31eb6c961a765e4db2672083cde7ca336b6866`
 
+## Assertion-level result
+
+The failing BASE assertion is the PR's primary migration case:
+
+`doLoadConfig tabAutocompleteModel migration should transform a JSON-style tabAutocompleteModel object into a roles-based model entry`
+
+On BASE, Vitest reports:
+
+```text
+expected 'name: My Config ...' not to contain 'tabAutocompleteModel'
+```
+
+The other four assertions in the changed test file still pass on BASE.
+
+A second clean replay reproduced the same semantic result:
+
+- HEAD: 5/5 passed
+- BASE + same changed test: 4/5 passed, 1 failed
+
+Second runner:
+https://github.com/hippoley/CounterProof/actions/runs/35975618130
+
 ## What this establishes
 
 The regression coverage added by #12576 is not merely green on the proposed implementation.
