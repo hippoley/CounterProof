@@ -95,6 +95,23 @@ try {
     throw new Error("Reality Lab did not render both source and probe links");
   }
 
+  const productChanges = await page.locator('.reality-change').count();
+  if (productChanges < 5) {
+    throw new Error("Reality Lab did not expose the reality-to-product feedback loop");
+  }
+
+  const productChangeText = await page.locator(".reality-lab").textContent();
+  for (const expected of [
+    "Node .test.mjs/.cjs discovery",
+    "Changed test-support integrity finding",
+    "Infrastructure failure no longer mints a witness",
+    "Not built yet — waiting for reviewer validation",
+  ]) {
+    if (!productChangeText.includes(expected)) {
+      throw new Error(`Reality Lab is missing product change: ${expected}`);
+    }
+  }
+
   // The capability truth table must be visible and honest.
   await page.waitForSelector(".capability-row");
   const pageText = await page.locator("body").textContent();
