@@ -36,10 +36,18 @@ DEFAULT_TEST_PATTERNS = (
     "**/*.test.ts",
     "**/*.test.jsx",
     "**/*.test.tsx",
+    "**/*.test.mjs",
+    "**/*.test.cjs",
+    "**/*.test.mts",
+    "**/*.test.cts",
     "**/*.spec.js",
     "**/*.spec.ts",
     "**/*.spec.jsx",
     "**/*.spec.tsx",
+    "**/*.spec.mjs",
+    "**/*.spec.cjs",
+    "**/*.spec.mts",
+    "**/*.spec.cts",
     "**/__tests__/**",
 )
 
