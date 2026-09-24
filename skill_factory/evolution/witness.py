@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .replay import parse_structured_probe_result
+
 DEFAULT_TEST_PATTERNS = (
     "**/test_*.py",
     "**/*_test.py",
@@ -63,9 +65,15 @@ class WitnessCommand:
     stdout: str
     stderr: str
     timed_out: bool = False
+    semantic_verdict: str | None = None
+    semantic_error: str | None = None
 
     @property
     def passed(self) -> bool:
+        if self.semantic_error is not None:
+            return False
+        if self.semantic_verdict is not None:
+            return self.semantic_verdict == "pass"
         return not self.timed_out and self.returncode == 0
 
 
@@ -82,6 +90,7 @@ class RegressionWitness:
     support_files: tuple[str, ...] = ()
     base_sha: str | None = None
     head_sha: str | None = None
+    result_protocol: str = "exit-code"
 
     @property
     def witnessed(self) -> bool:
@@ -187,7 +196,10 @@ def _run(
     cwd: Path,
     timeout_seconds: float,
     env: dict[str, str] | None = None,
+    result_protocol: str = "exit-code",
 ) -> WitnessCommand:
+    if result_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown witness result protocol: {result_protocol}")
     started = time.perf_counter()
     try:
         proc = subprocess.run(
@@ -211,12 +223,36 @@ def _run(
         )
 
     duration_ms = int((time.perf_counter() - started) * 1000)
+    stdout = proc.stdout[-4000:]
+    semantic_verdict: str | None = None
+    semantic_error: str | None = None
+    if result_protocol == "json-v1":
+        if proc.returncode != 0:
+            semantic_error = (
+                f"json-v1 witness adapter exited non-zero rc={proc.returncode}; "
+                "treating this as infrastructure/integration failure, not behavioral evidence."
+            )
+        else:
+            try:
+                structured = parse_structured_probe_result(stdout)
+            except (TypeError, ValueError) as exc:
+                semantic_error = str(exc)
+            else:
+                if structured is None:
+                    semantic_error = (
+                        "json-v1 witness adapter did not emit COUNTERPROOF_RESULT"
+                    )
+                else:
+                    semantic_verdict = structured.verdict
+
     return WitnessCommand(
         argv=argv,
         returncode=proc.returncode,
         duration_ms=duration_ms,
-        stdout=proc.stdout[-4000:],
+        stdout=stdout,
         stderr=proc.stderr[-4000:],
+        semantic_verdict=semantic_verdict,
+        semantic_error=semantic_error,
     )
 
 
@@ -274,12 +310,49 @@ def _classify_base_result(
     *,
     argv: tuple[str, ...],
     mode: str,
+    result_protocol: str,
 ) -> tuple[str, str]:
     if baseline.timed_out:
         return (
             "inconclusive",
             "Base-with-head-tests timed out; witness is inconclusive.",
         )
+    if result_protocol == "json-v1":
+        if baseline.semantic_error:
+            return (
+                "inconclusive",
+                "Base replay did not produce behavioral evidence: "
+                + baseline.semantic_error,
+            )
+        if baseline.semantic_verdict == "pass":
+            return (
+                "not-witnessed",
+                (
+                    "The structured adapter reports PASS on both base and head. "
+                    "It does not distinguish the pre-change code from the PR."
+                ),
+            )
+        if baseline.semantic_verdict != "fail":
+            return (
+                "inconclusive",
+                "Base replay did not emit a valid pass/fail behavioral verdict.",
+            )
+        if mode == "suite":
+            return (
+                "suite-delta",
+                (
+                    "The structured adapter reports a suite-level FAIL on base and PASS on head. "
+                    "Because changed tests were not targeted directly, this is not an exact witness."
+                ),
+            )
+        return (
+            "witnessed",
+            (
+                "The structured adapter reports FAIL for the changed tests on base and PASS on head. "
+                "This is a regression witness for the tested behavior."
+            ),
+        )
+
     if baseline.returncode == 0:
         return (
             "not-witnessed",
@@ -323,8 +396,11 @@ def run_regression_witness(
     test_command: str,
     timeout_seconds: float = 300,
     patterns: tuple[str, ...] = DEFAULT_TEST_PATTERNS,
+    result_protocol: str = "exit-code",
 ) -> RegressionWitness:
     """Replay changed tests against HEAD and base with changed test support overlaid."""
+    if result_protocol not in {"exit-code", "json-v1"}:
+        raise ValueError(f"unknown witness result protocol: {result_protocol}")
     repo_root = repo_root.resolve()
     resolved_base_sha = _git(repo_root, "rev-parse", f"{base_ref}^{{commit}}")
     resolved_head_sha = _git(repo_root, "rev-parse", f"{head_ref}^{{commit}}")
@@ -360,6 +436,7 @@ def run_regression_witness(
             support_files=(),
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
         )
 
     argv, mode = _build_test_argv(test_command, tests)
@@ -368,7 +445,23 @@ def run_regression_witness(
         cwd=repo_root,
         timeout_seconds=timeout_seconds,
         env=_witness_env(repo_root, "head"),
+        result_protocol=result_protocol,
     )
+    if result_protocol == "json-v1" and head.semantic_error:
+        return RegressionWitness(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            tests=tests,
+            head=head,
+            base_with_head_tests=None,
+            status="inconclusive",
+            note="PR-head replay did not produce behavioral evidence: " + head.semantic_error,
+            mode=mode,
+            support_files=support_files,
+            base_sha=resolved_base_sha,
+            head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
+        )
     if not head.passed:
         return RegressionWitness(
             base_ref=base_ref,
@@ -382,6 +475,7 @@ def run_regression_witness(
             support_files=support_files,
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
+            result_protocol=result_protocol,
         )
 
     with tempfile.TemporaryDirectory(prefix="counterproof-witness-") as tmp:
@@ -400,6 +494,7 @@ def run_regression_witness(
                 cwd=base_dir,
                 timeout_seconds=timeout_seconds,
                 env=_witness_env(base_dir, "base-with-head-tests"),
+                result_protocol=result_protocol,
             )
         finally:
             subprocess.run(
@@ -414,6 +509,7 @@ def run_regression_witness(
         baseline,
         argv=argv,
         mode=mode,
+        result_protocol=result_protocol,
     )
     return RegressionWitness(
         base_ref=base_ref,
@@ -427,6 +523,7 @@ def run_regression_witness(
         support_files=support_files,
         base_sha=resolved_base_sha,
         head_sha=resolved_head_sha,
+        result_protocol=result_protocol,
     )
 
 
@@ -440,6 +537,8 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
         "timed_out": command.timed_out,
         "stdout": command.stdout,
         "stderr": command.stderr,
+        "semantic_verdict": command.semantic_verdict,
+        "semantic_error": command.semantic_error,
     }
 
 
@@ -454,6 +553,7 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
         "support_files": list(witness.support_files),
         "status": witness.status,
         "mode": witness.mode,
+        "result_protocol": witness.result_protocol,
         "witnessed": witness.witnessed,
         "note": witness.note,
         "head": _command_to_dict(witness.head),
@@ -490,6 +590,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         f"- Head: {witness.head_ref}",
         f"- Changed tests: {len(witness.tests)}",
         f"- Mode: {witness.mode}",
+        f"- Result protocol: {witness.result_protocol}",
         f"- Test-support files overlaid: {len(witness.support_files)}",
     ]
 
