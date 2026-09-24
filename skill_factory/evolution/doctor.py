@@ -95,7 +95,7 @@ def run_doctor() -> DoctorReport:
                 f"parsed verdict={structured.verdict} score={structured.score:.2f}",
             )
         )
-    except Exception as exc:
+    except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as exc:
         checks.append(DoctorCheck("structured-result", "fail", str(exc)))
 
     try:
@@ -163,7 +163,7 @@ def run_doctor() -> DoctorReport:
                     f"detected {integrity.high_risk_count} high-risk finding(s)",
                 )
             )
-    except Exception as exc:
+    except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as exc:
         if not any(item.name == "regression-witness" for item in checks):
             checks.append(DoctorCheck("regression-witness", "fail", str(exc)))
         if not any(item.name == "proof-integrity" for item in checks):
