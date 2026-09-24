@@ -48,6 +48,14 @@ DEFAULT_TEST_PATTERNS = (
     "**/*.spec.cjs",
     "**/*.spec.mts",
     "**/*.spec.cts",
+    "**/*.vitest.js",
+    "**/*.vitest.ts",
+    "**/*.vitest.jsx",
+    "**/*.vitest.tsx",
+    "**/*.vitest.mjs",
+    "**/*.vitest.cjs",
+    "**/*.vitest.mts",
+    "**/*.vitest.cts",
     "**/__tests__/**",
 )
 

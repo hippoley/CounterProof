@@ -237,6 +237,25 @@ def test_changed_test_detection_covers_node_module_extensions(tmp_path):
     assert "tests/legacy.spec.cts" in files
 
 
+def test_changed_test_detection_covers_vitest_named_files(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    tests = repo / "core" / "config"
+    tests.mkdir(parents=True)
+    for name in (
+        "doLoadConfig.vitest.ts",
+        "runtime.vitest.mjs",
+    ):
+        (tests / name).write_text("// fixture\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add Vitest-named tests")
+
+    files = set(changed_test_files(repo, base_ref=base))
+
+    assert "core/config/doLoadConfig.vitest.ts" in files
+    assert "core/config/runtime.vitest.mjs" in files
+
+
 def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
