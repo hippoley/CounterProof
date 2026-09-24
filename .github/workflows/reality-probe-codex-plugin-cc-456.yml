@@ -98,6 +98,16 @@ jobs:
           assert "tests/helpers.mjs" in payload["support_files"], payload
           PY
 
+      - name: Inspect proof integrity on the judge-changing PR
+        working-directory: head
+        run: |
+          counterproof integrity \
+            --base db52e28f4d9ded852ab3942cea316258ae4ef346 \
+            --out /tmp/PROOF_INTEGRITY_456.md \
+            --json-out /tmp/PROOF_INTEGRITY_456.json
+          cat /tmp/PROOF_INTEGRITY_456.md
+          cat /tmp/PROOF_INTEGRITY_456.json
+
       - name: Upload judge-mutation receipt
         uses: actions/upload-artifact@v4
         with:
@@ -107,3 +117,5 @@ jobs:
             /tmp/HEAD_DIRECT.tap
             /tmp/COUNTERPROOF_456.md
             /tmp/COUNTERPROOF_456.json
+            /tmp/PROOF_INTEGRITY_456.md
+            /tmp/PROOF_INTEGRITY_456.json
