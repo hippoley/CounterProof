@@ -12,11 +12,13 @@ permissions:
 jobs:
   counterproof:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Checkout CounterProof
+      - name: Checkout CounterProof candidate
         uses: actions/checkout@v4
         with:
+          repository: hippoley/CounterProof
+          ref: fix/node-esm-test-discovery
           path: counterproof
           persist-credentials: false
 
@@ -33,30 +35,88 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install CounterProof
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - name: Install CounterProof candidate
         run: python -m pip install ./counterproof
 
-      - name: Probe changed-test discovery
+      - name: Install target test dependencies
+        working-directory: target
+        run: npm ci --ignore-scripts
+
+      - name: Prepare structured Node test adapter
+        run: |
+          cat > /tmp/node_test_adapter.py <<'PY'
+          from __future__ import annotations
+
+          import json
+          import re
+          import subprocess
+          import sys
+
+          argv = ["node", "--test", *sys.argv[1:]]
+          proc = subprocess.run(argv, text=True, capture_output=True, check=False)
+          print(proc.stdout)
+          print(proc.stderr, file=sys.stderr)
+          combined = proc.stdout + "\n" + proc.stderr
+
+          if proc.returncode == 0:
+              print("COUNTERPROOF_RESULT=" + json.dumps({
+                  "verdict": "pass",
+                  "metrics": {"returncode": 0, "files": len(sys.argv) - 1},
+                  "observations": ["Node test runner completed with no failures."],
+              }))
+              raise SystemExit(0)
+
+          tests_match = re.search(r"(?m)^# tests (\d+)\s*$", combined)
+          fail_match = re.search(r"(?m)^# fail (\d+)\s*$", combined)
+          tests = int(tests_match.group(1)) if tests_match else 0
+          failures = int(fail_match.group(1)) if fail_match else 0
+
+          if tests > 0 and failures > 0:
+              print("COUNTERPROOF_RESULT=" + json.dumps({
+                  "verdict": "fail",
+                  "metrics": {
+                      "returncode": proc.returncode,
+                      "tests": tests,
+                      "failures": failures,
+                  },
+                  "observations": ["Node reached test execution and reported failing tests."],
+              }))
+              raise SystemExit(0)
+
+          print("Node runner failed without a behavioral failing-test summary.", file=sys.stderr)
+          raise SystemExit(proc.returncode or 2)
+          PY
+
+      - name: Replay changed tests with structured semantics
         working-directory: target
         run: |
           counterproof witness \
             --base db52e28f4d9ded852ab3942cea316258ae4ef346 \
-            --test-command "node --test {tests}" \
-            --out /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md \
-            --json-out /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
-          cat /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md
-          cat /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
+            --test-command "python /tmp/node_test_adapter.py {tests}" \
+            --result-protocol json-v1 \
+            --timeout 300 \
+            --out /tmp/CODEX_PLUGIN_CC_731_WITNESS.md \
+            --json-out /tmp/CODEX_PLUGIN_CC_731_WITNESS.json
+          cat /tmp/CODEX_PLUGIN_CC_731_WITNESS.md
+          cat /tmp/CODEX_PLUGIN_CC_731_WITNESS.json
           python - <<'PY'
           import json
-          with open("/tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json", encoding="utf-8") as f:
+          with open("/tmp/CODEX_PLUGIN_CC_731_WITNESS.json", encoding="utf-8") as f:
               payload = json.load(f)
-          assert payload["status"] == "no-changed-tests", payload
+          assert set(payload["tests"]) == {
+              "tests/runtime.test.mjs",
+              "tests/state.test.mjs",
+          }, payload
           PY
 
-      - name: Upload discovery receipt
+      - name: Upload reality receipt
         uses: actions/upload-artifact@v4
         with:
-          name: codex-plugin-cc-731-discovery
+          name: codex-plugin-cc-731-counterproof
           path: |
-            /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.md
-            /tmp/CODEX_PLUGIN_CC_731_DISCOVERY.json
+            /tmp/CODEX_PLUGIN_CC_731_WITNESS.md
+            /tmp/CODEX_PLUGIN_CC_731_WITNESS.json
