@@ -45,9 +45,11 @@ jobs:
       - name: Install CounterProof
         run: python -m pip install ./counterproof
 
-      - name: Install harness package dependency closure
+      - name: Install and build harness package dependency closure
         working-directory: target
-        run: pnpm install --frozen-lockfile --filter @ai-sdk/harness-claude-code...
+        run: |
+          pnpm install --frozen-lockfile --filter @ai-sdk/harness-claude-code...
+          pnpm --filter @ai-sdk/harness-claude-code... build
 
       - name: Prepare structured Vitest adapter
         run: |
@@ -144,9 +146,9 @@ jobs:
           cat /tmp/VERCEL_AI_17096_WITNESS.md
           cat /tmp/VERCEL_AI_17096_WITNESS.json
           echo "=== HEAD VITEST JSON ==="
-          cat /tmp/vercel-ai-17096-head.json
+          test -f /tmp/vercel-ai-17096-head.json && cat /tmp/vercel-ai-17096-head.json || true
           echo "=== BASE VITEST JSON ==="
-          cat /tmp/vercel-ai-17096-base-with-head-tests.json
+          test -f /tmp/vercel-ai-17096-base-with-head-tests.json && cat /tmp/vercel-ai-17096-base-with-head-tests.json || true
 
       - name: Upload receipt
         if: always()
