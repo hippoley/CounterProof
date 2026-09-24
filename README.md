@@ -257,6 +257,44 @@ counterproof share-witness REGRESSION_WITNESS.json \
 
 The note includes the exact HEAD / BASE commits, exit codes, executed changed-test command, evidence digest, links, and the scope limit that a regression witness proves the tested before/after delta — not every claimed production cause.
 
+### When one PR contains multiple review claims
+
+A real PR can have one genuinely witnessed regression and several adjacent concerns that its tests do not exercise.
+
+Counterproof's experimental claim matrix keeps those claims separate:
+
+```bash
+counterproof claim-matrix examples/claim_matrix/codex-plugin-cc-731.yml
+```
+
+The manifest is explicit. Counterproof does **not** use an LLM to invent claims or decide which product behavior is authoritative.
+
+Each row has two mechanical evidence axes:
+
+```text
+submitted-test evidence
+  WITNESSED / NOT_WITNESSED / UNPROVEN
+
+oracle alignment
+  ALIGNED / CONTRADICTED / UNVERIFIED
+```
+
+The overall claim is derived conservatively:
+
+```text
+WITNESSED + ALIGNED      -> PROVEN
+anything + CONTRADICTED  -> CONTRADICTED
+WITNESSED + UNVERIFIED   -> WITNESSED (submitted judge)
+otherwise                -> UNPROVEN
+```
+
+That means a red→green regression can stay useful without silently becoming a product-correctness claim.
+
+The first two acceptance fixtures come directly from public reviewer feedback:
+
+- `examples/claim_matrix/codex-plugin-cc-731.yml` — one witnessed submitted regression, later review concerns still unproven;
+- `examples/claim_matrix/claude-code-89404.yml` — product-oracle contradiction stays stronger than an internally green submitted judge.
+
 ---
 
 ## It also checks whether the PR changed the judge
