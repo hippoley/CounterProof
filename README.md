@@ -12,7 +12,7 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#30-second-onboarding) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
+### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#30-second-onboarding) · [**◎ REALITY LAB**](docs/REALITY_LAB.md) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/17)
 
 [![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
@@ -21,6 +21,16 @@
 <sub>Works beside Claude Code · Codex · Copilot · Cursor · PR-Agent · human-written PRs — Counterproof verifies the evidence, not the author.</sub>
 
 </div>
+
+---
+
+## Tested on real agent PRs
+
+CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.
+
+**[See the Reality Lab →](docs/REALITY_LAB.md)** · **[Bring an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/17)**
+
+Current field cases include a genuine regression witness, a compiler-failure false positive, a changed-test-harness case, a claim-boundary case, and an emerging oracle-mismatch case.
 
 ---
 
