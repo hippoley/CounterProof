@@ -21,3 +21,9 @@ def test_proof_lab_public_surface_is_explicitly_fixture_backed():
         text = path.read_text(encoding="utf-8")
         assert "interactive fixture" in text
         assert "PROOF LAB / 001" in text
+
+
+def test_readme_install_cta_targets_current_onboarding_section():
+    text = Path("README.md").read_text(encoding="utf-8")
+    assert "(#30-second-onboarding)" in text
+    assert "(#drop-it-into-a-pr)" not in text
