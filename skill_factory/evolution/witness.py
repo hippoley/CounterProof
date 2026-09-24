@@ -220,6 +220,11 @@ def _run(
             stdout=(exc.stdout or "")[-4000:] if isinstance(exc.stdout, str) else "",
             stderr=(exc.stderr or "")[-4000:] if isinstance(exc.stderr, str) else "",
             timed_out=True,
+            semantic_error=(
+                "json-v1 witness adapter timed out before producing behavioral evidence"
+                if result_protocol == "json-v1"
+                else None
+            ),
         )
 
     duration_ms = int((time.perf_counter() - started) * 1000)
