@@ -1,9 +1,6 @@
 name: Reality Probe · Metrolist 4097 · structured
 
 on:
-  push:
-    branches:
-      - fix/witness-structured-result-protocol
   workflow_dispatch:
 
 permissions:
