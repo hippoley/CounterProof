@@ -256,6 +256,60 @@ def test_changed_test_detection_covers_vitest_named_files(tmp_path):
     assert "core/config/runtime.vitest.mjs" in files
 
 
+def test_base_replay_reuses_package_local_node_modules(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "counterproof@example.test")
+    _git(repo, "config", "user.name", "Counterproof Test")
+
+    package = repo / "packages" / "app"
+    package.mkdir(parents=True)
+    (repo / ".gitignore").write_text("**/node_modules/\n", encoding="utf-8")
+    (package / "behavior.txt").write_text("old\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base = _git(repo, "rev-parse", "HEAD")
+
+    dependency = package / "node_modules" / "probe-dependency"
+    dependency.mkdir(parents=True)
+    (dependency / "marker.txt").write_text("installed\n", encoding="utf-8")
+
+    (package / "behavior.txt").write_text("new\n", encoding="utf-8")
+    test_file = package / "behavior.test.js"
+    test_file.write_text("// changed regression fixture\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "fix plus regression test")
+
+    adapter = tmp_path / "adapter.py"
+    adapter.write_text(
+        "import json, pathlib, sys\n"
+        "marker = pathlib.Path('packages/app/node_modules/probe-dependency/marker.txt')\n"
+        "if not marker.is_file():\n"
+        "    print('package-local dependency missing', file=sys.stderr)\n"
+        "    raise SystemExit(2)\n"
+        "value = pathlib.Path('packages/app/behavior.txt').read_text().strip()\n"
+        "verdict = 'pass' if value == 'new' else 'fail'\n"
+        "print('COUNTERPROOF_RESULT=' + json.dumps({'verdict': verdict, 'metrics': {}}))\n",
+        encoding="utf-8",
+    )
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=f"{sys.executable} {adapter} {{tests}}",
+        timeout_seconds=30,
+        result_protocol="json-v1",
+    )
+
+    assert witness.status == "witnessed"
+    assert witness.head is not None
+    assert witness.head.semantic_verdict == "pass"
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.semantic_verdict == "fail"
+    assert witness.base_with_head_tests.semantic_error is None
+
+
 def test_changed_conftest_is_replayed_with_changed_test(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
