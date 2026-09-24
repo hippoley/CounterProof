@@ -1,51 +1,52 @@
-name: "Counterproof Behavior Proof"
-description: "Attach falsifiable behavior evidence to agent-generated changes."
+name: "Counterproof Regression Witness"
+description: "Prove that a PR's changed tests fail before the fix and pass after it."
 author: "hippoley"
 
 branding:
-  icon: "check-circle"
+  icon: "shield"
   color: "purple"
 
 inputs:
-  trace:
-    description: "Path to a Counterproof JSON/JSONL trace."
+  test-command:
+    description: "Test command. Use {tests} for precise changed-test replay; omit it for suite-level evidence."
     required: true
-  experiment-manifest:
-    description: "Path to the discrimination experiment manifest."
-    required: true
-  surfaces:
-    description: "Comma-separated intervention surfaces to compare."
+  base-ref:
+    description: "Pre-change git ref. Defaults to the pull request base SHA."
     required: false
-    default: "policy,skill,prompt"
-  output-dir:
-    description: "Directory for Behavior Proof, packet and receipt artifacts."
+    default: ""
+  timeout:
+    description: "Per-side test timeout in seconds."
     required: false
-    default: ".counterproof/out"
-  require-unique-survivor:
-    description: "Fail the Action unless exactly one eligible intervention survives."
+    default: "300"
+  require-witness:
+    description: "Fail the Action unless a real regression witness is produced."
     required: false
     default: "false"
   comment-on-pr:
-    description: "Create or update one sticky Counterproof comment on pull requests."
+    description: "Create or update one sticky Regression Witness comment."
     required: false
     default: "true"
+  require-clean-integrity:
+    description: "Fail when the PR changes test/CI evidence surfaces."
+    required: false
+    default: "false"
 
 outputs:
-  selection-state:
-    description: "Counterproof discrimination result."
-    value: ${{ steps.proof.outputs.selection-state }}
-  selected-candidate:
-    description: "Selected candidate id, if any."
-    value: ${{ steps.proof.outputs.selected-candidate }}
-  proof-path:
-    description: "Generated Behavior Proof Markdown path."
-    value: ${{ steps.proof.outputs.proof-path }}
-  receipt-path:
-    description: "Generated Proof Receipt JSON path."
-    value: ${{ steps.proof.outputs.receipt-path }}
-  packet-path:
-    description: "Generated evolved packet JSON path."
-    value: ${{ steps.proof.outputs.packet-path }}
+  status:
+    description: "witnessed, suite-delta, not-witnessed, head-failing, no-changed-tests, or inconclusive."
+    value: ${{ steps.witness.outputs.status }}
+  evidence-mode:
+    description: "precise or suite."
+    value: ${{ steps.witness.outputs.evidence-mode }}
+  report-path:
+    description: "Generated Regression Witness Markdown path."
+    value: ${{ steps.witness.outputs.report-path }}
+  json-path:
+    description: "Generated Regression Witness JSON path."
+    value: ${{ steps.witness.outputs.json-path }}
+  integrity-status:
+    description: "clean or review-required."
+    value: ${{ steps.integrity.outputs.integrity-status }}
 
 runs:
   using: "composite"
@@ -56,82 +57,161 @@ runs:
         set -euo pipefail
         python -m pip install "${{ github.action_path }}"
 
-    - name: Build Behavior Proof
-      id: proof
+    - name: Resolve base ref
+      id: base
       shell: bash
       env:
-        COUNTERPROOF_TRACE: ${{ inputs.trace }}
-        COUNTERPROOF_EXPERIMENT: ${{ inputs.experiment-manifest }}
-        COUNTERPROOF_SURFACES: ${{ inputs.surfaces }}
-        COUNTERPROOF_OUTPUT_DIR: ${{ inputs.output-dir }}
-        COUNTERPROOF_REQUIRE_UNIQUE: ${{ inputs.require-unique-survivor }}
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
         set -euo pipefail
+        if [[ -n "$INPUT_BASE_REF" ]]; then
+          base="$INPUT_BASE_REF"
+        elif [[ -n "$EVENT_BASE_SHA" ]]; then
+          base="$EVENT_BASE_SHA"
+        else
+          echo "Counterproof Regression Witness needs base-ref outside pull_request events." >&2
+          exit 2
+        fi
+        echo "base=$base" >> "$GITHUB_OUTPUT"
 
-        mkdir -p "$COUNTERPROOF_OUTPUT_DIR"
-        proof="$COUNTERPROOF_OUTPUT_DIR/BEHAVIOR_PROOF.md"
-        packet="$COUNTERPROOF_OUTPUT_DIR/EVOLVED_PACKET.json"
-        receipt="$COUNTERPROOF_OUTPUT_DIR/PROOF_RECEIPT.json"
+    - name: Check PR head checkout
+      if: ${{ github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      run: |
+        set -euo pipefail
+        actual_head="$(git rev-parse HEAD)"
+        if [[ -n "$EXPECTED_HEAD" && "$actual_head" != "$EXPECTED_HEAD" ]]; then
+          echo "::warning::Counterproof is running on $actual_head, not PR head $EXPECTED_HEAD. Checkout github.event.pull_request.head.sha for the cleanest witness."
+        fi
 
-        args=()
-        IFS=',' read -ra raw_surfaces <<< "$COUNTERPROOF_SURFACES"
-        for raw in "${raw_surfaces[@]}"; do
-          surface="$(printf '%s' "$raw" | xargs)"
-          if [[ -z "$surface" || ! "$surface" =~ ^[A-Za-z0-9_-]+$ ]]; then
-            echo "Invalid Counterproof surface: '$surface'" >&2
-            exit 2
-          fi
-          args+=(--surface "$surface")
-        done
+    - name: Fetch base commit
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+      run: |
+        set -euo pipefail
+        if ! git cat-file -e "$BASE_REF^{commit}" 2>/dev/null; then
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+        fi
 
-        counterproof evolve "$COUNTERPROOF_TRACE"           --experiment-manifest "$COUNTERPROOF_EXPERIMENT"           "${args[@]}"           --out "$proof"           --packet-out "$packet"           --receipt-out "$receipt"
+    - name: Run Regression Witness
+      id: witness
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+        TEST_COMMAND: ${{ inputs.test-command }}
+        TIMEOUT_SECONDS: ${{ inputs.timeout }}
+        REQUIRE_WITNESS: ${{ inputs.require-witness }}
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
 
-        export COUNTERPROOF_PACKET="$packet"
-        export COUNTERPROOF_PROOF="$proof"
-        export COUNTERPROOF_RECEIPT="$receipt"
+        args=(
+          witness
+          --base "$BASE_REF"
+          --test-command "$TEST_COMMAND"
+          --timeout "$TIMEOUT_SECONDS"
+          --out .counterproof/out/REGRESSION_WITNESS.md
+          --json-out .counterproof/out/REGRESSION_WITNESS.json
+        )
 
-        python - <<'PY'
+        if [[ "${REQUIRE_WITNESS,,}" == "true" ]]; then
+          args+=(--require-witness)
+        fi
+
+        set +e
+        counterproof "${args[@]}"
+        command_status=$?
+        set -e
+
+        if [[ ! -f .counterproof/out/REGRESSION_WITNESS.json ]]; then
+          exit "$command_status"
+        fi
+
+        status="$(python - <<'PY'
         import json
-        import os
-        from pathlib import Path
-
-        packet_path = Path(os.environ["COUNTERPROOF_PACKET"])
-        packet = json.loads(packet_path.read_text(encoding="utf-8"))
-        metadata = packet.get("metadata", {})
-        state = str(metadata.get("discrimination_result", "unknown"))
-        selected = packet.get("selected_candidate_id") or ""
-
-        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-            out.write(f"selection-state={state}\n")
-            out.write(f"selected-candidate={selected}\n")
-            out.write(f"proof-path={os.environ['COUNTERPROOF_PROOF']}\n")
-            out.write(f"receipt-path={os.environ['COUNTERPROOF_RECEIPT']}\n")
-            out.write(f"packet-path={os.environ['COUNTERPROOF_PACKET']}\n")
-
-        require_unique = os.environ.get("COUNTERPROOF_REQUIRE_UNIQUE", "false").lower()
-        if require_unique in {"1", "true", "yes"} and not state.startswith("unique-survivor:"):
-            raise SystemExit(
-                f"Counterproof gate blocked: expected unique survivor, got {state}"
-            )
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f)["status"])
         PY
+        )"
+        mode="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f).get("mode", "unknown"))
+        PY
+        )"
+
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "evidence-mode=$mode" >> "$GITHUB_OUTPUT"
+        echo "report-path=.counterproof/out/REGRESSION_WITNESS.md" >> "$GITHUB_OUTPUT"
+        echo "json-path=.counterproof/out/REGRESSION_WITNESS.json" >> "$GITHUB_OUTPUT"
 
         {
-          echo "## Counterproof · Behavior Proof"
+          echo "## Counterproof · Regression Witness"
           echo
-          echo "**Selection:** `$(python -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("metadata",{}).get("discrimination_result","unknown"))' "$packet")`"
-          echo
-          cat "$proof"
+          cat .counterproof/out/REGRESSION_WITNESS.md
         } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Publish sticky PR proof
-      if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' }}
+        exit "$command_status"
+
+
+    - name: Check proof integrity
+      id: integrity
+      if: ${{ always() }}
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base }}
+        REQUIRE_CLEAN_INTEGRITY: ${{ inputs.require-clean-integrity }}
+      run: |
+        set -euo pipefail
+        mkdir -p .counterproof/out
+
+        args=(
+          integrity
+          --base "$BASE_REF"
+          --out .counterproof/out/PROOF_INTEGRITY.md
+          --json-out .counterproof/out/PROOF_INTEGRITY.json
+        )
+        if [[ "${REQUIRE_CLEAN_INTEGRITY,,}" == "true" ]]; then
+          args+=(--require-clean)
+        fi
+
+        set +e
+        counterproof "${args[@]}"
+        command_status=$?
+        set -e
+
+        if [[ -f .counterproof/out/PROOF_INTEGRITY.json ]]; then
+          status="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/PROOF_INTEGRITY.json", encoding="utf-8") as f:
+            print(json.load(f)["status"])
+        PY
+          )"
+          echo "integrity-status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "---"
+            echo
+            cat .counterproof/out/PROOF_INTEGRITY.md
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        exit "$command_status"
+
+    - name: Publish sticky witness comment
+      if: ${{ github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' && always() }}
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        COUNTERPROOF_PROOF: ${{ steps.proof.outputs.proof-path }}
-        COUNTERPROOF_PACKET: ${{ steps.proof.outputs.packet-path }}
       run: |
         set -euo pipefail
+        report=".counterproof/out/REGRESSION_WITNESS.md"
+        integrity=".counterproof/out/PROOF_INTEGRITY.md"
+        [[ -f "$report" ]] || exit 0
 
         pr_number="$(python - <<'PY'
         import json, os
@@ -141,59 +221,29 @@ runs:
         )"
 
         body_file="$(mktemp)"
-        export COUNTERPROOF_COMMENT_FILE="$body_file"
-        python - <<'PY'
-        import json
-        import os
-        from pathlib import Path
-
-        proof = Path(os.environ["COUNTERPROOF_PROOF"]).read_text(encoding="utf-8")
-        packet = json.loads(
-            Path(os.environ["COUNTERPROOF_PACKET"]).read_text(encoding="utf-8")
-        )
-        state = packet.get("metadata", {}).get("discrimination_result", "unknown")
-        selected = packet.get("selected_candidate_id") or "none"
-
-        max_chars = 12000
-        clipped = proof[:max_chars]
-        if len(proof) > max_chars:
-            clipped += "\n\n…proof truncated in PR comment; full artifact remains in the workflow."
-
-        body = "\n".join(
-            [
-                "<!-- counterproof-behavior-proof -->",
-                "## Counterproof · Behavior Proof",
-                "",
-                f"**Selection state:** `{state}`  ",
-                f"**Selected candidate:** `{selected}`",
-                "",
-                "<details>",
-                "<summary>Open behavioral evidence</summary>",
-                "",
-                clipped,
-                "",
-                "</details>",
-                "",
-                "> Every agent PR should come with proof, not confidence.",
-                "",
-            ]
-        )
-        Path(os.environ["COUNTERPROOF_COMMENT_FILE"]).write_text(
-            body,
-            encoding="utf-8",
-        )
-        PY
+        {
+          echo "<!-- counterproof-regression-witness -->"
+          cat "$report"
+          if [[ -f "$integrity" ]]; then
+            echo
+            echo "---"
+            echo
+            cat "$integrity"
+          fi
+          echo
+          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge."
+        } > "$body_file"
 
         existing_id="$(
-          gh api "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments" --paginate             --jq '.[] | select(.body | contains("<!-- counterproof-behavior-proof -->")) | .id'             2>/dev/null | head -n 1 || true
+          gh api "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments" --paginate             --jq '.[] | select(.body | contains("<!-- counterproof-regression-witness -->")) | .id'             2>/dev/null | head -n 1 || true
         )"
 
         if [[ -n "$existing_id" ]]; then
           if ! gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing_id"             -F "body=@$body_file" >/dev/null; then
-            echo "::warning::Counterproof generated proof, but could not update the PR comment. Check pull-requests: write permission."
+            echo "::warning::Regression Witness generated, but PR comment update failed. Check pull-requests: write permission."
           fi
         else
           if ! gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments"             -F "body=@$body_file" >/dev/null; then
-            echo "::warning::Counterproof generated proof, but could not create the PR comment. Check pull-requests: write permission."
+            echo "::warning::Regression Witness generated, but PR comment creation failed. Check pull-requests: write permission."
           fi
         fi
