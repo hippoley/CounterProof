@@ -45,7 +45,7 @@ jobs:
 
       - name: Install CrewAI test environment
         working-directory: target
-        run: uv sync --package crewai --group dev
+        run: uv sync --all-groups --all-extras
 
       - name: Prepare structured pytest adapter
         run: |
