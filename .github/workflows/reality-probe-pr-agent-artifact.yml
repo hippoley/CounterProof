@@ -35,7 +35,7 @@ jobs:
       - name: Install CounterProof and PR-Agent artifact-loader dependencies
         run: |
           python -m pip install ./counterproof
-          python -m pip install dynaconf starlette-context loguru botocore
+          python -m pip install dynaconf starlette-context loguru botocore jinja2
 
       - name: Generate CounterProof claim matrix
         run: |
