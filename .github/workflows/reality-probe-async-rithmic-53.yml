@@ -1,0 +1,63 @@
+name: Reality Probe · async_rithmic 53
+
+on:
+  push:
+    branches:
+      - probe/async-rithmic-53
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counterproof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout external Agent PR head
+        uses: actions/checkout@v4
+        with:
+          repository: rundef/async_rithmic
+          ref: 4fca039e9041f5ba256f5c3bf9887267b3998572
+          fetch-depth: 0
+          path: target
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof and target test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ./counterproof
+          python -m pip install -e './target[test]'
+
+      - name: Run CounterProof against external Claude-assisted PR
+        working-directory: target
+        run: |
+          counterproof witness \
+            --base 0b73330ba5dd1b9e7118d42168c73ebcd3c8b67e \
+            --test-command "python -m pytest -q {tests}" \
+            --timeout 300 \
+            --out /tmp/ASYNC_RITHMIC_53_WITNESS.md \
+            --json-out /tmp/ASYNC_RITHMIC_53_WITNESS.json \
+            --require-witness
+          cat /tmp/ASYNC_RITHMIC_53_WITNESS.md
+          cat /tmp/ASYNC_RITHMIC_53_WITNESS.json
+
+      - name: Upload reality-probe receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: async-rithmic-53-counterproof
+          path: |
+            /tmp/ASYNC_RITHMIC_53_WITNESS.md
+            /tmp/ASYNC_RITHMIC_53_WITNESS.json
+          if-no-files-found: error
