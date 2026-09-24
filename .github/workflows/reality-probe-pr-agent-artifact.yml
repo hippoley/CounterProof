@@ -1,0 +1,110 @@
+name: Reality Probe · PR-Agent artifact handoff
+
+on:
+  push:
+    branches:
+      - probe/pr-agent-artifact-handoff
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+        with:
+          path: counterproof
+          persist-credentials: false
+
+      - name: Checkout PR-Agent exact main
+        uses: actions/checkout@v4
+        with:
+          repository: The-PR-Agent/pr-agent
+          ref: eb15fc225ee39c341a1647bfb8db2139a15fbb2f
+          path: pr-agent
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CounterProof and PR-Agent artifact-loader dependencies
+        run: |
+          python -m pip install ./counterproof
+          python -m pip install dynaconf starlette-context loguru botocore
+
+      - name: Generate CounterProof claim matrix
+        run: |
+          counterproof claim-matrix \
+            counterproof/examples/claim_matrix/codex-plugin-cc-731.yml \
+            --out "$GITHUB_WORKSPACE/CLAIM_EVIDENCE_MATRIX.md" \
+            --json-out "$GITHUB_WORKSPACE/CLAIM_EVIDENCE_MATRIX.json"
+          cat "$GITHUB_WORKSPACE/CLAIM_EVIDENCE_MATRIX.md"
+
+      - name: Hand matrix to PR-Agent artifact context
+        env:
+          PYTHONPATH: ${{ github.workspace }}/pr-agent
+          ARTIFACT_PATH: CLAIM_EVIDENCE_MATRIX.md
+          ARTIFACT_INSTRUCTIONS: >-
+            CounterProof evidence is scoped per claim. Preserve WITNESSED
+            (submitted judge), UNPROVEN, and oracle-alignment boundaries; do not
+            upgrade them into an overall merge recommendation.
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          from pathlib import Path
+
+          from pr_agent.algo.artifacts import inject_artifact_context, load_artifact
+          from pr_agent.config_loader import get_settings
+
+          inject_artifact_context()
+          artifact = load_artifact()
+
+          assert "CI Artifact: CLAIM_EVIDENCE_MATRIX.md" in artifact
+          assert "WITNESSED (submitted judge)" in artifact
+          assert "Oracle alignment" in artifact
+          assert "restrictive file permissions" in artifact
+          assert "UNPROVEN" in artifact
+          assert "merge recommendation" in artifact.lower()
+
+          targets = {}
+          for key in ("pr_reviewer", "pr_description", "pr_code_suggestions"):
+              setting = get_settings().get(key.upper())
+              if setting is None:
+                  setting = get_settings().get(key)
+              extra = str(getattr(setting, "extra_instructions", "") or "")
+              targets[key] = {
+                  "contains_counterproof_matrix": "WITNESSED (submitted judge)" in extra,
+                  "contains_unproven_boundary": "UNPROVEN" in extra,
+                  "length": len(extra),
+              }
+              assert targets[key]["contains_counterproof_matrix"], (key, extra[:500])
+              assert targets[key]["contains_unproven_boundary"], (key, extra[:500])
+
+          receipt = {
+              "pr_agent_commit": "eb15fc225ee39c341a1647bfb8db2139a15fbb2f",
+              "counterproof_artifact": "CLAIM_EVIDENCE_MATRIX.md",
+              "targets": targets,
+              "result": "handoff-confirmed",
+          }
+          Path("PR_AGENT_HANDOFF_RECEIPT.json").write_text(
+              json.dumps(receipt, indent=2),
+              encoding="utf-8",
+          )
+          print(json.dumps(receipt, indent=2))
+          PY
+
+      - name: Upload handoff proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: counterproof-pr-agent-handoff
+          path: |
+            CLAIM_EVIDENCE_MATRIX.md
+            CLAIM_EVIDENCE_MATRIX.json
+            PR_AGENT_HANDOFF_RECEIPT.json
