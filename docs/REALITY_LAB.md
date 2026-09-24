@@ -31,6 +31,33 @@ The rule is simple:
 - [#30 — human-review concerns replayed on Prefect #22698](https://github.com/hippoley/CounterProof/issues/30)
 - [#32 — existing-test + environment evidence on Prefect #23146](https://github.com/hippoley/CounterProof/issues/32)
 
+## What reviewers have asked for
+
+The first substantive external reviewer feedback changed the design target.
+
+In [Reality Probe #13](https://github.com/hippoley/CounterProof/issues/13), reviewer `sylvesterkaczmarek` said the separation between a witnessed property and still-unproven review concerns was materially useful. The requested output shape was a compact **claim / evidence matrix** containing:
+
+- review claim or failure mode;
+- exact test(s);
+- BASE result;
+- HEAD result;
+- whether the test oracle was independently checked;
+- status such as `WITNESSED`, `CONTRADICTED`, or `UNPROVEN`;
+- a short assertion / failure excerpt for witnessed properties.
+
+In [Reality Probe #16](https://github.com/hippoley/CounterProof/issues/16), the same reviewer asked for **oracle alignment** to stay separate from ordinary red→green replay:
+
+```text
+submitted regression  BASE fail / HEAD pass
+authoritative oracle  accept / reject
+oracle alignment      aligned / contradicted / unverified
+claim status          proven / contradicted / unproven
+```
+
+CounterProof has not automatically promoted those requests into a feature yet. Manual matrices are being tested first against the exact PRs that produced the feedback.
+
+That is the Reality Lab contract: **human review feedback becomes a probe before it becomes product code.**
+
 ## What counts as useful feedback
 
 A maintainer does not need to adopt CounterProof.
