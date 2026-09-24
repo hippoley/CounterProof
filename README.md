@@ -12,7 +12,7 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#drop-it-into-a-pr) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
+### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#30-second-onboarding) · [**◎ UNDERSTAND THE IDEA**](#why-green-ci-is-not-enough)
 
 [![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
