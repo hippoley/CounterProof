@@ -12,12 +12,12 @@ import click
 
 from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
-from .doctor import doctor_json, render_doctor, run_doctor
 from .discriminate import (
     discrimination_to_dict,
     render_discrimination_markdown,
     run_discrimination_manifest,
 )
+from .doctor import doctor_json, render_doctor, run_doctor
 from .integrity import (
     inspect_proof_integrity,
     render_integrity_markdown,
