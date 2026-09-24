@@ -30,11 +30,25 @@
       "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect."
     },
     {
+      "id": "install-doctor",
+      "name": "Install-level real-Git doctor self-test",
+      "status": "tested",
+      "evidence": "counterproof doctor creates a temporary Git repository and exercises structured-result parsing, Regression Witness, and Proof Integrity without an external service.",
+      "limitation": "Doctor validates Counterproof mechanics, not the consuming repository's full dependency graph or domain semantics."
+    },
+    {
+      "id": "github-onboarding",
+      "name": "One-command GitHub onboarding with runner detection",
+      "status": "tested",
+      "evidence": "counterproof init detects common test runners and writes a pull-request workflow using the root CounterProof Action without overwriting existing config by default.",
+      "limitation": "Runner detection is conservative; project-specific dependency setup may still need review, and strict mode refuses suite-only evidence."
+    },
+    {
       "id": "regression-witness",
       "name": "Regression Witness for agent pull requests",
       "status": "tested",
-      "evidence": "Counterproof detects changed tests, runs them on PR head, overlays the same tests onto a detached base worktree, and distinguishes witnessed fixes from tests that already passed before the change.",
-      "limitation": "The first release relies on repository-local test commands and changed-test filename patterns; dependency setup remains the consuming repository's responsibility."
+      "evidence": "In precise mode, Counterproof runs the exact changed tests on PR head and detached base code with changed test support overlaid. Full-suite commands are reported separately as SUITE DELTA.",
+      "limitation": "Suite-level evidence is deliberately weaker and cannot satisfy --require-witness; repository-specific dependency setup still belongs to the consuming project."
     },
     {
       "id": "proof-receipt",
@@ -206,7 +220,7 @@
     }
   ],
   "summary": {
-    "tested": 20,
+    "tested": 22,
     "partial": 4,
     "demo": 1,
     "planned": 4
