@@ -32,6 +32,10 @@ CounterProof is not developed only against fixtures. New proof semantics are tes
 
 Current field cases include a genuine regression witness, a compiler-failure false positive, a changed-test-harness case, a claim-boundary case, and an emerging oracle-mismatch case.
 
+**Field evidence today:** [11 public cases](docs/REALITY_LAB.md) · [an external reviewer confirmed the claim/evidence artifact preserves useful review semantics](https://github.com/hippoley/CounterProof/issues/13#issuecomment-5812942595) · [the first external code contribution is hardening oracle provenance](https://github.com/hippoley/CounterProof/pull/50)
+
+These are evidence links, not endorsements. CounterProof still treats every new claim as unproven until its evidence earns a stronger status.
+
 ---
 
 A green CI run proves that your code passes **now**.
