@@ -290,6 +290,23 @@ otherwise                -> UNPROVEN
 
 That means a red→green regression can stay useful without silently becoming a product-correctness claim.
 
+Rows declaring `WITNESSED` must use exactly `base_result: FAIL` and `head_result: PASS`.
+Put explanatory result text in `note` or `assertion_excerpt`; inconsistent or ambiguous
+witness results are rejected before the matrix is written. These are consistency checks
+on caller declarations: `claim-matrix` does not run the listed tests or `oracle_probe`,
+and an `ALIGNED` declaration still needs independent verification by the evidence producer.
+
+Rows declaring `ALIGNED` or `CONTRADICTED` must also carry auditable oracle provenance:
+a nonblank `oracle_probe` and an `oracle_source_url` that is an absolute `http://` or
+`https://` URL with a host, pointing at the evidence a reviewer can inspect (a review comment,
+issue, or CI run). The URL must follow RFC 3986 syntax: spaces, non-ASCII characters and other
+characters outside the URI grammar must be percent-encoded, and every `%` must start a
+two-hex-digit escape. Missing, blank, or malformed references are rejected before the matrix is
+written. `UNVERIFIED` rows need neither field. The reference makes the
+declared oracle state inspectable; it does not authenticate it. `claim-matrix` never fetches the
+URL or runs the probe, so an `ALIGNED` or `CONTRADICTED` row is only as trustworthy as the
+source it cites.
+
 The first two acceptance fixtures come directly from public reviewer feedback:
 
 - `examples/claim_matrix/codex-plugin-cc-731.yml` — one witnessed submitted regression, later review concerns still unproven;
