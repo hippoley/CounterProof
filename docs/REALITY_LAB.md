@@ -22,21 +22,38 @@ The rule is simple:
 | [PrefectHQ/prefect#23146](https://github.com/PrefectHQ/prefect/pull/23146) | What if a real regression is witnessed by **existing** tests only under a specific environment? | **NO CHANGED TESTS + environment witness** | Automatic changed-test discovery found 0 tests, but under `TZ=America/Los_Angeles` the same 126 existing tests were BASE 112/126 vs HEAD 126/126. Evidence set and environment can both be first-class proof inputs. |
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
 
-## Public probes
+## Reality-probe status
+
+A cross-reference is **not** adoption. The Lab separates outbound contact from actual external feedback.
+
+### Validated loop
+
+- [#13 — codex-plugin-cc#731 claim boundary](https://github.com/hippoley/CounterProof/issues/13) — **completed**. An external reviewer confirmed the manual matrix shape, reviewed the automated artifact, and said they would use it in review. That feedback produced the merged `claim-matrix` surface.
+
+### External feedback received; follow-up still active
+
+- [#16 — submitted judge vs authoritative oracle](https://github.com/hippoley/CounterProof/issues/16) — external reviewers confirmed the oracle-alignment model and then identified a provenance trust boundary. An external contributor opened [#50](https://github.com/hippoley/CounterProof/pull/50) to harden it; review is still active.
+- [#42 — CounterProof as a verifier input to Codex PROVE](https://github.com/hippoley/CounterProof/issues/42) — the PROVE maintainer preferred ordinary REQ-ID Evidence over a new integration protocol. CounterProof implemented that suggestion as a runnable handoff example in [#53](https://github.com/hippoley/CounterProof/pull/53); final maintainer feedback on the example is still pending.
+
+### Waiting for external feedback
+
+These are useful public probes, but **no external response is counted yet**:
 
 - [#11 — async_rithmic reviewer usefulness](https://github.com/hippoley/CounterProof/issues/11)
-- [#13 — claim boundary on codex-plugin-cc#731](https://github.com/hippoley/CounterProof/issues/13)
 - [#15 — when the PR fixes the judge itself](https://github.com/hippoley/CounterProof/issues/15)
-- [#16 — when submitted tests disagree with the authoritative oracle](https://github.com/hippoley/CounterProof/issues/16)
-- [#17 — bring an agent PR you do not trust](https://github.com/hippoley/CounterProof/issues/17)
 - [#20 — ownership evidence vs production reproduction](https://github.com/hippoley/CounterProof/issues/20)
 - [#22 — independent Continue #12576 witness](https://github.com/hippoley/CounterProof/issues/22)
 - [#28 — CrewAI #7721 claim/evidence boundary](https://github.com/hippoley/CounterProof/issues/28)
+- [#30 — human-review concerns replayed on Prefect #22698](https://github.com/hippoley/CounterProof/issues/30)
+- [#32 — existing-test + environment evidence on Prefect #23146](https://github.com/hippoley/CounterProof/issues/32)
+- [#40 — PR-Agent artifact handoff](https://github.com/hippoley/CounterProof/issues/40)
 - [#45 — Cognee #5161 human-oracle contradiction](https://github.com/hippoley/CounterProof/issues/45)
 - [#46 — Mem0 #6516 evidence-workflow interview](https://github.com/hippoley/CounterProof/issues/46)
 - [#48 — Vercel AI #17096 mixed evidence boundary](https://github.com/hippoley/CounterProof/issues/48)
-- [#30 — human-review concerns replayed on Prefect #22698](https://github.com/hippoley/CounterProof/issues/30)
-- [#32 — existing-test + environment evidence on Prefect #23146](https://github.com/hippoley/CounterProof/issues/32)
+
+### Open intake
+
+- [#17 — bring an agent PR you do not trust](https://github.com/hippoley/CounterProof/issues/17) — anyone can submit a public PR plus the claim that still feels under-evidenced.
 
 ## What reviewers have asked for
 
