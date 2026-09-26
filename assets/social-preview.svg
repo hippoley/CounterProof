@@ -2,9 +2,9 @@
   <rect width="1280" height="640" fill="#f3f0e7"/>
   <rect x="32" y="32" width="1216" height="576" rx="28" fill="#111210"/>
   <text x="76" y="92" fill="#8f928a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" letter-spacing="3">COUNTERPROOF</text>
-  <text x="76" y="176" fill="#f5f2e8" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700">Your coding agent says</text>
-  <text x="76" y="236" fill="#f5f2e8" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700">it fixed the bug. Prove it.</text>
-  <text x="76" y="286" fill="#a3a69e" font-family="Inter,Arial,sans-serif" font-size="20">Behavioral proof for agent-generated pull requests.</text>
+  <text x="76" y="176" fill="#f5f2e8" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700">Your coding agent says it fixed the bug.</text>
+  <text x="76" y="236" fill="#f5f2e8" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700">Prove the exact claim.</text>
+  <text x="76" y="286" fill="#a3a69e" font-family="Inter,Arial,sans-serif" font-size="20">Same evidence · BASE vs HEAD · scope stays explicit.</text>
 
   <rect x="76" y="338" width="1128" height="174" rx="16" fill="#1b1d1a" stroke="#3d403a"/>
   <text x="108" y="378" fill="#85887f" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15">PR HEAD + CHANGED TESTS</text>
