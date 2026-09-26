@@ -961,12 +961,21 @@ def witness(
     type=click.Path(exists=True, dir_okay=False),
     help="Optional PROOF_INTEGRITY.json to include in the reviewer note.",
 )
+@click.option(
+    "--expected-head",
+    default=None,
+    help=(
+        "Exact current candidate commit SHA. Refuse to render if the witness "
+        "receipt was generated for a different HEAD."
+    ),
+)
 @click.option("--source-url", default=None, help="Optional source pull-request URL.")
 @click.option("--runner-url", default=None, help="Optional execution-run URL.")
 @click.option("--out", "out_file", default="WITNESS_REVIEW_NOTE.md", show_default=True)
 def share_witness(
     witness_file: str,
     integrity_file: str | None,
+    expected_head: str | None,
     source_url: str | None,
     runner_url: str | None,
     out_file: str,
@@ -978,6 +987,19 @@ def share_witness(
         raise click.ClickException(f"could not read witness receipt: {exc}") from exc
     if not isinstance(payload, dict) or "status" not in payload:
         raise click.ClickException("witness receipt must be a JSON object with status")
+
+    if expected_head is not None:
+        receipt_head = payload.get("head_sha")
+        if not isinstance(receipt_head, str) or not receipt_head.strip():
+            raise click.ClickException(
+                "candidate binding requested but witness receipt has no head_sha"
+            )
+        if receipt_head.strip().lower() != expected_head.strip().lower():
+            raise click.ClickException(
+                "stale witness receipt: "
+                f"receipt HEAD {receipt_head} does not match expected candidate "
+                f"{expected_head}"
+            )
 
     integrity_payload = None
     if integrity_file is not None:
@@ -1002,6 +1024,7 @@ def share_witness(
         source_url=source_url,
         runner_url=runner_url,
         integrity_payload=integrity_payload,
+        expected_head=expected_head,
     )
     Path(out_file).write_text(note, encoding="utf-8")
     click.echo(f"Review note: {payload.get('status', 'unknown')}")
