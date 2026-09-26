@@ -643,6 +643,109 @@ def test_review_note_exposes_minimum_reviewer_evidence(tmp_path):
     assert "[runner](https://github.com/example/proof/actions/runs/7)" in note
 
 
+def test_review_note_includes_explicit_support_and_integrity_findings(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo, base_value=1)
+    _add_fixture_only_regression(repo)
+    base = _git(repo, "rev-parse", "HEAD")
+    _change_fixture_and_fix(repo)
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+        explicit_tests=("tests/test_fixture_contract.py",),
+        explicit_support_files=("fixtures/value.txt",),
+    )
+    payload = witness_to_dict(witness)
+    integrity_payload = {
+        "schema_version": 1,
+        "status": "review-required",
+        "high_risk_count": 0,
+        "findings": [
+            {
+                "code": "declared-evidence-changed",
+                "risk": "medium",
+                "path": "fixtures/value.txt",
+                "evidence": "M fixtures/value.txt",
+                "note": "Declared evidence changed.",
+            }
+        ],
+    }
+
+    note = render_witness_review_note(
+        payload,
+        integrity_payload=integrity_payload,
+    )
+
+    assert "Test selection: `explicit`" in note
+    assert "Support files overlaid: `fixtures/value.txt`" in note
+    assert "#### Evidence integrity" in note
+    assert "Status: `REVIEW-REQUIRED`" in note
+    assert "`MEDIUM` `declared-evidence-changed` — `fixtures/value.txt`" in note
+    assert "evidence-producing surface changed in this PR" in note
+
+
+def test_share_witness_cli_can_include_integrity_receipt(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo, base_value=1)
+    _add_fixture_only_regression(repo)
+    base = _git(repo, "rev-parse", "HEAD")
+    _change_fixture_and_fix(repo)
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+        explicit_tests=("tests/test_fixture_contract.py",),
+        explicit_support_files=("fixtures/value.txt",),
+    )
+    receipt = tmp_path / "witness.json"
+    receipt.write_text(json.dumps(witness_to_dict(witness)), encoding="utf-8")
+
+    integrity = tmp_path / "integrity.json"
+    integrity.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "review-required",
+                "high_risk_count": 0,
+                "findings": [
+                    {
+                        "code": "declared-evidence-changed",
+                        "risk": "medium",
+                        "path": "fixtures/value.txt",
+                        "evidence": "M fixtures/value.txt",
+                        "note": "Declared evidence changed.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "review-with-integrity.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--integrity-file",
+            str(integrity),
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    text = output.read_text(encoding="utf-8")
+    assert "Support files overlaid: `fixtures/value.txt`" in text
+    assert "Evidence integrity" in text
+    assert "declared-evidence-changed" in text
+
+
 def test_share_witness_cli_writes_review_note(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
