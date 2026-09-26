@@ -133,39 +133,65 @@ Install the current repository build:
 python -m pip install "git+https://github.com/hippoley/CounterProof.git"
 ```
 
-Run a real local self-test first:
+From a feature branch, ask CounterProof for one local evidence readout **before changing repository configuration**:
+
+```bash
+counterproof check
+```
+
+A strong local result looks like:
+
+```text
+Regression       WITNESSED
+Evidence scope   SUBMITTED JUDGE
+Proof integrity  CLEAN
+Strict gate      PASS
+Product oracle   UNVERIFIED
+```
+
+That means the exact changed-test evidence distinguishes HEAD from BASE and CounterProof did not detect a changed evidence surface. It does **not** mean the PR is correct or ready to merge.
+
+If runner or base detection is unusual, make it explicit:
+
+```bash
+counterproof check \
+  --base origin/main \
+  --test-command "python -m pytest -q {tests}"
+```
+
+Want to verify CounterProof itself first? Run:
 
 ```bash
 counterproof doctor
 ```
 
-Then let CounterProof inspect the repository and write the pull-request workflow:
+When the local evidence shape looks useful, let CounterProof write an advisory pull-request workflow:
 
 ```bash
 counterproof init
 ```
 
-It detects common test runners, keeps the first install **advisory**, and writes:
+It detects common test runners and writes:
 
 ```text
 .github/workflows/counterproof.yml
 ```
 
-After you have watched it behave correctly on real pull requests, turn on the two hard gates:
+Only after you have watched it behave correctly on real pull requests, turn on the two narrow CI gates:
 
 ```bash
 counterproof init --force --strict
 ```
 
-Strict mode means:
+Strict mode requires:
 
 ```text
-exact changed-test witness required
+exact changed-test witness
 +
-proof-integrity surface must stay clean
+clean proof-integrity surface
 ```
 
-If the project only exposes a full-suite command such as `go test ./...` or generic `npm test`, CounterProof refuses `--strict` instead of pretending suite-level evidence is an exact witness.
+It is an evidence gate, not a merge recommendation. If the project only exposes a full-suite command such as `go test ./...` or generic `npm test`, CounterProof refuses `--strict` instead of pretending suite-level evidence is an exact witness.
 
 ### Manual Action setup
 
