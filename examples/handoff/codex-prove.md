@@ -60,11 +60,13 @@ REQ-2-shaped claim:
 
 No special CounterProof packet is required.
 
-A PROVE result can reference the generated artifact directly:
+A PROVE worker result can reference the generated artifact directly. Here, `Worker task status: PASS`
+only means the evidence-generation task completed successfully; it is **not** the PROVE Controller's
+final decision and says nothing by itself about whether any REQ-ID is satisfied.
 
 ```text
 Task ID: verify-regression-evidence
-Status: PASS
+Worker task status: PASS
 Summary: Generated CounterProof claim/evidence artifact for the final candidate.
 Inspected:
   - examples/claim_matrix/codex-plugin-cc-731.yml
@@ -119,6 +121,7 @@ Blocker: None
 ## 4. Controller interpretation stays inside PROVE
 
 The PROVE Controller still compares the artifact to the evidence contract it declared before execution.
+A successful worker task and a successful final Controller decision are deliberately separate states.
 
 For this example:
 
@@ -144,7 +147,7 @@ CounterProof:
 
 Controller:
   requirement remains unsatisfied
-  overall PASS is impossible
+  final Controller PASS is impossible
 ```
 
 If REQ-1 had instead required agreement with an authoritative product oracle, then `WITNESSED (submitted judge)` would also be insufficient.
