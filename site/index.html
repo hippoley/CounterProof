@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Counterproof proves agent PR fixes by replaying changed tests against pre-change code, then protects the evidence from CI/test tampering.">
-  <title>Counterproof · Proof Lab</title>
+  <meta name="description" content="CounterProof replays the same PR evidence on BASE and HEAD, keeps claim scope explicit, and surfaces when the test or CI judge changed.">
+  <title>CounterProof · Proof Lab</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,9 +18,9 @@
     <section class="opening">
       <div class="opening-index">01—</div>
       <div>
-        <p class="overline">PROOF-OF-FIX FOR AGENT PULL REQUESTS</p>
-        <h1>Green says it passes now.<br><em>Prove it failed before the fix.</em></h1>
-        <p class="opening-copy">Counterproof replays the PR’s changed tests against pre-change code, then checks whether the same PR weakened the tests or CI that produced the evidence.</p>
+        <p class="overline">EVIDENCE REPLAY FOR AI-ASSISTED PULL REQUESTS</p>
+        <h1>Green says it passes now.<br><em>Prove the exact claim.</em></h1>
+        <p class="opening-copy">CounterProof replays the same submitted evidence against pre-change code, then checks whether the PR changed the test or CI judge. It tells you what the evidence establishes — not whether the PR should merge.</p>
       </div>
     </section>
 
@@ -52,9 +52,9 @@
           <strong id="witnessVerdict">WITNESSED</strong>
           <small id="witnessIntegrity">proof integrity · CLEAN</small>
           <div id="witnessUnified" class="witness-unified verified">
-            <span>UNIFIED PROOF</span>
-            <b id="witnessProofStatus">VERIFIED</b>
-            <small id="witnessProofReady">proof ready · TRUE</small>
+            <span>EVIDENCE SCOPE</span>
+            <b id="witnessProofStatus">SUBMITTED JUDGE</b>
+            <small id="witnessProofReady">product oracle · UNVERIFIED</small>
           </div>
         </div>
       </div>
@@ -234,7 +234,7 @@
   <div id="toast" class="toast" aria-live="polite"></div>
 
   <footer>
-    <span>COUNTERPROOF / SKILLFACTORY</span>
+    <span>COUNTERPROOF / PROOF LAB</span>
     <span>Agents will learn. The question is whether you can review what they learned.</span>
   </footer>
 
