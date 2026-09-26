@@ -438,9 +438,19 @@ jobs:
       - name: Check frontend JavaScript syntax
         run: node --check site/app.js
 
-      - name: Serve Counterproof playground
+      - name: Build deployable Proof Lab artifact
         run: |
-          python3 -m http.server 8765 --directory site >/tmp/counterproof-http.log 2>&1 &
+          python3 scripts/build_pages.py
+          test -f dist/index.html
+          test -f dist/app.js
+          test -f dist/data/build.json
+          test -f dist/data/capabilities.json
+          grep -q '"commit"' dist/data/build.json
+          grep -q 'CounterProof' dist/index.html
+
+      - name: Serve CounterProof Proof Lab
+        run: |
+          python3 -m http.server 8765 --directory dist >/tmp/counterproof-http.log 2>&1 &
           echo $! >/tmp/counterproof-http.pid
           for i in {1..20}; do
             curl -fsS http://127.0.0.1:8765/ >/dev/null && exit 0
