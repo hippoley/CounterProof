@@ -605,7 +605,7 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
 
 def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "schema_version": 5,
+        "schema_version": 4,
         "base_ref": witness.base_ref,
         "head_ref": witness.head_ref,
         "base_sha": witness.base_sha,
