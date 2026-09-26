@@ -4,6 +4,61 @@ CounterProof grows from real review uncertainty, not from a feature wishlist.
 
 The highest-value contribution is often **not code**.
 
+## Choose a contribution path
+
+CounterProof is currently learning from three different kinds of contribution. They are intentionally separate because each one protects a different proof boundary.
+
+### Reviewer / evidence-semantics partner
+
+You do **not** need to write code.
+
+Bring a real review artifact and tell us where the output would make you believe more than the evidence supports, where it omits a concern you would still check manually, or which provenance would save you from repeating work.
+
+The preferred loop is:
+
+```text
+real PR
+  -> manual claim/evidence artifact
+  -> human reviewer says usable / misleading / missing X
+  -> smallest mechanical implementation
+  -> the reviewer checks the automated artifact again
+```
+
+This is how the claim/evidence matrix and oracle-alignment vocabulary were shaped. A reviewer rejecting bad semantics is a first-class contribution.
+
+### Adversarial evidence contributor
+
+Attack the admission boundary.
+
+Useful contributions construct a minimal case where a receipt or manifest could claim more than its underlying evidence warrants, for example:
+
+- declaring `WITNESSED` without an actual BASE-fail / HEAD-pass transition;
+- attaching an `ALIGNED` or `CONTRADICTED` oracle state without auditable provenance;
+- reusing evidence after the candidate commit changed;
+- changing the test harness or fixture that acts as the judge;
+- supplying a green command that never exercised the claimed behavior.
+
+Prefer a focused regression fixture over a broad parser, framework, or policy implementation. CounterProof should validate the proof boundary it owns and leave unrelated standards to existing libraries.
+
+### Evidence consumer / integration partner
+
+Try to consume an existing CounterProof artifact **before** proposing a new SDK, adapter, packet type, or approval layer.
+
+A useful integration experiment answers:
+
+```text
+What decision does the downstream tool already own?
+What exact CounterProof evidence would reduce uncertainty?
+Can the existing report be attached without changing either project's authority?
+What field is actually missing after one real handoff?
+```
+
+CounterProof classifies evidence scope. A downstream controller, reviewer UI, or policy engine keeps its own decision authority.
+
+If an existing format is enough, the correct contribution may be an acceptance example and no new runtime code.
+
+These are contribution surfaces, not promises of permanent module boundaries. Real review failures can change them.
+
 ## 1. Bring a PR you do not trust
 
 If you are reviewing an AI-assisted pull request and the evidence feels weaker than the claim, submit it through the Reality Probe intake:
