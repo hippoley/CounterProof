@@ -279,6 +279,23 @@ COUNTERPROOF_RESULT={"verdict":"fail","metrics":{}}
 
 If the adapter itself exits non-zero, times out, or fails to emit a valid result, CounterProof reports **INCONCLUSIVE**. A compiler error is therefore not silently upgraded into regression evidence.
 
+### When the test already existed but the fixture changed
+
+Changed-test discovery is only the default. Sometimes the reviewer already knows the evidence set: an existing test becomes discriminating because the PR changes a fixture, sample, helper, or other support file.
+
+Declare that evidence explicitly instead of asking CounterProof to infer a dependency graph:
+
+```bash
+counterproof witness \
+  --base origin/main \
+  --test-command "python -m pytest -q {tests}" \
+  --test tests/existing_regression_test.py \
+  --support-file fixtures/changed_case.json \
+  --require-witness
+```
+
+CounterProof runs the selected test on HEAD, overlays the declared support file onto BASE, and runs the same test again. The receipt records `test_selection: explicit`. This path came from a real reviewer question where the test file itself was unchanged but the submitted fixture was what made the old behavior fail.
+
 ### Share a witness with a reviewer
 
 A machine receipt is useful for automation; a reviewer needs the small set of facts they can check quickly.
