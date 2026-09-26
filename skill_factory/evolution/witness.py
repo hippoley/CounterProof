@@ -729,7 +729,7 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
             [
                 "",
                 "> The full configured suite distinguishes base from head.",
-                "> Because the runner did not target changed tests directly, this is not labeled a Regression Witness.",
+                "> Because the runner did not target the selected tests directly, this is not labeled a Regression Witness.",
             ]
         )
     return "\n".join(lines) + "\n"
