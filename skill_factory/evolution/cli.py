@@ -792,9 +792,9 @@ def check_cmd(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(local_check_json(result) if json_output else render_local_check(result))
-    if strict and not result.ready:
+    if strict and not result.strict_pass:
         raise click.ClickException(
-            f"Counterproof strict check failed: status={result.status}"
+            f"CounterProof strict check failed: status={result.status}"
         )
 
 
