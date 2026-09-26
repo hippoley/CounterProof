@@ -147,7 +147,7 @@ def test_explicit_existing_test_can_replay_changed_fixture_against_base(tmp_path
     assert witness.base_with_head_tests.returncode == 1
 
     payload = witness_to_dict(witness)
-    assert payload["schema_version"] == 5
+    assert payload["schema_version"] == 4
     assert payload["test_selection"] == "explicit"
     assert payload["support_files"] == [
         "tests/test_fixture_contract.py",
