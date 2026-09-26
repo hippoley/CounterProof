@@ -3,7 +3,7 @@
   <rect x="30" y="30" width="1220" height="560" rx="22" fill="#111210"/>
   <text x="72" y="92" fill="#9ea098" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="2">COUNTERPROOF / PR PROOF LAB</text>
   <text x="72" y="162" fill="#f5f2e8" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="48">Your coding agent says it fixed the bug.</text>
-  <text x="72" y="216" fill="#f5f2e8" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="48">Prove it.</text>
+  <text x="72" y="216" fill="#f5f2e8" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="48">Prove the exact claim.</text>
 
   <rect x="72" y="266" width="1136" height="210" rx="14" fill="#1b1d1a" stroke="#3d403a"/>
   <text x="102" y="310" fill="#8e9188" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">REGRESSION WITNESS</text>
@@ -20,7 +20,7 @@
 
   <rect x="832" y="316" width="322" height="96" rx="12" fill="#eeeadf"/>
   <text x="864" y="352" fill="#444740" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="1">BEFORE / AFTER</text>
-  <text x="864" y="388" fill="#111210" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="25" font-weight="700">PASS ≠ PROOF</text>
+  <text x="864" y="388" fill="#111210" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="25" font-weight="700">PASS ≠ CLAIM PROOF</text>
 
   <rect x="72" y="516" width="316" height="48" rx="24" fill="#f5f2e8"/>
   <text x="107" y="547" fill="#111210" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">OPEN LIVE PROOF LAB →</text>
