@@ -807,6 +807,15 @@ def check_cmd(
 )
 @click.option("--head", "head_ref", default="HEAD", show_default=True)
 @click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
+@click.option(
+    "--evidence-file",
+    "evidence_files",
+    multiple=True,
+    help=(
+        "Reviewer-declared test/fixture/helper path that should count as an evidence surface. "
+        "Repeat for multiple files."
+    ),
+)
 @click.option("--out", "out_file", default="PROOF_INTEGRITY.md", show_default=True)
 @click.option("--json-out", default="PROOF_INTEGRITY.json", show_default=True)
 @click.option(
@@ -818,6 +827,7 @@ def integrity(
     base_ref: str,
     head_ref: str,
     repo_dir: str,
+    evidence_files: tuple[str, ...],
     out_file: str,
     json_out: str,
     require_clean: bool,
@@ -828,6 +838,7 @@ def integrity(
             Path(repo_dir),
             base_ref=base_ref,
             head_ref=head_ref,
+            evidence_paths=evidence_files,
         )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc

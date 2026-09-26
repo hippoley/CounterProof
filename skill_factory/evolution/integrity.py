@@ -184,11 +184,45 @@ def inspect_proof_integrity(
     *,
     base_ref: str,
     head_ref: str = "HEAD",
+    evidence_paths: tuple[str, ...] = (),
 ) -> ProofIntegrityReport:
-    """Inspect deterministic signs that the PR changed its own evidence machinery."""
+    """Inspect deterministic signs that the PR changed its own evidence machinery.
+
+    Explicit evidence paths let callers mark reviewer-declared tests, fixtures,
+    samples, or helpers that live outside conventional test/support directories.
+    """
+
     repo_root = repo_root.resolve()
     findings: list[IntegrityFinding] = []
     changed = _name_status(repo_root, base_ref, head_ref)
+    declared_evidence = {
+        path.replace("\\", "/")
+        for path in evidence_paths
+        if path.strip()
+    }
+
+    for status, path in changed:
+        normalized = path.replace("\\", "/")
+        if (
+            normalized in declared_evidence
+            and not status.startswith("A")
+            and not _matches(path, DEFAULT_SUPPORT_PATTERNS)
+            and not _matches(path, DEFAULT_TEST_PATTERNS)
+            and not _matches(path, EVIDENCE_CONFIG_PATTERNS)
+        ):
+            findings.append(
+                IntegrityFinding(
+                    code="declared-evidence-changed",
+                    risk="medium",
+                    path=path,
+                    evidence=f"{status} {path}",
+                    note=(
+                        "A reviewer-declared evidence file changed in the same PR. "
+                        "The replay may legitimately overlay it onto BASE, but the "
+                        "evidence surface is not held fixed and should be reviewed."
+                    ),
+                )
+            )
 
     for status, path in changed:
         if (
