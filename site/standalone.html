@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Counterproof proves agent PR fixes by replaying changed tests against pre-change code, then protects the evidence from CI/test tampering.">
-  <title>Counterproof · Proof Lab</title>
+  <meta name="description" content="CounterProof replays the same PR evidence on BASE and HEAD, keeps claim scope explicit, and surfaces when the test or CI judge changed.">
+  <title>CounterProof · Proof Lab</title>
   <style>@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap');
 :root{--paper:#f2efe8;--ink:#171814;--muted:#77796f;--rule:#cbc7bc;--red:#d74c35;--blue:#3f63a8;--green:#386c49;--yellow:#e2d46d;--white:#fbfaf6}
 *{box-sizing:border-box}html{background:var(--paper)}body{margin:0;color:var(--ink);background:var(--paper);font:15px/1.55 Manrope,system-ui,sans-serif}button{font:inherit}button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.mast{height:58px;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 28px;font:11px DM Mono,monospace;letter-spacing:.05em}.wordmark{color:var(--ink);font-weight:500;text-decoration:none;font-size:14px}.mast-center{text-align:center}.mast-right{justify-self:end;display:flex;gap:20px;color:var(--muted)}.mast-right a{color:var(--ink);text-decoration:none}main{max-width:1320px;margin:auto;padding:0 28px}.opening,.capability-truth{display:grid;grid-template-columns:90px 1fr;padding:86px 0 58px}.opening-index{font:12px DM Mono,monospace;color:var(--muted);padding-top:9px}.overline{font:10px DM Mono,monospace;letter-spacing:.13em;color:var(--muted);margin:0}.opening h1{font-size:clamp(42px,6.1vw,82px);line-height:.95;letter-spacing:-.064em;margin:14px 0 24px;max-width:1050px}.opening h1 em,.capability-truth h2 em{font-family:Newsreader,serif;font-weight:500}.opening-copy{font-size:18px;max-width:690px;color:#55584f}
@@ -34,9 +34,9 @@
     <section class="opening">
       <div class="opening-index">01—</div>
       <div>
-        <p class="overline">PROOF-OF-FIX FOR AGENT PULL REQUESTS</p>
-        <h1>Green says it passes now.<br><em>Prove it failed before the fix.</em></h1>
-        <p class="opening-copy">Counterproof replays the PR’s changed tests against pre-change code, then checks whether the same PR weakened the tests or CI that produced the evidence.</p>
+        <p class="overline">EVIDENCE REPLAY FOR AI-ASSISTED PULL REQUESTS</p>
+        <h1>Green says it passes now.<br><em>Prove the exact claim.</em></h1>
+        <p class="opening-copy">CounterProof replays the same submitted evidence against pre-change code, then checks whether the PR changed the test or CI judge. It tells you what the evidence establishes — not whether the PR should merge.</p>
       </div>
     </section>
 
@@ -68,9 +68,9 @@
           <strong id="witnessVerdict">WITNESSED</strong>
           <small id="witnessIntegrity">proof integrity · CLEAN</small>
           <div id="witnessUnified" class="witness-unified verified">
-            <span>UNIFIED PROOF</span>
-            <b id="witnessProofStatus">VERIFIED</b>
-            <small id="witnessProofReady">proof ready · TRUE</small>
+            <span>EVIDENCE SCOPE</span>
+            <b id="witnessProofStatus">SUBMITTED JUDGE</b>
+            <small id="witnessProofReady">product oracle · UNVERIFIED</small>
           </div>
         </div>
       </div>
@@ -250,7 +250,7 @@
   <div id="toast" class="toast" aria-live="polite"></div>
 
   <footer>
-    <span>COUNTERPROOF / SKILLFACTORY</span>
+    <span>COUNTERPROOF / PROOF LAB</span>
     <span>Agents will learn. The question is whether you can review what they learned.</span>
   </footer>
 
@@ -922,7 +922,7 @@ const __COUNTERPROOF_CAPS__={
       "id": "proof-integrity-guard",
       "name": "Proof Integrity Guard for changed tests and CI",
       "status": "tested",
-      "evidence": "Counterproof deterministically flags deleted tests, added skip/xfail markers, shell failure masking, continue-on-error, removed pull-request workflow triggers, and other evidence-surface changes.",
+      "evidence": "CounterProof deterministically flags deleted tests, added skip/xfail markers, shell failure masking, continue-on-error, removed pull-request workflow triggers, and other evidence-surface changes.",
       "limitation": "A finding means the judging machinery changed and needs review; it is not proof that the change is malicious or incorrect."
     },
     {
@@ -930,7 +930,7 @@ const __COUNTERPROOF_CAPS__={
       "name": "Install-level real-Git doctor self-test",
       "status": "tested",
       "evidence": "counterproof doctor creates a temporary Git repository and exercises structured-result parsing, Regression Witness, and Proof Integrity without an external service.",
-      "limitation": "Doctor validates Counterproof mechanics, not the consuming repository's full dependency graph or domain semantics."
+      "limitation": "Doctor validates CounterProof mechanics, not the consuming repository's full dependency graph or domain semantics."
     },
     {
       "id": "github-onboarding",
@@ -943,14 +943,14 @@ const __COUNTERPROOF_CAPS__={
       "id": "regression-witness",
       "name": "Regression Witness for agent pull requests",
       "status": "tested",
-      "evidence": "In precise mode, Counterproof runs the exact changed tests on PR head and detached base code with changed test support overlaid. Full-suite commands are reported separately as SUITE DELTA.",
+      "evidence": "In precise mode, CounterProof runs the exact changed tests on PR head and detached base code with changed test support overlaid. Full-suite commands are reported separately as SUITE DELTA.",
       "limitation": "Suite-level evidence is deliberately weaker and cannot satisfy --require-witness; repository-specific dependency setup still belongs to the consuming project."
     },
     {
       "id": "proof-receipt",
       "name": "Reproducible Proof Receipt with source fingerprints",
       "status": "tested",
-      "evidence": "Counterproof can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
+      "evidence": "CounterProof can hash the exact trace and experiment manifest, record observed/expected signatures and selection results, then verify later that the proof still points to unchanged inputs.",
       "limitation": "The receipt fingerprints source artifacts; it does not yet capture a full container image, dependency lock or external service state."
     },
     {
@@ -979,7 +979,7 @@ const __COUNTERPROOF_CAPS__={
       "name": "Multiple mutation surfaces",
       "status": "partial",
       "evidence": "The data model accepts skill, prompt, policy, router, memory, tool, and eval surfaces.",
-      "limitation": "Counterproof does not yet apply each mutation surface to a live agent automatically."
+      "limitation": "CounterProof does not yet apply each mutation surface to a live agent automatically."
     },
     {
       "id": "evidence-semantics",
@@ -1021,7 +1021,7 @@ const __COUNTERPROOF_CAPS__={
       "name": "Pre-registered PASS / FAIL predictions for intervention cases",
       "status": "tested",
       "evidence": "Experiment manifests can register expected outcomes before execution; contradicted or partial predictions are tracked separately from runtime pass/fail and can block automatic selection.",
-      "limitation": "Prediction quality still depends on the experiment author or adapter; Counterproof does not yet learn calibrated causal predictions."
+      "limitation": "Prediction quality still depends on the experiment author or adapter; CounterProof does not yet learn calibrated causal predictions."
     },
     {
       "id": "active-discrimination",
@@ -1069,7 +1069,7 @@ const __COUNTERPROOF_CAPS__={
       "id": "next-probe-planner",
       "name": "Next discriminating probe planning for ambiguous survivors",
       "status": "tested",
-      "evidence": "When survivor behavior signatures are identical, Counterproof emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
+      "evidence": "When survivor behavior signatures are identical, CounterProof emits a pairwise plan stating what to hold fixed, what levers to vary, competing predictions, and a falsification rule.",
       "limitation": "The planner produces experiment-design guidance, not an automatically instantiated executable domain test."
     },
     {
@@ -1105,7 +1105,7 @@ const __COUNTERPROOF_CAPS__={
       "name": "Automatic Evolution PR open / merge / revert",
       "status": "planned",
       "evidence": "Roadmap only.",
-      "limitation": "No GitHub automation is wired into the Counterproof runtime yet."
+      "limitation": "No GitHub automation is wired into the CounterProof runtime yet."
     },
     {
       "id": "online-rollout",
@@ -1221,11 +1221,11 @@ const witnessScenarios = {
     baseNote: "pre-change behavior reproduced",
     verdict: "WITNESSED",
     integrity: "proof integrity · CLEAN",
-    proofStatus: "VERIFIED",
-    proofReady: "proof ready · TRUE",
+    proofStatus: "SUBMITTED JUDGE",
+    proofReady: "product oracle · UNVERIFIED",
     proofClass: "verified",
     explanation: "The changed test passes on the PR, fails on the old code, and the evidence surface is clean.",
-    takeaway: "The configured Counterproof evidence contract is satisfied."
+    takeaway: "The regression is witnessed under the submitted judge; broader product correctness remains unproven."
   },
   "weak-test": {
     head: "PASS",
@@ -1235,7 +1235,7 @@ const witnessScenarios = {
     verdict: "NOT WITNESSED",
     integrity: "proof integrity · CLEAN",
     proofStatus: "UNPROVEN",
-    proofReady: "proof ready · FALSE",
+    proofReady: "submitted judge · INSUFFICIENT",
     proofClass: "unproven",
     explanation: "Green on HEAD is not enough when the same test was already green on BASE.",
     takeaway: "The configured evidence does not prove the regression."
@@ -1248,10 +1248,10 @@ const witnessScenarios = {
     verdict: "WITNESSED",
     integrity: "proof integrity · CI/TEST SURFACE CHANGED",
     proofStatus: "REVIEW REQUIRED",
-    proofReady: "proof ready · FALSE",
+    proofReady: "judge changed · REVIEW",
     proofClass: "review",
     explanation: "The regression witness exists, but the PR also changed how evidence is produced.",
-    takeaway: "The witness survives, but the unified proof is blocked until the judge is reviewed."
+    takeaway: "The witness survives, but changed evidence-producing machinery requires reviewer inspection before any broader claim."
   },
   "suite-delta": {
     head: "PASS",
@@ -1261,7 +1261,7 @@ const witnessScenarios = {
     verdict: "SUITE DELTA",
     integrity: "proof integrity · CLEAN",
     proofStatus: "SUITE DELTA",
-    proofReady: "proof ready · FALSE",
+    proofReady: "exact witness · UNPROVEN",
     proofClass: "suite",
     explanation: "The whole suite distinguishes HEAD from BASE, but the changed test was not isolated.",
     takeaway: "Useful evidence, but deliberately weaker than an exact Regression Witness."

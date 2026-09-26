@@ -20,11 +20,11 @@ const witnessScenarios = {
     baseNote: "pre-change behavior reproduced",
     verdict: "WITNESSED",
     integrity: "proof integrity · CLEAN",
-    proofStatus: "VERIFIED",
-    proofReady: "proof ready · TRUE",
+    proofStatus: "SUBMITTED JUDGE",
+    proofReady: "product oracle · UNVERIFIED",
     proofClass: "verified",
     explanation: "The changed test passes on the PR, fails on the old code, and the evidence surface is clean.",
-    takeaway: "The configured Counterproof evidence contract is satisfied."
+    takeaway: "The regression is witnessed under the submitted judge; broader product correctness remains unproven."
   },
   "weak-test": {
     head: "PASS",
@@ -34,7 +34,7 @@ const witnessScenarios = {
     verdict: "NOT WITNESSED",
     integrity: "proof integrity · CLEAN",
     proofStatus: "UNPROVEN",
-    proofReady: "proof ready · FALSE",
+    proofReady: "submitted judge · INSUFFICIENT",
     proofClass: "unproven",
     explanation: "Green on HEAD is not enough when the same test was already green on BASE.",
     takeaway: "The configured evidence does not prove the regression."
@@ -47,10 +47,10 @@ const witnessScenarios = {
     verdict: "WITNESSED",
     integrity: "proof integrity · CI/TEST SURFACE CHANGED",
     proofStatus: "REVIEW REQUIRED",
-    proofReady: "proof ready · FALSE",
+    proofReady: "judge changed · REVIEW",
     proofClass: "review",
     explanation: "The regression witness exists, but the PR also changed how evidence is produced.",
-    takeaway: "The witness survives, but the unified proof is blocked until the judge is reviewed."
+    takeaway: "The witness survives, but changed evidence-producing machinery requires reviewer inspection before any broader claim."
   },
   "suite-delta": {
     head: "PASS",
@@ -60,7 +60,7 @@ const witnessScenarios = {
     verdict: "SUITE DELTA",
     integrity: "proof integrity · CLEAN",
     proofStatus: "SUITE DELTA",
-    proofReady: "proof ready · FALSE",
+    proofReady: "exact witness · UNPROVEN",
     proofClass: "suite",
     explanation: "The whole suite distinguishes HEAD from BASE, but the changed test was not isolated.",
     takeaway: "Useful evidence, but deliberately weaker than an exact Regression Witness."
