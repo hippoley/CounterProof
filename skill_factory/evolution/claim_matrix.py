@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, TypeAdapter, ValidationError, model_validator
 
 
 class SubmittedTestEvidence(str, Enum):
@@ -27,6 +29,26 @@ class OverallClaim(str, Enum):
     CONTRADICTED = "CONTRADICTED"
     WITNESSED_SUBMITTED_JUDGE = "WITNESSED (submitted judge)"
     UNPROVEN = "UNPROVEN"
+
+
+_HTTP_SOURCE = TypeAdapter(AnyHttpUrl)
+
+
+def _is_absolute_http_url(value: str | None) -> bool:
+    # Reject corruption before URL parsers can normalize it away.
+    if not value or any(
+        char == "\\" or char.isspace() or unicodedata.category(char) in {"Cc", "Cf"}
+        for char in value
+    ):
+        return False
+    try:
+        parts = urlsplit(value)
+        if not parts.hostname:
+            return False
+        _HTTP_SOURCE.validate_python(value)
+    except ValueError:
+        return False
+    return True
 
 
 class ClaimEvidence(BaseModel):
@@ -58,13 +80,24 @@ class ClaimEvidence(BaseModel):
                     "WITNESSED / NOT_WITNESSED claims require BASE and HEAD results"
                 )
 
+        if self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED and (
+            self.base_result != "FAIL" or self.head_result != "PASS"
+        ):
+            raise ValueError("WITNESSED claims require BASE=FAIL and HEAD=PASS")
+
         if self.oracle_alignment in {
             OracleAlignment.ALIGNED,
             OracleAlignment.CONTRADICTED,
-        } and not self.oracle_probe:
-            raise ValueError(
-                "ALIGNED / CONTRADICTED oracle status requires an explicit oracle_probe"
-            )
+        }:
+            if not self.oracle_probe or not self.oracle_probe.strip():
+                raise ValueError(
+                    "ALIGNED / CONTRADICTED oracle status requires an explicit oracle_probe"
+                )
+            if not _is_absolute_http_url(self.oracle_source_url):
+                raise ValueError(
+                    "ALIGNED / CONTRADICTED oracle status requires oracle_source_url "
+                    "as an absolute http(s) URL with a host"
+                )
         return self
 
     @property
