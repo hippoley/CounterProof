@@ -131,6 +131,46 @@ jobs:
           grep -q 'Counterproof · Regression Witness' /tmp/REGRESSION_WITNESS.md
           grep -Fq 'Base code + PR tests: **FAIL**' /tmp/REGRESSION_WITNESS.md
 
+      - name: Run packaged zero-config local check
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/counterproof-check-fixture
+          mkdir -p /tmp/counterproof-check-fixture
+          cd /tmp/counterproof-check-fixture
+
+          git init -b main
+          git config user.email "counterproof@example.test"
+          git config user.name "Counterproof CI"
+
+          printf 'VALUE = 1\n' > app.py
+          git add app.py
+          git commit -m "base"
+
+          git checkout -b feature/fix
+          mkdir -p tests
+          printf 'VALUE = 2\n' > app.py
+          cat > tests/test_regression.py <<'PY'
+          from app import VALUE
+
+          def test_regression():
+              assert VALUE == 2
+          PY
+          git add app.py tests/test_regression.py
+          git commit -m "fix plus regression test"
+
+          /tmp/counterproof-clean/bin/pip install pytest
+          /tmp/counterproof-clean/bin/counterproof check \
+            --repo /tmp/counterproof-check-fixture \
+            --test-command "/tmp/counterproof-clean/bin/python -m pytest -q {tests}" \
+            --strict \
+            > /tmp/LOCAL_CHECK.txt
+
+          grep -q 'Status           VERIFIED' /tmp/LOCAL_CHECK.txt
+          grep -q 'Proof ready      YES' /tmp/LOCAL_CHECK.txt
+          grep -q 'Base             main' /tmp/LOCAL_CHECK.txt
+          grep -q 'Regression       WITNESSED' /tmp/LOCAL_CHECK.txt
+          grep -q 'Proof integrity  CLEAN' /tmp/LOCAL_CHECK.txt
+
       - name: Run packaged Proof Integrity Guard
         run: |
           set -euo pipefail
