@@ -59,6 +59,31 @@ def _pytest_command() -> str:
     return f"{sys.executable} -m pytest -q {{tests}}"
 
 
+def _add_fixture_only_regression(repo: Path) -> None:
+    tests = repo / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_fixture_contract.py").write_text(
+        "from pathlib import Path\n"
+        "from app import VALUE\n\n"
+        "def test_fixture_contract():\n"
+        "    expected = int(Path('fixtures/value.txt').read_text().strip())\n"
+        "    assert VALUE == expected\n",
+        encoding="utf-8",
+    )
+    fixtures = repo / "fixtures"
+    fixtures.mkdir(exist_ok=True)
+    (fixtures / "value.txt").write_text("1\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add existing fixture-backed test")
+
+
+def _change_fixture_and_fix(repo: Path) -> None:
+    (repo / "app.py").write_text("VALUE = 2\n", encoding="utf-8")
+    (repo / "fixtures" / "value.txt").write_text("2\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "fix behavior and update fixture")
+
+
 def test_changed_test_files_detects_pr_tests(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
@@ -93,6 +118,83 @@ def test_regression_witness_proves_test_fails_before_fix_and_passes_after(tmp_pa
     payload = witness_to_dict(witness)
     assert payload["witnessed"] is True
     assert payload["tests"] == ["tests/test_regression.py"]
+
+
+def test_explicit_existing_test_can_replay_changed_fixture_against_base(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo, base_value=1)
+    _add_fixture_only_regression(repo)
+    base = _git(repo, "rev-parse", "HEAD")
+    _change_fixture_and_fix(repo)
+
+    assert changed_test_files(repo, base_ref=base) == ()
+
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+        explicit_tests=("tests/test_fixture_contract.py",),
+        explicit_support_files=("fixtures/value.txt",),
+    )
+
+    assert witness.status == "witnessed"
+    assert witness.test_selection == "explicit"
+    assert witness.tests == ("tests/test_fixture_contract.py",)
+    assert "fixtures/value.txt" in witness.support_files
+    assert witness.head is not None and witness.head.returncode == 0
+    assert witness.base_with_head_tests is not None
+    assert witness.base_with_head_tests.returncode == 1
+
+    payload = witness_to_dict(witness)
+    assert payload["schema_version"] == 4
+    assert payload["test_selection"] == "explicit"
+    assert payload["support_files"] == [
+        "tests/test_fixture_contract.py",
+        "fixtures/value.txt",
+    ]
+    rendered = render_witness_markdown(witness)
+    assert "same explicitly selected tests fail before the fix" in rendered.lower()
+
+
+def test_witness_cli_accepts_explicit_existing_test_and_support_file(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo, base_value=1)
+    _add_fixture_only_regression(repo)
+    base = _git(repo, "rev-parse", "HEAD")
+    _change_fixture_and_fix(repo)
+    report = tmp_path / "explicit.md"
+    payload = tmp_path / "explicit.json"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "witness",
+            "--repo",
+            str(repo),
+            "--base",
+            base,
+            "--test-command",
+            _pytest_command(),
+            "--test",
+            "tests/test_fixture_contract.py",
+            "--support-file",
+            "fixtures/value.txt",
+            "--out",
+            str(report),
+            "--json-out",
+            str(payload),
+            "--require-witness",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Regression witness: witnessed" in result.output
+    assert "Test selection: explicit" in result.output
+    raw = json.loads(payload.read_text(encoding="utf-8"))
+    assert raw["status"] == "witnessed"
+    assert raw["test_selection"] == "explicit"
+    assert raw["support_files"][-1] == "fixtures/value.txt"
 
 
 def test_regression_witness_refuses_test_that_already_passed_on_base(tmp_path):

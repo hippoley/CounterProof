@@ -863,6 +863,24 @@ def integrity(
 @click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
 @click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
 @click.option(
+    "--test",
+    "explicit_tests",
+    multiple=True,
+    help=(
+        "Explicit existing test file to replay instead of relying on changed-test discovery. "
+        "Repeat for multiple files."
+    ),
+)
+@click.option(
+    "--support-file",
+    "explicit_support_files",
+    multiple=True,
+    help=(
+        "Changed fixture/helper from HEAD to overlay onto BASE for the replay. "
+        "Repeat for multiple files."
+    ),
+)
+@click.option(
     "--result-protocol",
     type=click.Choice(["exit-code", "json-v1"]),
     default="exit-code",
@@ -877,7 +895,7 @@ def integrity(
 @click.option(
     "--require-witness",
     is_flag=True,
-    help="Exit non-zero unless changed tests fail on base and pass on head.",
+    help="Exit non-zero unless the selected evidence tests fail on base and pass on head.",
 )
 def witness(
     base_ref: str,
@@ -885,12 +903,14 @@ def witness(
     test_command: str,
     repo_dir: str,
     timeout_seconds: float,
+    explicit_tests: tuple[str, ...],
+    explicit_support_files: tuple[str, ...],
     result_protocol: str,
     out_file: str,
     json_out: str,
     require_witness: bool,
 ) -> None:
-    """Prove that changed PR tests fail before the fix and pass after it."""
+    """Prove that selected PR evidence fails before the fix and passes after it."""
     try:
         result = run_regression_witness(
             Path(repo_dir),
@@ -899,6 +919,8 @@ def witness(
             test_command=test_command,
             timeout_seconds=timeout_seconds,
             result_protocol=result_protocol,
+            explicit_tests=explicit_tests,
+            explicit_support_files=explicit_support_files,
         )
     except (RuntimeError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -909,7 +931,8 @@ def witness(
     click.echo(f"Regression witness: {result.status}")
     click.echo(f"Evidence mode: {result.mode}")
     click.echo(f"Result protocol: {result.result_protocol}")
-    click.echo(f"Changed tests: {len(result.tests)}")
+    click.echo(f"Tests replayed: {len(result.tests)}")
+    click.echo(f"Test selection: {result.test_selection}")
     click.echo(f"Wrote {out_file}")
     click.echo(f"Wrote {json_out}")
 
