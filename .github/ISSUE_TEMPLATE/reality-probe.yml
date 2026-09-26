@@ -33,6 +33,24 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: claim_source
+    attributes:
+      label: Where did this claim or concern come from?
+      description: "Optional. Link the PR description, review comment, issue, or other source that created the review question."
+      placeholder: "https://github.com/owner/repo/pull/123#discussion_r..."
+
+  - type: textarea
+    id: existing_evidence
+    attributes:
+      label: What evidence already exists?
+      description: "Optional. Exact tests, CI jobs, reproduction steps, screenshots, runner links, or product probes already available."
+      placeholder: |
+        Examples:
+        tests/test_worker.py::test_configured_volume
+        CI run: ...
+        Product validator output: ...
+
   - type: textarea
     id: oracle
     attributes:
@@ -55,6 +73,18 @@ body:
         The exact changed test failing on the base commit and passing on the PR head.
     validations:
       required: true
+
+  - type: textarea
+    id: review_work
+    attributes:
+      label: What review work should this evidence save?
+      description: "Optional, but especially useful. Name the human check you hope not to repeat if the evidence is trustworthy."
+      placeholder: |
+        Examples:
+        Re-run the same regression on BASE.
+        Re-read a 500-line test log.
+        Manually compare the submitted judge with the product parser.
+        Nothing yet — I only want to know the evidence boundary.
 
   - type: textarea
     id: context
