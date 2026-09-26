@@ -66,8 +66,8 @@ def test_local_check_auto_detects_pytest_and_verifies_regression(tmp_path):
         timeout_seconds=30,
     )
 
-    assert result.status == "verified"
-    assert result.ready is True
+    assert result.status == "witnessed"
+    assert result.strict_pass is True
     assert result.base_ref == "main"
     assert result.witness.status == "witnessed"
     assert result.integrity.status == "clean"
@@ -89,10 +89,13 @@ def test_counterproof_check_cli_is_one_command_local_proof(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    assert "Status           VERIFIED" in result.output
-    assert "Proof ready      YES" in result.output
-    assert "Base             main" in result.output
     assert "Regression       WITNESSED" in result.output
+    assert "Evidence scope   SUBMITTED JUDGE" in result.output
+    assert "Proof integrity  CLEAN" in result.output
+    assert "Strict gate      PASS" in result.output
+    assert "Product oracle   UNVERIFIED" in result.output
+    assert "Base             main" in result.output
+    assert "does not establish product-level correctness or merge readiness" in result.output
 
 
 def test_counterproof_check_strict_rejects_weak_test(tmp_path):
@@ -119,4 +122,4 @@ def test_counterproof_check_strict_rejects_weak_test(tmp_path):
     )
 
     assert result.exit_code != 0
-    assert "Counterproof strict check failed" in result.output
+    assert "CounterProof strict check failed" in result.output
