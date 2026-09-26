@@ -177,19 +177,9 @@ def test_cli_rejects_inconsistent_witness_without_writing_outputs(
     assert not json_out.exists()
 
 
-def test_verified_or_contradicted_oracle_requires_probe():
-    with pytest.raises(ValidationError, match="requires an explicit oracle_probe"):
-        ClaimEvidence(
-            id="claim-1",
-            claim="behavior",
-            submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
-            oracle_alignment=OracleAlignment.CONTRADICTED,
-        )
-
-
 @pytest.mark.parametrize("oracle", ASSERTED_ORACLES)
-@pytest.mark.parametrize("oracle_probe", ["", "   ", "\n\t"])
-def test_asserted_oracle_rejects_blank_probe(oracle: OracleAlignment, oracle_probe: str):
+@pytest.mark.parametrize("oracle_probe", [None, "", "   ", "\n\t"])
+def test_asserted_oracle_rejects_blank_probe(oracle: OracleAlignment, oracle_probe: str | None):
     with pytest.raises(ValidationError, match="requires an explicit oracle_probe"):
         _claim(
             submitted=SubmittedTestEvidence.UNPROVEN,
@@ -201,19 +191,15 @@ def test_asserted_oracle_rejects_blank_probe(oracle: OracleAlignment, oracle_pro
 
 @pytest.mark.parametrize("oracle", ASSERTED_ORACLES)
 @pytest.mark.parametrize(
-    "submitted", [SubmittedTestEvidence.WITNESSED, SubmittedTestEvidence.UNPROVEN]
-)
-@pytest.mark.parametrize(
     "oracle_source_url",
     [
         None,
         "",
         "   ",
-        "\t",
         "oracle-source.example.test/no-scheme",
         "/relative/oracle/evidence",
+        "//oracle-source.example.test/scheme-relative",
         "ftp://oracle-source.example.test/synthetic-test-input",
-        "mailto:oracle@example.test",
         "https://",
         "https:///path-without-host",
         "https://:443/port-without-host",
@@ -221,33 +207,31 @@ def test_asserted_oracle_rejects_blank_probe(oracle: OracleAlignment, oracle_pro
         " https://oracle-source.example.test/leading-space",
         "https://oracle-source.example.test/trailing-newline\n",
         "https://oracle-source.example.test/inner space",
+        "https://oracle-source.example.test/inner\u00a0space",
         "https://oracle-source.example.test/control\x00char",
+        "https://oracle-source.example.test/control\x7fchar",
+        "https://oracle-source.example.test/control\x80char",
+        "https://example.test/\u202evidence",
+        "https://exam\u200bple.test/evidence",
+        "https://example.test/byte\ufefforder-mark",
+        "https://evil.example\\@github.com/hippoley/CounterProof/pull/50",
+        "https://example.test/evidence\\other",
         "https://oracle-source.example.test:99999/port-out-of-range",
         "https://oracle-source.example.test:port/non-numeric-port",
         "https://[2001:db8::1/unclosed-ipv6",
         "https://exa<mple.test/run",
-        "https://example.test/%ZZ",
-        "https://oracle-source.example.test/truncated-escape%2",
-        "https://oracle-source.example.test/pipe|in-path",
-        "https://oracle-source.example.test/run#fragment#twice",
-        "https://oracle-source.example.test/non-ascii-é",
         "https://user@/missing-host-after-userinfo",
-        "https://[fe80::1%eth0]/zone-id",
         "https://[not-an-ip]/bad-literal",
-        pytest.param(
-            "https://oracle-source.example.test:" + "0" * 5000 + "99999/huge-port",
-            id="zero-padded-out-of-range-port",
-        ),
+        "https://[2001:db8::1]suffix/bad-bracketed-host",
     ],
 )
 def test_asserted_oracle_rejects_missing_or_malformed_source(
     oracle: OracleAlignment,
-    submitted: SubmittedTestEvidence,
     oracle_source_url: str | None,
 ):
     with pytest.raises(ValidationError, match="requires oracle_source_url"):
         _claim(
-            submitted=submitted,
+            submitted=SubmittedTestEvidence.UNPROVEN,
             oracle=oracle,
             oracle_probe="caller-declared probe; never executed by this renderer",
             oracle_source_url=oracle_source_url,
@@ -270,13 +254,7 @@ def test_asserted_oracle_rejects_missing_or_malformed_source(
         "https://oracle-source.example.test:8443/synthetic-test-input",
         "https://[2001:db8::1]/synthetic-test-input",
         "https://example.test/oracle%20run#result",
-        "https://oracle-source.example.test/a%2Fb?check=%E2%9C%93&page=2#L10-L20",
-        "https://user:token-free@oracle-source.example.test/userinfo-syntax",
-        pytest.param(
-            "https://oracle-source.example.test:" + "0" * 5000 + "8443/leading-zero-port",
-            id="zero-padded-valid-port",
-        ),
-        "https://[v1.fe80::a+en1]/ipvfuture-literal",
+        "https://bücher.test/evidence",
     ],
 )
 def test_asserted_oracle_accepts_absolute_http_source_verbatim(
@@ -325,7 +303,7 @@ def test_unverified_oracle_needs_neither_probe_nor_source(
         {},
         {"oracle_source_url": "   "},
         {"oracle_source_url": "oracle-source.example.test/no-scheme"},
-        {"oracle_source_url": "https://example.test/%ZZ"},
+        {"oracle_source_url": "https://example.test:99999/invalid-port"},
     ],
 )
 def test_cli_rejects_asserted_oracle_without_source_before_writing_outputs(

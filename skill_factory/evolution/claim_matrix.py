@@ -1,15 +1,15 @@
 """Reviewer-facing claim/evidence matrices with mechanical proof semantics."""
 from __future__ import annotations
 
-import ipaddress
 import json
-import re
+import unicodedata
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, TypeAdapter, ValidationError, model_validator
 
 
 class SubmittedTestEvidence(str, Enum):
@@ -31,40 +31,23 @@ class OverallClaim(str, Enum):
     UNPROVEN = "UNPROVEN"
 
 
-# RFC 3986 absolute http(s) URI with a non-empty host.
-_UNRESERVED = r"A-Za-z0-9\-._~"
-_SUB_DELIMS = r"!$&'()*+,;="
-_PCT_ENCODED = r"%[0-9A-Fa-f]{2}"
-_PCHAR = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}:@]|{_PCT_ENCODED})"
-_HTTP_URL = re.compile(
-    r"[Hh][Tt][Tt][Pp][Ss]?://"
-    rf"(?:(?:[{_UNRESERVED}{_SUB_DELIMS}:]|{_PCT_ENCODED})*@)?"
-    rf"(?P<host>\[[^\]]*\]|(?:[{_UNRESERVED}{_SUB_DELIMS}]|{_PCT_ENCODED})+)"
-    r"(?::(?P<port>[0-9]*))?"
-    rf"(?:/{_PCHAR}*)*"
-    rf"(?:\?(?:{_PCHAR}|[/?])*)?"
-    rf"(?:#(?:{_PCHAR}|[/?])*)?"
-)
-_IPV_FUTURE = re.compile(rf"[Vv][0-9A-Fa-f]+\.[{_UNRESERVED}{_SUB_DELIMS}:]+")
+_HTTP_SOURCE = TypeAdapter(AnyHttpUrl)
 
 
 def _is_absolute_http_url(value: str | None) -> bool:
-    match = _HTTP_URL.fullmatch(value) if value else None
-    if match is None:
+    # Reject corruption before URL parsers can normalize it away.
+    if not value or any(
+        char == "\\" or char.isspace() or unicodedata.category(char) in {"Cc", "Cf"}
+        for char in value
+    ):
         return False
-    host, port_digits = match.group("host"), (match.group("port") or "").lstrip("0")
-    if len(port_digits) > 5 or int(port_digits or "0") > 65535:
+    try:
+        parts = urlsplit(value)
+        if not parts.hostname:
+            return False
+        _HTTP_SOURCE.validate_python(value)
+    except ValueError:
         return False
-    if host.startswith("["):
-        literal = host[1:-1]
-        if _IPV_FUTURE.fullmatch(literal):
-            return True
-        if "%" in literal:
-            return False
-        try:
-            ipaddress.IPv6Address(literal)
-        except ValueError:
-            return False
     return True
 
 
