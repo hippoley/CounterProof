@@ -27,7 +27,7 @@ def _repo(tmp_path: Path) -> Path:
     repo.mkdir()
     _git(repo, "init", "-b", "main")
     _git(repo, "config", "user.email", "counterproof@example.test")
-    _git(repo, "config", "user.name", "Counterproof Test")
+    _git(repo, "config", "user.name", "CounterProof Test")
 
     (repo / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
     _git(repo, "add", ".")
@@ -57,7 +57,7 @@ def test_resolve_base_falls_back_to_local_main(tmp_path):
     assert commit == _git(repo, "rev-parse", "main")
 
 
-def test_local_check_auto_detects_pytest_and_verifies_regression(tmp_path):
+def test_local_check_auto_detects_pytest_and_witnesses_regression(tmp_path):
     repo = _repo(tmp_path)
 
     result = run_local_check(
