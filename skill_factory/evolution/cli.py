@@ -28,6 +28,7 @@ from .integrity import (
     render_integrity_markdown,
     write_integrity_json,
 )
+from .local_check import local_check_json, render_local_check, run_local_check
 from .models import (
     CandidateMutation,
     Evidence,
@@ -735,6 +736,66 @@ def doctor(json_output: bool) -> None:
         click.echo(render_doctor(report))
     if not report.ok:
         raise click.ClickException("Counterproof self-test failed")
+
+
+@cli.command("check")
+@click.option(
+    "--repo",
+    "repo_dir",
+    default=".",
+    show_default=True,
+    type=click.Path(file_okay=False),
+)
+@click.option(
+    "--base",
+    "base_ref",
+    default=None,
+    help="Override automatic base-branch detection.",
+)
+@click.option(
+    "--test-command",
+    default=None,
+    help="Override runner detection. Use {tests} for precise replay.",
+)
+@click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
+@click.option(
+    "--result-protocol",
+    type=click.Choice(["exit-code", "json-v1"]),
+    default="exit-code",
+    show_default=True,
+)
+@click.option("--json-output", is_flag=True, help="Emit machine-readable JSON.")
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Exit non-zero unless exact witness evidence exists and integrity is clean.",
+)
+def check_cmd(
+    repo_dir: str,
+    base_ref: str | None,
+    test_command: str | None,
+    timeout_seconds: float,
+    result_protocol: str,
+    json_output: bool,
+    strict: bool,
+) -> None:
+    """Run a zero-config local proof check for the current branch."""
+    try:
+        result = run_local_check(
+            Path(repo_dir),
+            base_ref=base_ref,
+            test_command=test_command,
+            timeout_seconds=timeout_seconds,
+            result_protocol=result_protocol,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(local_check_json(result) if json_output else render_local_check(result))
+    if strict and not result.ready:
+        raise click.ClickException(
+            f"Counterproof strict check failed: status={result.status}"
+        )
 
 
 @cli.command("integrity")
