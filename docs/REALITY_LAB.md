@@ -50,6 +50,7 @@ These are useful public probes, but **no external response is counted yet**:
 - [#45 — Cognee #5161 human-oracle contradiction](https://github.com/hippoley/CounterProof/issues/45)
 - [#46 — Mem0 #6516 evidence-workflow interview](https://github.com/hippoley/CounterProof/issues/46)
 - [#48 — Vercel AI #17096 mixed evidence boundary](https://github.com/hippoley/CounterProof/issues/48)
+- [#64 — claimproof runtime receipt vs candidate-bound PR evidence](https://github.com/hippoley/CounterProof/issues/64) — outbound boundary probe only. Current claimproof receipts are session-local command + exit-code evidence; the open question is whether that ephemerality is intentional or whether a reusable candidate-bound export belongs upstream.
 
 ### Open intake
 
