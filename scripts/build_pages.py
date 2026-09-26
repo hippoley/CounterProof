@@ -8,8 +8,6 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from skill_factory.evolution.capabilities import capability_report
-
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 
@@ -34,10 +32,6 @@ def main() -> None:
     }
     (data / "build.json").write_text(
         json.dumps(build, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    (data / "capabilities.json").write_text(
-        json.dumps(capability_report(), ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     (DIST / ".nojekyll").touch()
