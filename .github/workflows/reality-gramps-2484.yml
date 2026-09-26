@@ -1,0 +1,94 @@
+name: Reality probe - gramps #2484
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reality-gramps-2484.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out CounterProof probe
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install minimal validator dependency
+        run: python -m pip install lxml
+
+      - name: Fetch exact Gramps candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/gramps-project/gramps.git /tmp/gramps
+          cd /tmp/gramps
+          git fetch origin \
+            48e067ced96ad83b7498587ea1562c2d327b41aa \
+            faee7435ebb7ddcc5522b83028eddae5a5ef39e3 \
+            --depth=1
+
+      - name: Replay the submitted fixture across HEAD and BASE
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/gramps
+          out=/tmp/gramps-probe
+          rm -rf "$out"
+          mkdir -p "$out/head" "$out/base" "$out/guard"
+
+          git -C "$repo" show faee7435ebb7ddcc5522b83028eddae5a5ef39e3:data/grampsxml.rng > "$out/head/grampsxml.rng"
+          git -C "$repo" show faee7435ebb7ddcc5522b83028eddae5a5ef39e3:example/gramps/data.gramps > "$out/head/data.gramps"
+
+          git -C "$repo" show 48e067ced96ad83b7498587ea1562c2d327b41aa:data/grampsxml.rng > "$out/base/grampsxml.rng"
+          cp "$out/head/data.gramps" "$out/base/data.gramps"
+
+          cp "$out/base/grampsxml.rng" "$out/guard/grampsxml.rng"
+          git -C "$repo" show 48e067ced96ad83b7498587ea1562c2d327b41aa:example/gramps/data.gramps > "$out/guard/data.gramps"
+
+          cat > "$out/validate.py" <<'PY'
+          import gzip
+          import sys
+          from pathlib import Path
+          from lxml import etree
+
+          rng_path = Path(sys.argv[1])
+          data_path = Path(sys.argv[2])
+
+          raw = data_path.read_bytes()
+          if raw[:2] == b"\x1f\x8b":
+              raw = gzip.decompress(raw)
+
+          schema = etree.RelaxNG(etree.parse(str(rng_path)))
+          parser = etree.XMLParser(load_dtd=False, no_network=True, resolve_entities=False)
+          doc = etree.fromstring(raw, parser=parser).getroottree()
+
+          ok = schema.validate(doc)
+          print("PASS" if ok else "FAIL")
+          if not ok:
+              for error in schema.error_log:
+                  print(error)
+          raise SystemExit(0 if ok else 1)
+          PY
+
+          echo "=== HEAD: HEAD schema + submitted HEAD fixture ==="
+          python "$out/validate.py" "$out/head/grampsxml.rng" "$out/head/data.gramps"
+
+          echo "=== BASE replay: BASE schema + same submitted HEAD fixture ==="
+          set +e
+          python "$out/validate.py" "$out/base/grampsxml.rng" "$out/base/data.gramps"
+          base_replay=$?
+          set -e
+          test "$base_replay" -ne 0
+
+          echo "=== Guard: BASE schema + original BASE fixture ==="
+          python "$out/validate.py" "$out/guard/grampsxml.rng" "$out/guard/data.gramps"
+
+          echo "COUNTERPROOF_REALITY_RESULT=WITNESSED"
+          echo "HEAD=PASS BASE_WITH_SUBMITTED_FIXTURE=FAIL BASE_GUARD=PASS"
