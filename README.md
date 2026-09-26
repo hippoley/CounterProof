@@ -302,12 +302,21 @@ A machine receipt is useful for automation; a reviewer needs the small set of fa
 
 ```bash
 counterproof share-witness REGRESSION_WITNESS.json \
+  --integrity-file PROOF_INTEGRITY.json \
   --source-url https://github.com/owner/repo/pull/123 \
   --runner-url https://github.com/owner/proof/actions/runs/456 \
   --out WITNESS_REVIEW_NOTE.md
 ```
 
-The note includes the exact HEAD / BASE commits, exit codes, executed changed-test command, evidence digest, links, and the scope limit that a regression witness proves the tested before/after delta — not every claimed production cause.
+The integrity file is optional. Without it, the command remains a witness-only reviewer note.
+
+When supplied, the note keeps the two evidence layers separate while putting them on one screen:
+
+- exact HEAD / BASE commits and exit results;
+- selected tests and any support files overlaid onto BASE;
+- evidence digest and execution links;
+- Proof Integrity status plus concrete changed evidence surfaces;
+- the scope limit that a regression witness proves the tested before/after delta — not every claimed production cause or merge readiness.
 
 ### When one PR contains multiple review claims
 
