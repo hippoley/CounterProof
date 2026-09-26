@@ -1,12 +1,11 @@
-name: Deploy review demo
+name: Deploy CounterProof Proof Lab
 
 on:
   push:
     branches: [main]
     paths:
-      - 'skill_factory/**'
-      - 'skills/**'
       - 'site/**'
+      - 'skill_factory/evolution/capabilities.py'
       - 'scripts/build_pages.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -42,7 +41,7 @@ jobs:
             echo "GitHub Pages is enabled."
           elif [[ "$status" == "404" ]]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=GitHub Pages not enabled::Skipping deployment. Enable Pages for this repository with GitHub Actions as the source, then re-run this workflow."
+            echo "::notice title=GitHub Pages not enabled::Built the Proof Lab successfully, but deployment is skipped. Enable Pages with GitHub Actions as the source, then re-run this workflow."
           else
             echo "Unexpected GitHub Pages API status: $status" >&2
             cat /tmp/counterproof-pages.json >&2 || true
@@ -50,24 +49,24 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
-        if: steps.pages.outputs.enabled == 'true'
 
       - uses: actions/setup-python@v5
-        if: steps.pages.outputs.enabled == 'true'
         with:
           python-version: '3.12'
-          cache: pip
 
-      - name: Install, verify and test
-        if: steps.pages.outputs.enabled == 'true'
-        run: |
-          pip install -e '.[dev]'
-          ruff check skill_factory/ tests/
-          pytest -q
-
-      - name: Build review surface from repository skills
-        if: steps.pages.outputs.enabled == 'true'
+      - name: Build CounterProof Proof Lab
         run: python scripts/build_pages.py
+
+      - name: Validate static artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -f dist/app.js
+          test -f dist/data/build.json
+          test -f dist/data/capabilities.json
+          grep -q '"commit"' dist/data/build.json
+          grep -q 'CounterProof' dist/index.html
 
       - uses: actions/configure-pages@v5
         if: steps.pages.outputs.enabled == 'true'
@@ -77,7 +76,7 @@ jobs:
         with:
           path: dist
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy CounterProof Proof Lab
         if: steps.pages.outputs.enabled == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
