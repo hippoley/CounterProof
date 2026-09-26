@@ -1,4 +1,4 @@
-"""Local one-command Counterproof check for the current Git branch."""
+"""Local one-command CounterProof evidence check for the current Git branch."""
 from __future__ import annotations
 
 import json
@@ -22,15 +22,17 @@ class LocalCheckResult:
     integrity: ProofIntegrityReport
 
     @property
-    def ready(self) -> bool:
+    def strict_pass(self) -> bool:
+        """Whether the narrow local strict gate passes.
+
+        This is intentionally not a product-correctness or merge-readiness verdict.
+        """
         return self.witness.witnessed and self.integrity.status == "clean"
 
     @property
     def status(self) -> str:
         if self.integrity.status != "clean":
             return "review-required"
-        if self.witness.witnessed:
-            return "verified"
         return self.witness.status
 
 
@@ -161,7 +163,15 @@ def local_check_to_dict(result: LocalCheckResult) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "status": result.status,
-        "ready": result.ready,
+        "strict_gate": {
+            "passed": result.strict_pass,
+            "requires": [
+                "exact changed-test witness",
+                "clean proof-integrity surface",
+            ],
+        },
+        "evidence_scope": "submitted-judge",
+        "oracle_alignment": "unverified",
         "base_ref": result.base_ref,
         "base_commit": result.base_commit,
         "runner": {
@@ -185,30 +195,31 @@ def local_check_to_dict(result: LocalCheckResult) -> dict[str, Any]:
 
 
 def render_local_check(result: LocalCheckResult) -> str:
-    status = result.status.upper().replace("-", " ")
-    ready = "YES" if result.ready else "NO"
+    strict_gate = "PASS" if result.strict_pass else "FAIL"
     lines = [
-        "Counterproof local check",
+        "CounterProof local check",
         "",
-        f"Status           {status}",
-        f"Proof ready      {ready}",
+        f"Regression       {result.witness.status.upper().replace('-', ' ')}",
+        f"Evidence scope   SUBMITTED JUDGE",
+        f"Proof integrity  {result.integrity.status.upper().replace('-', ' ')}",
+        f"Strict gate      {strict_gate}",
+        f"Product oracle   UNVERIFIED",
+        "",
         f"Base             {result.base_ref}",
         f"Base commit      {result.base_commit[:12]}",
         f"Runner           {result.detection.runner}",
         f"Command          {result.detection.command}",
-        "",
-        f"Regression       {result.witness.status.upper().replace('-', ' ')}",
         f"Evidence mode    {result.witness.mode.upper()}",
         f"Changed tests    {len(result.witness.tests)}",
-        f"Proof integrity  {result.integrity.status.upper().replace('-', ' ')}",
         f"Integrity risks  {len(result.integrity.findings)}",
     ]
-    if result.ready:
+    if result.strict_pass:
         lines.extend(
             [
                 "",
                 "The exact changed-test evidence distinguishes HEAD from BASE",
-                "and Counterproof did not detect a changed evidence surface.",
+                "and CounterProof did not detect a changed evidence surface.",
+                "This does not establish product-level correctness or merge readiness.",
             ]
         )
     elif result.witness.status == "no-changed-tests":
