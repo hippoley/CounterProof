@@ -415,7 +415,7 @@ async function init() {
       fetch("data/evolution_cases.json").then(r => { if (!r.ok) throw new Error("case data " + r.status); return r.json(); }),
       fetch("data/capabilities.json").then(r => { if (!r.ok) throw new Error("capabilities " + r.status); return r.json(); }),
       fetch("data/reality_cases.json").then(r => r.ok ? r.json() : {cases: []}).catch(() => ({cases: []})),
-      fetch("data/skills.json").then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch("data/build.json").then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
     cases = casePayload.cases;
     capabilities = capabilityPayload.capabilities;
