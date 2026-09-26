@@ -145,6 +145,58 @@ def test_integrity_does_not_flag_modified_test_as_support_change(tmp_path):
     assert "test-support-changed" not in codes
 
 
+def test_integrity_flags_modified_declared_evidence_outside_test_dirs(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    example = repo / "example"
+    example.mkdir()
+    fixture = example / "data.gramps"
+    fixture.write_text("<database version='base'/>\n", encoding="utf-8")
+    _commit(repo, "add external example fixture")
+    base = _git(repo, "rev-parse", "HEAD")
+
+    fixture.write_text("<database version='head'/>\n", encoding="utf-8")
+    _commit(repo, "change reviewer-declared fixture")
+
+    default_report = inspect_proof_integrity(repo, base_ref=base)
+    assert default_report.status == "clean"
+
+    report = inspect_proof_integrity(
+        repo,
+        base_ref=base,
+        evidence_paths=("example/data.gramps",),
+    )
+    findings = {item.code: item for item in report.findings}
+
+    assert report.status == "review-required"
+    assert findings["declared-evidence-changed"].path == "example/data.gramps"
+    assert findings["declared-evidence-changed"].risk == "medium"
+
+    json_path = tmp_path / "declared-integrity.json"
+    result = CliRunner().invoke(
+        cli,
+        [
+            "integrity",
+            "--repo",
+            str(repo),
+            "--base",
+            base,
+            "--evidence-file",
+            "example/data.gramps",
+            "--json-out",
+            str(json_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    raw = json.loads(json_path.read_text(encoding="utf-8"))
+    assert raw["status"] == "review-required"
+    assert any(
+        item["code"] == "declared-evidence-changed"
+        and item["path"] == "example/data.gramps"
+        for item in raw["findings"]
+    )
+
+
 def test_integrity_flags_added_skip_marker(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo)
