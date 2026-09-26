@@ -740,10 +740,16 @@ def render_witness_review_note(
     *,
     source_url: str | None = None,
     runner_url: str | None = None,
+    integrity_payload: dict[str, Any] | None = None,
 ) -> str:
-    """Render a concise reviewer-facing note from a stored witness payload."""
+    """Render a concise reviewer-facing note from stored witness evidence."""
     status = str(payload.get("status", "unknown"))
     tests = [str(item) for item in payload.get("tests", [])]
+    support_files = [
+        str(item)
+        for item in payload.get("support_files", [])
+        if str(item) not in tests
+    ]
     head = payload.get("head") or {}
     base = payload.get("base_with_head_tests") or {}
     head_sha = str(payload.get("head_sha") or payload.get("head_ref") or "unknown")
@@ -799,8 +805,43 @@ def render_witness_review_note(
         lines.append(f"- Command: `{shlex.join(argv)}`")
     if tests:
         lines.append("- Tests: " + ", ".join(f"`{item}`" for item in tests))
+    if support_files:
+        lines.append(
+            "- Support files overlaid: "
+            + ", ".join(f"`{item}`" for item in support_files)
+        )
     if digest:
         lines.append(f"- Evidence digest: `sha256:{digest}`")
+
+    if integrity_payload is not None:
+        integrity_status = str(integrity_payload.get("status", "unknown"))
+        findings = integrity_payload.get("findings") or []
+        if not isinstance(findings, list):
+            findings = []
+        high_risk_count = integrity_payload.get("high_risk_count")
+        if not isinstance(high_risk_count, int):
+            high_risk_count = sum(
+                1
+                for item in findings
+                if isinstance(item, dict) and item.get("risk") == "high"
+            )
+
+        lines.extend(
+            [
+                "",
+                "#### Evidence integrity",
+                "",
+                f"- Status: `{integrity_status.upper()}`",
+                f"- Findings: {len(findings)} (high risk: {high_risk_count})",
+            ]
+        )
+        for item in findings:
+            if not isinstance(item, dict):
+                continue
+            risk = str(item.get("risk", "unknown")).upper()
+            code = str(item.get("code", "unknown"))
+            path = str(item.get("path", "unknown"))
+            lines.append(f"- `{risk}` `{code}` — `{path}`")
 
     links = []
     if source_url:
@@ -820,10 +861,18 @@ def render_witness_review_note(
             "> Scope: this replay did not establish an exact Regression Witness. "
             "Do not treat it as proof of the claimed fix."
         )
+    lines.extend(["", scope])
+    if (
+        integrity_payload is not None
+        and str(integrity_payload.get("status", "")).lower() == "review-required"
+    ):
+        lines.append(
+            "> Integrity: the evidence-producing surface changed in this PR. "
+            "The replay result remains scoped to the selected evidence; inspect "
+            "the integrity findings before treating it as independent proof."
+        )
     lines.extend(
         [
-            "",
-            scope,
             "",
             (
                 "Would this evidence materially help review this change? "
