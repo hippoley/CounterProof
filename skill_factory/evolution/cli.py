@@ -955,11 +955,18 @@ def witness(
 
 @cli.command("share-witness")
 @click.argument("witness_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--integrity-file",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Optional PROOF_INTEGRITY.json to include in the reviewer note.",
+)
 @click.option("--source-url", default=None, help="Optional source pull-request URL.")
 @click.option("--runner-url", default=None, help="Optional execution-run URL.")
 @click.option("--out", "out_file", default="WITNESS_REVIEW_NOTE.md", show_default=True)
 def share_witness(
     witness_file: str,
+    integrity_file: str | None,
     source_url: str | None,
     runner_url: str | None,
     out_file: str,
@@ -972,10 +979,29 @@ def share_witness(
     if not isinstance(payload, dict) or "status" not in payload:
         raise click.ClickException("witness receipt must be a JSON object with status")
 
+    integrity_payload = None
+    if integrity_file is not None:
+        try:
+            integrity_payload = json.loads(
+                Path(integrity_file).read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            raise click.ClickException(
+                f"could not read integrity receipt: {exc}"
+            ) from exc
+        if (
+            not isinstance(integrity_payload, dict)
+            or "status" not in integrity_payload
+        ):
+            raise click.ClickException(
+                "integrity receipt must be a JSON object with status"
+            )
+
     note = render_witness_review_note(
         payload,
         source_url=source_url,
         runner_url=runner_url,
+        integrity_payload=integrity_payload,
     )
     Path(out_file).write_text(note, encoding="utf-8")
     click.echo(f"Review note: {payload.get('status', 'unknown')}")
