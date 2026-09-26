@@ -107,6 +107,7 @@ class RegressionWitness:
     base_sha: str | None = None
     head_sha: str | None = None
     result_protocol: str = "exit-code"
+    test_selection: str = "changed-tests"
 
     @property
     def witnessed(self) -> bool:
@@ -435,19 +436,32 @@ def run_regression_witness(
     timeout_seconds: float = 300,
     patterns: tuple[str, ...] = DEFAULT_TEST_PATTERNS,
     result_protocol: str = "exit-code",
+    explicit_tests: tuple[str, ...] = (),
+    explicit_support_files: tuple[str, ...] = (),
 ) -> RegressionWitness:
-    """Replay changed tests against HEAD and base with changed test support overlaid."""
+    """Replay selected tests against HEAD and base with declared support overlaid.
+
+    By default CounterProof discovers changed test files. Reviewers can instead
+    provide explicit existing tests plus changed fixtures/helpers when the PR's
+    evidentiary change lives outside the test file itself.
+    """
     if result_protocol not in {"exit-code", "json-v1"}:
         raise ValueError(f"unknown witness result protocol: {result_protocol}")
     repo_root = repo_root.resolve()
     resolved_base_sha = _git(repo_root, "rev-parse", f"{base_ref}^{{commit}}")
     resolved_head_sha = _git(repo_root, "rev-parse", f"{head_ref}^{{commit}}")
-    tests = changed_test_files(
+    discovered_tests = changed_test_files(
         repo_root,
         base_ref=base_ref,
         head_ref=head_ref,
         patterns=patterns,
     )
+    tests = tuple(dict.fromkeys(explicit_tests)) if explicit_tests else discovered_tests
+    test_selection = "explicit" if explicit_tests else "changed-tests"
+
+    for relative in (*tests, *explicit_support_files):
+        _safe_relative_file(repo_root, relative)
+
     support_files = tuple(
         dict.fromkeys(
             (
@@ -457,6 +471,7 @@ def run_regression_witness(
                     base_ref=base_ref,
                     head_ref=head_ref,
                 ),
+                *explicit_support_files,
             )
         )
     )
@@ -475,6 +490,7 @@ def run_regression_witness(
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
             result_protocol=result_protocol,
+            test_selection=test_selection,
         )
 
     argv, mode = _build_test_argv(test_command, tests)
@@ -484,6 +500,7 @@ def run_regression_witness(
         timeout_seconds=timeout_seconds,
         env=_witness_env(repo_root, "head"),
         result_protocol=result_protocol,
+        test_selection=test_selection,
     )
     if result_protocol == "json-v1" and head.semantic_error:
         return RegressionWitness(
@@ -499,6 +516,7 @@ def run_regression_witness(
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
             result_protocol=result_protocol,
+            test_selection=test_selection,
         )
     if not head.passed:
         return RegressionWitness(
@@ -514,6 +532,7 @@ def run_regression_witness(
             base_sha=resolved_base_sha,
             head_sha=resolved_head_sha,
             result_protocol=result_protocol,
+            test_selection=test_selection,
         )
 
     with tempfile.TemporaryDirectory(prefix="counterproof-witness-") as tmp:
@@ -586,7 +605,7 @@ def _command_to_dict(command: WitnessCommand | None) -> dict[str, Any] | None:
 
 def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "schema_version": 4,
+        "schema_version": 5,
         "base_ref": witness.base_ref,
         "head_ref": witness.head_ref,
         "base_sha": witness.base_sha,
@@ -596,6 +615,7 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
         "status": witness.status,
         "mode": witness.mode,
         "result_protocol": witness.result_protocol,
+        "test_selection": witness.test_selection,
         "witnessed": witness.witnessed,
         "note": witness.note,
         "head": _command_to_dict(witness.head),
@@ -638,7 +658,8 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         "",
         f"- Base: {witness.base_ref}",
         f"- Head: {witness.head_ref}",
-        f"- Changed tests: {len(witness.tests)}",
+        f"- Tests replayed: {len(witness.tests)}",
+        f"- Test selection: {witness.test_selection}",
         f"- Mode: {witness.mode}",
         f"- Result protocol: {witness.result_protocol}",
         f"- Test-support files overlaid: {len(witness.support_files)}",
@@ -691,10 +712,15 @@ def render_witness_markdown(witness: RegressionWitness) -> str:
         )
 
     if witness.witnessed:
+        evidence_label = (
+            "same explicitly selected tests"
+            if witness.test_selection == "explicit"
+            else "same changed tests"
+        )
         lines.extend(
             [
                 "",
-                "> The same changed tests fail before the fix and pass after it.",
+                f"> The {evidence_label} fail before the fix and pass after it.",
                 "> This proves the tested regression delta; it does not prove every claimed cause.",
             ]
         )
@@ -740,8 +766,14 @@ def render_witness_review_note(
         "",
     ]
     if status == "witnessed":
+        selection = str(payload.get("test_selection") or "changed-tests")
+        label = (
+            "explicitly selected regression test(s)"
+            if selection == "explicit"
+            else "changed regression test(s)"
+        )
         lines.append(
-            "The same changed regression test(s) pass on the PR head and fail "
+            f"The same {label} pass on the PR head and fail "
             "when replayed against the pre-change base."
         )
     else:
