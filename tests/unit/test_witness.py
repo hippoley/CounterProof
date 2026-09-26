@@ -784,6 +784,82 @@ def test_share_witness_cli_writes_review_note(tmp_path):
     assert "Would this evidence materially help review this change?" in text
 
 
+def test_share_witness_can_bind_note_to_expected_head(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    receipt = tmp_path / "witness.json"
+    receipt.write_text(
+        json.dumps(witness_to_dict(witness)),
+        encoding="utf-8",
+    )
+    output = tmp_path / "bound-review.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            witness.head_sha,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    text = output.read_text(encoding="utf-8")
+    assert (
+        f"Candidate binding: `MATCHED` expected HEAD `{witness.head_sha}`"
+        in text
+    )
+
+
+def test_share_witness_refuses_stale_candidate_binding(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    receipt = tmp_path / "witness.json"
+    receipt.write_text(
+        json.dumps(witness_to_dict(witness)),
+        encoding="utf-8",
+    )
+    output = tmp_path / "stale-review.md"
+    stale_head = "0" * len(witness.head_sha)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            stale_head,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "stale witness receipt" in result.output
+    assert witness.head_sha in result.output
+    assert stale_head in result.output
+    assert not output.exists()
+
+
 def _write_json_v1_adapter(path: Path, body: str) -> str:
     path.write_text(body, encoding="utf-8")
     return f"{sys.executable} {path} {{tests}}"

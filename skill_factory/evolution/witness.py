@@ -741,6 +741,7 @@ def render_witness_review_note(
     source_url: str | None = None,
     runner_url: str | None = None,
     integrity_payload: dict[str, Any] | None = None,
+    expected_head: str | None = None,
 ) -> str:
     """Render a concise reviewer-facing note from stored witness evidence."""
     status = str(payload.get("status", "unknown"))
@@ -795,6 +796,10 @@ def render_witness_review_note(
             f"- Test selection: `{payload.get('test_selection', 'changed-tests')}`",
         ]
     )
+    if expected_head is not None:
+        lines.append(
+            f"- Candidate binding: `MATCHED` expected HEAD `{expected_head}`"
+        )
     if head.get("semantic_verdict"):
         lines.append(f"- HEAD behavioral verdict: `{head['semantic_verdict']}`")
     if base.get("semantic_verdict"):
