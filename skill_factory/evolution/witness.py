@@ -500,7 +500,6 @@ def run_regression_witness(
         timeout_seconds=timeout_seconds,
         env=_witness_env(repo_root, "head"),
         result_protocol=result_protocol,
-        test_selection=test_selection,
     )
     if result_protocol == "json-v1" and head.semantic_error:
         return RegressionWitness(
@@ -585,6 +584,7 @@ def run_regression_witness(
         base_sha=resolved_base_sha,
         head_sha=resolved_head_sha,
         result_protocol=result_protocol,
+        test_selection=test_selection,
     )
 
 
