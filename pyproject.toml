@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "counterproof"
 version = "0.2.0"
-description = "Prove agent PR fixes by replaying changed tests against pre-change code."
+description = "Prove AI-assisted PR claims with replayable BASE-to-HEAD evidence and scoped receipts."
 readme = "README.md"
 license = "Apache-2.0"
 authors = [{ name = "hippoley" }]
