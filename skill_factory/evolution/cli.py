@@ -759,24 +759,6 @@ def doctor(json_output: bool) -> None:
 )
 @click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
 @click.option(
-    "--test",
-    "explicit_tests",
-    multiple=True,
-    help=(
-        "Explicit existing test file to replay instead of relying on changed-test discovery. "
-        "Repeat for multiple files."
-    ),
-)
-@click.option(
-    "--support-file",
-    "explicit_support_files",
-    multiple=True,
-    help=(
-        "Changed fixture/helper from HEAD to overlay onto BASE for the replay. "
-        "Repeat for multiple files."
-    ),
-)
-@click.option(
     "--result-protocol",
     type=click.Choice(["exit-code", "json-v1"]),
     default="exit-code",
@@ -793,8 +775,6 @@ def check_cmd(
     base_ref: str | None,
     test_command: str | None,
     timeout_seconds: float,
-    explicit_tests: tuple[str, ...],
-    explicit_support_files: tuple[str, ...],
     result_protocol: str,
     json_output: bool,
     strict: bool,
@@ -807,8 +787,6 @@ def check_cmd(
             test_command=test_command,
             timeout_seconds=timeout_seconds,
             result_protocol=result_protocol,
-            explicit_tests=explicit_tests,
-            explicit_support_files=explicit_support_files,
         )
     except (RuntimeError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -885,6 +863,24 @@ def integrity(
 @click.option("--repo", "repo_dir", default=".", show_default=True, type=click.Path(file_okay=False))
 @click.option("--timeout", "timeout_seconds", default=300.0, show_default=True, type=float)
 @click.option(
+    "--test",
+    "explicit_tests",
+    multiple=True,
+    help=(
+        "Explicit existing test file to replay instead of relying on changed-test discovery. "
+        "Repeat for multiple files."
+    ),
+)
+@click.option(
+    "--support-file",
+    "explicit_support_files",
+    multiple=True,
+    help=(
+        "Changed fixture/helper from HEAD to overlay onto BASE for the replay. "
+        "Repeat for multiple files."
+    ),
+)
+@click.option(
     "--result-protocol",
     type=click.Choice(["exit-code", "json-v1"]),
     default="exit-code",
@@ -907,6 +903,8 @@ def witness(
     test_command: str,
     repo_dir: str,
     timeout_seconds: float,
+    explicit_tests: tuple[str, ...],
+    explicit_support_files: tuple[str, ...],
     result_protocol: str,
     out_file: str,
     json_out: str,
@@ -921,6 +919,8 @@ def witness(
             test_command=test_command,
             timeout_seconds=timeout_seconds,
             result_protocol=result_protocol,
+            explicit_tests=explicit_tests,
+            explicit_support_files=explicit_support_files,
         )
     except (RuntimeError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
