@@ -1,4 +1,4 @@
-"""Regression Witness: prove changed tests fail before a PR fix and pass after it."""
+"""Regression Witness: prove selected PR evidence fails before a fix and passes after it."""
 from __future__ import annotations
 
 import fnmatch
@@ -381,13 +381,13 @@ def _classify_base_result(
                 "suite-delta",
                 (
                     "The structured adapter reports a suite-level FAIL on base and PASS on head. "
-                    "Because changed tests were not targeted directly, this is not an exact witness."
+                    "Because selected tests were not targeted directly, this is not an exact witness."
                 ),
             )
         return (
             "witnessed",
             (
-                "The structured adapter reports FAIL for the changed tests on base and PASS on head. "
+                "The structured adapter reports FAIL for the selected tests on base and PASS on head. "
                 "This is a regression witness for the tested behavior."
             ),
         )
@@ -414,14 +414,14 @@ def _classify_base_result(
             "suite-delta",
             (
                 "The configured full suite passes on head and fails on base with the PR's "
-                "changed test support overlaid. This proves a suite-level before/after delta, "
-                "but not that the changed test itself caused the base failure."
+                "selected evidence support overlaid. This proves a suite-level before/after delta, "
+                "but not that the selected test itself caused the base failure."
             ),
         )
     return (
         "witnessed",
         (
-            "The PR's changed tests pass on head and fail when replayed against base code. "
+            "The selected tests pass on head and fail when replayed against base code. "
             "This is a regression witness for the tested behavior."
         ),
     )
@@ -785,7 +785,8 @@ def render_witness_review_note(
             "",
             f"- HEAD: `{head_sha}` — exit `{head.get('returncode')}`",
             f"- BASE: `{base_sha}` — exit `{base.get('returncode')}`",
-            f"- Changed tests: {len(tests)}",
+            f"- Tests replayed: {len(tests)}",
+            f"- Test selection: `{payload.get('test_selection', 'changed-tests')}`",
         ]
     )
     if head.get("semantic_verdict"):
