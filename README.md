@@ -34,7 +34,7 @@ Current field cases include a genuine regression witness, a compiler-failure fal
 
 | Reality signal | What changed because of it |
 |---|---|
-| **11 public PR cases** | CounterProof gained runner, test-discovery, integrity, and claim-boundary fixes from failures against real repositories. |
+| **12 public PR cases** | CounterProof gained runner, test-discovery, integrity, and claim-boundary fixes from failures against real repositories. |
 | **External reviewer acceptance** | A reviewer asked for the compact claim/evidence matrix, then confirmed the automated artifact preserved the intended review semantics and was usable in review. [Read the exchange →](https://github.com/hippoley/CounterProof/issues/13#issuecomment-5812942595) |
 | **First external code contribution** | Oracle provenance and witness-consistency hardening arrived as an external PR and is being reviewed against the product boundary rather than merged on CI alone. [PR #50 →](https://github.com/hippoley/CounterProof/pull/50) |
 | **Downstream consumer probe** | A PROVE maintainer preferred attaching CounterProof as ordinary requirement evidence instead of creating a new packet or approval layer. [See the handoff →](examples/handoff/codex-prove.md) |
