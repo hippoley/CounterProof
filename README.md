@@ -1,10 +1,10 @@
-# Counterproof
+# CounterProof
 
 <div align="center">
 
-## **Your coding agent says it fixed the bug. Prove it.**
+## **Your coding agent says it fixed the bug. Prove the exact claim.**
 
-**Behavioral proof for agent-generated pull requests.**
+**Replay the same evidence on BASE and HEAD. Keep unproven claims unproven.**
 
 [![CI](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/)
@@ -12,13 +12,13 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY LIVE DEMO**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**⚡ INSTALL ACTION**](#30-second-onboarding) · [**◎ REALITY LAB**](docs/REALITY_LAB.md) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)
+### [**▶ PLAY PROOF LAB**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml) · [**⚡ INSTALL**](#30-second-onboarding)
 
-[![Open Counterproof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
-**Click the panel. Break the proof. Change the judge. See what survives.**
+**One PR · one claim · one evidence set · two commits · one auditable receipt.**
 
-<sub>Works beside Claude Code · Codex · Copilot · Cursor · PR-Agent · human-written PRs — Counterproof verifies the evidence, not the author.</sub>
+<sub>Not a merge bot. Not another AI reviewer. CounterProof tells you what the submitted evidence establishes — and what it still does not.</sub>
 
 </div>
 
@@ -28,11 +28,16 @@
 
 CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.
 
-**[See the Reality Lab →](docs/REALITY_LAB.md)** · **[Bring an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)**
+**[See the Reality Lab →](docs/REALITY_LAB.md)** · **[Bring an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)** · **[Choose a contribution path →](CONTRIBUTING.md)**
 
-Current field cases include a genuine regression witness, a compiler-failure false positive, a changed-test-harness case, a claim-boundary case, and an emerging oracle-mismatch case.
+Current field cases include a genuine regression witness, a compiler-failure false positive, a changed-test-harness case, a claim-boundary case, and an oracle-mismatch case.
 
-**Field evidence today:** [11 public cases](docs/REALITY_LAB.md) · [an external reviewer confirmed the claim/evidence artifact preserves useful review semantics](https://github.com/hippoley/CounterProof/issues/13#issuecomment-5812942595) · [the first external code contribution is hardening oracle provenance](https://github.com/hippoley/CounterProof/pull/50)
+| Reality signal | What changed because of it |
+|---|---|
+| **11 public PR cases** | CounterProof gained runner, test-discovery, integrity, and claim-boundary fixes from failures against real repositories. |
+| **External reviewer acceptance** | A reviewer asked for the compact claim/evidence matrix, then confirmed the automated artifact preserved the intended review semantics and was usable in review. [Read the exchange →](https://github.com/hippoley/CounterProof/issues/13#issuecomment-5812942595) |
+| **First external code contribution** | Oracle provenance and witness-consistency hardening arrived as an external PR and is being reviewed against the product boundary rather than merged on CI alone. [PR #50 →](https://github.com/hippoley/CounterProof/pull/50) |
+| **Downstream consumer probe** | A PROVE maintainer preferred attaching CounterProof as ordinary requirement evidence instead of creating a new packet or approval layer. [See the handoff →](examples/handoff/codex-prove.md) |
 
 These are evidence links, not endorsements. CounterProof still treats every new claim as unproven until its evidence earns a stronger status.
 
@@ -42,7 +47,7 @@ A green CI run proves that your code passes **now**.
 
 It does **not** prove that the regression test added by the same coding agent would have caught the bug **before** the fix.
 
-Counterproof asks that missing question.
+CounterProof asks that missing question.
 
 ```text
 PR code + PR test         → PASS
@@ -92,13 +97,13 @@ The browser scenarios are fixtures. **Real evidence comes from the CLI / GitHub 
 
 ---
 
-[![Counterproof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![CounterProof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
 > **Click the walkthrough to open the live Proof Lab.**
 
 ---
 
-## The fastest useful thing Counterproof does
+## The fastest useful thing CounterProof does
 
 Take tests changed in a pull request.
 
@@ -114,7 +119,7 @@ same changed test          PASS          FAIL
                               WITNESSED
 ```
 
-If the same test already passes on BASE, Counterproof does not manufacture a success story.
+If the same test already passes on BASE, CounterProof does not manufacture a success story.
 
 It says the proof is weak.
 
@@ -134,7 +139,7 @@ Run a real local self-test first:
 counterproof doctor
 ```
 
-Then let Counterproof inspect the repository and write the pull-request workflow:
+Then let CounterProof inspect the repository and write the pull-request workflow:
 
 ```bash
 counterproof init
@@ -160,14 +165,14 @@ exact changed-test witness required
 proof-integrity surface must stay clean
 ```
 
-If the project only exposes a full-suite command such as `go test ./...` or generic `npm test`, Counterproof refuses `--strict` instead of pretending suite-level evidence is an exact witness.
+If the project only exposes a full-suite command such as `go test ./...` or generic `npm test`, CounterProof refuses `--strict` instead of pretending suite-level evidence is an exact witness.
 
 ### Manual Action setup
 
 If you prefer to write the workflow yourself, the root Action is the same Regression Witness path:
 
 ```yaml
-name: Counterproof
+name: CounterProof
 
 on:
   pull_request:
@@ -206,7 +211,7 @@ For the deeper trace / hypothesis / multi-intervention runtime, use the explicit
     experiment-manifest: path/to/experiments.json
 ```
 
-Counterproof will:
+CounterProof will:
 
 ```text
 1. find tests added or modified by the PR
@@ -246,7 +251,7 @@ or:
 COUNTERPROOF_RESULT={"verdict":"fail","metrics":{}}
 ```
 
-If the adapter itself exits non-zero, times out, or fails to emit a valid result, Counterproof reports **INCONCLUSIVE**. A compiler error is therefore not silently upgraded into regression evidence.
+If the adapter itself exits non-zero, times out, or fails to emit a valid result, CounterProof reports **INCONCLUSIVE**. A compiler error is therefore not silently upgraded into regression evidence.
 
 ### Share a witness with a reviewer
 
@@ -265,13 +270,13 @@ The note includes the exact HEAD / BASE commits, exit codes, executed changed-te
 
 A real PR can have one genuinely witnessed regression and several adjacent concerns that its tests do not exercise.
 
-Counterproof's experimental claim matrix keeps those claims separate:
+CounterProof's experimental claim matrix keeps those claims separate:
 
 ```bash
 counterproof claim-matrix examples/claim_matrix/codex-plugin-cc-731.yml
 ```
 
-The manifest is explicit. Counterproof does **not** use an LLM to invent claims or decide which product behavior is authoritative.
+The manifest is explicit. CounterProof does **not** use an LLM to invent claims or decide which product behavior is authoritative.
 
 Each row has two mechanical evidence axes:
 
@@ -305,7 +310,7 @@ The first two acceptance fixtures come directly from public reviewer feedback:
 
 A passing test is weaker evidence if the same PR also weakens the system that evaluates it.
 
-Counterproof's **Proof Integrity Guard** surfaces changes such as:
+CounterProof's **Proof Integrity Guard** surfaces changes such as:
 
 ```text
 deleted test                         → review
@@ -341,7 +346,7 @@ It also creates a new review problem:
 
 > **the system proposing the fix can now help produce the evidence for its own fix.**
 
-Counterproof does not solve that by adding another model.
+CounterProof does not solve that by adding another model.
 
 It adds a deterministic before/after experiment.
 
@@ -359,9 +364,9 @@ something a reviewer can inspect
 
 ## Not another AI reviewer
 
-AI reviewers and Counterproof answer different questions.
+AI reviewers and CounterProof answer different questions.
 
-| | AI reviewer | Counterproof |
+| | AI reviewer | CounterProof |
 |---|---|---|
 | Main question | “Does this diff look suspicious?” | “Does this evidence distinguish before from after?” |
 | Core input | code + model context | Git history + tests |
@@ -370,7 +375,7 @@ AI reviewers and Counterproof answer different questions.
 | Changed test/CI judge | not the core primitive | **explicitly surfaced** |
 | Can refuse a story | model-dependent | **yes — weak/inconclusive evidence stays weak** |
 
-Use Counterproof **next to** Claude Code, Codex, Copilot, Cursor, PR-Agent, or a human engineer.
+Use CounterProof **next to** Claude Code, Codex, Copilot, Cursor, PR-Agent, or a human engineer.
 
 It does not care who wrote the patch.
 
@@ -400,7 +405,7 @@ Or just use the public version:
 
 Regression Witness is the smallest useful entry point.
 
-Counterproof also contains an experimental runtime for **falsifiable agent self-improvement**.
+CounterProof also contains an experimental runtime for **falsifiable agent self-improvement**.
 
 Instead of asking only:
 
@@ -469,7 +474,7 @@ counterproof evolve examples/traces/tenant_failure.json \
   --packet-out EVOLVED_PACKET.json
 ```
 
-Counterproof is allowed to return ambiguity.
+CounterProof is allowed to return ambiguity.
 
 **No winner is better than a fake winner.**
 
@@ -479,7 +484,7 @@ For the deeper architecture, see **[docs/COUNTERPROOF.md](docs/COUNTERPROOF.md)*
 
 ## What is real today?
 
-Counterproof keeps a runtime truth table instead of pretending roadmap items are finished.
+CounterProof keeps a runtime truth table instead of pretending roadmap items are finished.
 
 ```bash
 counterproof audit
@@ -583,11 +588,11 @@ Use it for the repository social preview, launch posts, HN/X screenshots, or rel
 
 ---
 
-## Break Counterproof
+## Break CounterProof
 
 The highest-value contribution is a **counterexample**.
 
-Can you make Counterproof:
+Can you make CounterProof:
 
 - call weak evidence strong?
 - miss a real regression witness?
@@ -604,7 +609,7 @@ A great report gives us:
 ```text
 small reproducible PR
 + expected evidence classification
-+ actual Counterproof classification
++ actual CounterProof classification
 + why the difference matters
 ```
 
@@ -616,7 +621,7 @@ small reproducible PR
 - better discriminating probes;
 - adapters for real agent runtimes.
 
-If Counterproof labels weak evidence as strong evidence, **that is a bug**.
+If CounterProof labels weak evidence as strong evidence, **that is a bug**.
 
 ---
 
@@ -630,7 +635,7 @@ Apache-2.0.
 
 ### **Green is a state. Proof is a relationship between before and after.**
 
-**Counterproof**
+**CounterProof**
 
 *Claim nothing you can't replay.*
 
