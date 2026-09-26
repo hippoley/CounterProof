@@ -1,0 +1,107 @@
+name: Reality probe — cachy-app #2279
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reality-cachy-app-2279.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  red-green:
+    name: Replay exact changed test on HEAD and BASE
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      HEAD_SHA: 4b7240a8a407565bc668127ffbbc754c5cec3de5
+      BASE_SHA: 6f86b2b67d28c958c412a9269d7155caf628aec0
+      TEST_FILE: src/components/shared/DashboardNav.xss.component.test.ts
+
+    steps:
+      - name: Check out CounterProof
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out cachy-app HEAD
+        uses: actions/checkout@v4
+        with:
+          repository: mydcc/cachy-app
+          ref: ${{ env.HEAD_SHA }}
+          path: target-head
+          persist-credentials: false
+
+      - name: Check out cachy-app BASE
+        uses: actions/checkout@v4
+        with:
+          repository: mydcc/cachy-app
+          ref: ${{ env.BASE_SHA }}
+          path: target-base
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: target-head/package-lock.json
+
+      - name: Record candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD expected=$HEAD_SHA actual=$(git -C target-head rev-parse HEAD)"
+          echo "BASE expected=$BASE_SHA actual=$(git -C target-base rev-parse HEAD)"
+          test "$(git -C target-head rev-parse HEAD)" = "$HEAD_SHA"
+          test "$(git -C target-base rev-parse HEAD)" = "$BASE_SHA"
+
+      - name: Install exact HEAD dependencies
+        working-directory: target-head
+        run: npm ci --no-audit --no-fund
+
+      - name: HEAD — submitted regression test must pass
+        working-directory: target-head
+        shell: bash
+        run: |
+          set -euo pipefail
+          VITEST_MAX_WORKERS=1 npx vitest run "$TEST_FILE" 2>&1 | tee /tmp/counterproof-head.log
+
+      - name: Transplant submitted test onto BASE
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "target-base/$(dirname "$TEST_FILE")"
+          cp "target-head/$TEST_FILE" "target-base/$TEST_FILE"
+          mv target-head/node_modules target-base/node_modules
+
+      - name: BASE — same submitted regression test must fail
+        working-directory: target-base
+        shell: bash
+        run: |
+          set +e
+          VITEST_MAX_WORKERS=1 npx vitest run "$TEST_FILE" 2>&1 | tee /tmp/counterproof-base.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "BASE_EXIT=$status"
+          if [ "$status" -eq 0 ]; then
+            echo "::error title=NOT_WITNESSED::The submitted regression test also passes on BASE."
+            exit 1
+          fi
+          echo "::notice title=WITNESSED::HEAD passes and the same submitted test fails on BASE."
+
+      - name: Emit scoped receipt
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## CounterProof Reality Probe — mydcc/cachy-app#2279"
+            echo
+            echo "- HEAD: `$HEAD_SHA`"
+            echo "- BASE: `$BASE_SHA`"
+            echo "- Submitted test: `$TEST_FILE`"
+            echo "- HEAD requirement: PASS"
+            echo "- BASE requirement: FAIL"
+            echo "- Scope: historical red→green evidence for the submitted component regression test only"
+            echo "- This does not establish the entire PR or every acceptance criterion."
+          } >> "$GITHUB_STEP_SUMMARY"
