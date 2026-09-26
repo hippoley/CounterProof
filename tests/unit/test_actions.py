@@ -19,8 +19,11 @@ def test_root_action_is_regression_witness():
     assert action["inputs"]["test-command"]["required"] is True
     assert action["inputs"]["require-witness"]["default"] == "false"
     assert action["inputs"]["result-protocol"]["default"] == "exit-code"
+    assert action["inputs"]["tests"]["default"] == ""
+    assert action["inputs"]["support-files"]["default"] == ""
     assert action["inputs"]["require-clean-integrity"]["default"] == "false"
     assert "evidence-mode" in action["outputs"]
+    assert "test-selection" in action["outputs"]
     assert "integrity-status" in action["outputs"]
 
     names = [step["name"] for step in action["runs"]["steps"]]
@@ -41,8 +44,11 @@ def test_legacy_witness_subpath_remains_compatible():
     assert action["name"] == "Counterproof Regression Witness"
     assert action["inputs"]["test-command"]["required"] is True
     assert action["inputs"]["result-protocol"]["default"] == "exit-code"
+    assert action["inputs"]["tests"]["default"] == ""
+    assert action["inputs"]["support-files"]["default"] == ""
     assert "suite-delta" in action["outputs"]["status"]["description"]
     assert "evidence-mode" in action["outputs"]
+    assert "test-selection" in action["outputs"]
 
 
 def test_advanced_behavior_proof_is_explicit_subpath():
@@ -73,6 +79,17 @@ def test_witness_actions_forward_result_protocol_to_cli():
         text = Path(path).read_text(encoding="utf-8")
         assert "RESULT_PROTOCOL: ${{ inputs.result-protocol }}" in text
         assert '--result-protocol "$RESULT_PROTOCOL"' in text
+
+
+def test_witness_actions_forward_explicit_evidence_to_witness_and_integrity():
+    for path in ("action.yml", "actions/witness/action.yml"):
+        text = Path(path).read_text(encoding="utf-8")
+        assert "EXPLICIT_TESTS: ${{ inputs.tests }}" in text
+        assert "EXPLICIT_SUPPORT_FILES: ${{ inputs.support-files }}" in text
+        assert 'args+=(--test "$path")' in text
+        assert 'args+=(--support-file "$path")' in text
+        assert 'args+=(--evidence-file "$path")' in text
+        assert "test-selection=$selection" in text
 
 
 def test_actions_do_not_execute_untrusted_pr_text_as_shell():
