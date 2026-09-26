@@ -168,7 +168,6 @@ jobs:
           grep -q 'Regression       WITNESSED' /tmp/LOCAL_CHECK.txt
           grep -q 'Strict gate      PASS' /tmp/LOCAL_CHECK.txt
           grep -q 'Base             main' /tmp/LOCAL_CHECK.txt
-          grep -q 'Regression       WITNESSED' /tmp/LOCAL_CHECK.txt
           grep -q 'Product oracle   UNVERIFIED' /tmp/LOCAL_CHECK.txt
           grep -q 'Proof integrity  CLEAN' /tmp/LOCAL_CHECK.txt
 
