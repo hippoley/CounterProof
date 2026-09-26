@@ -21,6 +21,7 @@ The rule is simple:
 | [crewAIInc/crewAI#7721](https://github.com/crewAIInc/crewAI/pull/7721) | What if CI is green and one submitted regression is genuinely witnessed, but adjacent claims still fail independent probes? | **WITNESSED + claim contradiction** | The env-var noninteractive tracing path is red→green, while an independent HEAD probe shows programmatic `tracing=True` still yields sharing=false; malformed persisted consent also needs review. A single green badge would hide that boundary. |
 | [PrefectHQ/prefect#23146](https://github.com/PrefectHQ/prefect/pull/23146) | What if a real regression is witnessed by **existing** tests only under a specific environment? | **NO CHANGED TESTS + environment witness** | Automatic changed-test discovery found 0 tests, but under `TZ=America/Los_Angeles` the same 126 existing tests were BASE 112/126 vs HEAD 126/126. Evidence set and environment can both be first-class proof inputs. |
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
+| [mydcc/cachy-app#2279](https://github.com/mydcc/cachy-app/pull/2279) | Can CounterProof supply the before-state evidence another verifier correctly refuses to infer from current-head green CI? | **[WITNESSED](reality/cachy-app-2279-red-green.md)** | The exact submitted XSS component test was HEAD 3/3 PASS and BASE 2 FAIL / 1 PASS when transplanted unchanged. This turns a historical red-first clause from prose into candidate-bound execution evidence without claiming the whole requirement is proven. |
 
 ## Reality-probe status
 
@@ -51,6 +52,7 @@ These are useful public probes, but **no external response is counted yet**:
 - [#46 — Mem0 #6516 evidence-workflow interview](https://github.com/hippoley/CounterProof/issues/46)
 - [#48 — Vercel AI #17096 mixed evidence boundary](https://github.com/hippoley/CounterProof/issues/48)
 - [#64 — claimproof runtime receipt vs candidate-bound PR evidence](https://github.com/hippoley/CounterProof/issues/64) — outbound boundary probe only. Current claimproof receipts are session-local command + exit-code evidence; the open question is whether that ephemerality is intentional or whether a reusable candidate-bound export belongs upstream.
+- [PRTruth #361 — BASE→HEAD receipt as historical evidence](https://github.com/eissasoubhi/PRTruth/issues/361) — external interop probe. CounterProof has now supplied one executable Batch 29 witness; maintainer feedback on whether it fits PRTruth's existing evidence-plugin contract is still pending.
 
 ### Open intake
 
