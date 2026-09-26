@@ -1,5 +1,5 @@
 name: "Counterproof Regression Witness"
-description: "Prove that a PR's changed tests fail before the fix and pass after it."
+description: "Prove that selected PR regression evidence fails before the fix and passes after it."
 author: "hippoley"
 
 branding:
@@ -8,8 +8,16 @@ branding:
 
 inputs:
   test-command:
-    description: "Test command. Use {tests} for precise changed-test replay; omit it for suite-level evidence."
+    description: "Test command. Use {tests} for precise selected-test replay; omit it for suite-level evidence."
     required: true
+  tests:
+    description: "Optional newline-delimited existing test paths. When set, replaces changed-test discovery."
+    required: false
+    default: ""
+  support-files:
+    description: "Optional newline-delimited HEAD fixture/helper paths to overlay onto BASE."
+    required: false
+    default: ""
   base-ref:
     description: "Pre-change git ref. Defaults to the pull request base SHA."
     required: false
@@ -42,6 +50,9 @@ outputs:
   evidence-mode:
     description: "precise or suite."
     value: ${{ steps.witness.outputs.evidence-mode }}
+  test-selection:
+    description: "changed-tests or explicit."
+    value: ${{ steps.witness.outputs.test-selection }}
   report-path:
     description: "Generated Regression Witness Markdown path."
     value: ${{ steps.witness.outputs.report-path }}
@@ -110,6 +121,8 @@ runs:
         TIMEOUT_SECONDS: ${{ inputs.timeout }}
         RESULT_PROTOCOL: ${{ inputs.result-protocol }}
         REQUIRE_WITNESS: ${{ inputs.require-witness }}
+        EXPLICIT_TESTS: ${{ inputs.tests }}
+        EXPLICIT_SUPPORT_FILES: ${{ inputs.support-files }}
       run: |
         set -euo pipefail
         mkdir -p .counterproof/out
@@ -123,6 +136,16 @@ runs:
           --out .counterproof/out/REGRESSION_WITNESS.md
           --json-out .counterproof/out/REGRESSION_WITNESS.json
         )
+
+        while IFS= read -r path; do
+          [[ -z "$path" ]] && continue
+          args+=(--test "$path")
+        done <<< "$EXPLICIT_TESTS"
+
+        while IFS= read -r path; do
+          [[ -z "$path" ]] && continue
+          args+=(--support-file "$path")
+        done <<< "$EXPLICIT_SUPPORT_FILES"
 
         if [[ "${REQUIRE_WITNESS,,}" == "true" ]]; then
           args+=(--require-witness)
@@ -150,8 +173,16 @@ runs:
         PY
         )"
 
+        selection="$(python - <<'PY'
+        import json
+        with open(".counterproof/out/REGRESSION_WITNESS.json", encoding="utf-8") as f:
+            print(json.load(f).get("test_selection", "changed-tests"))
+        PY
+        )"
+
         echo "status=$status" >> "$GITHUB_OUTPUT"
         echo "evidence-mode=$mode" >> "$GITHUB_OUTPUT"
+        echo "test-selection=$selection" >> "$GITHUB_OUTPUT"
         echo "report-path=.counterproof/out/REGRESSION_WITNESS.md" >> "$GITHUB_OUTPUT"
         echo "json-path=.counterproof/out/REGRESSION_WITNESS.json" >> "$GITHUB_OUTPUT"
 
@@ -171,6 +202,8 @@ runs:
       env:
         BASE_REF: ${{ steps.base.outputs.base }}
         REQUIRE_CLEAN_INTEGRITY: ${{ inputs.require-clean-integrity }}
+        EXPLICIT_TESTS: ${{ inputs.tests }}
+        EXPLICIT_SUPPORT_FILES: ${{ inputs.support-files }}
       run: |
         set -euo pipefail
         mkdir -p .counterproof/out
@@ -181,6 +214,16 @@ runs:
           --out .counterproof/out/PROOF_INTEGRITY.md
           --json-out .counterproof/out/PROOF_INTEGRITY.json
         )
+        while IFS= read -r path; do
+          [[ -z "$path" ]] && continue
+          args+=(--evidence-file "$path")
+        done <<< "$EXPLICIT_TESTS"
+
+        while IFS= read -r path; do
+          [[ -z "$path" ]] && continue
+          args+=(--evidence-file "$path")
+        done <<< "$EXPLICIT_SUPPORT_FILES"
+
         if [[ "${REQUIRE_CLEAN_INTEGRITY,,}" == "true" ]]; then
           args+=(--require-clean)
         fi
@@ -237,7 +280,7 @@ runs:
             cat "$integrity"
           fi
           echo
-          echo "> Green CI says it passes now. Counterproof asks whether the same test failed before the fix — and whether the PR changed the judge."
+          echo "> Green CI says it passes now. Counterproof asks whether the same selected evidence failed before the fix — and whether the PR changed the judge."
         } > "$body_file"
 
         existing_id="$(
