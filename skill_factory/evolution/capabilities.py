@@ -44,6 +44,13 @@ CAPABILITIES: tuple[dict[str, str], ...] = (
         "limitation": "Runner detection is conservative; project-specific dependency setup may still need review, and strict mode refuses suite-only evidence.",
     },
     {
+        "id": "local-check",
+        "name": "One-command local branch proof check",
+        "status": "tested",
+        "evidence": "counterproof check resolves a base branch, detects or accepts a test runner, executes Regression Witness plus Proof Integrity, and is exercised from both unit tests and a clean installed wheel.",
+        "limitation": "Automatic base detection currently prefers origin/HEAD, main/master conventions, or an explicit --base; unusual repository topologies may need an override.",
+    },
+    {
         "id": "regression-witness",
         "name": "Regression Witness for agent pull requests",
         "status": "tested",
