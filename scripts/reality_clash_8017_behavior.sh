@@ -32,6 +32,10 @@ done
 mkdir -p src-tauri/resources
 touch src-tauri/resources/.counterproof-placeholder
 
+# tauri::generate_context!() validates frontendDist even for lib tests.
+mkdir -p dist
+touch dist/.counterproof-placeholder
+
 python3 - <<'PY'
 from pathlib import Path
 
