@@ -1,0 +1,265 @@
+#!/bin/bash
+# Install selenium-webdriver-at-spi + inputsynth on the DUT and prepare
+# a systemd user service so the server starts in the graphical session.
+#
+# This script runs INSIDE the VM. It prefers distro packages when available and
+# falls back to a pinned source build of KDE/selenium-webdriver-at-spi.
+#
+# The server is launched via a systemd --user unit that inherits the Wayland /
+# AT-SPI session bus environment (the server needs both).  A bare system unit
+# will NOT work because it runs outside the graphical session.  The entry point
+# is the upstream ``selenium-webdriver-at-spi-run`` Ruby wrapper, which starts
+# the Flask server and polls ``http://localhost:$FLASK_PORT/status`` until ready.
+#
+# Environment variables:
+#   FLASK_PORT  — override the server's default listen port (default: 4723).
+#                 Used by the upstream ``run.rb`` wrapper.
+#
+# SECURITY: The server is an unauthenticated input-injection service.
+# It MUST bind 127.0.0.1 (loopback) only — NEVER 0.0.0.0.  Reaching it
+# from the CI runner is the job of QEMU port forwarding, not of exposing the
+# service on all interfaces.  Do NOT "fix" connection-refused errors by changing
+# the bind address.
+#
+# Outputs:
+#   Exits 0 on success.
+#   Prints "KDE_WEBDRIVER_SKIP=<reason>" and exits 0 when the suite should be
+#   skipped rather than run (version skew, unsupported distro, etc.).
+#
+# The build is pinned to a full git commit SHA; no floating branch refs are used.
+
+set -euo pipefail
+
+# Pinned source ref for selenium-webdriver-at-spi (KDE GitHub mirror).
+# Update only together with the runner image and after validating on all target distros.
+# Documented exception to the repo rule "no executable code fetched at test time".
+#
+# inputsynth is a Qt6 Wayland client linking PlasmaWaylandProtocols' fake-input
+# protocol. Its ABI is tied to the DUT's Plasma/Qt/KWin build, so a centrally
+# prebuilt binary is NOT portable across Fedora (Aurora/Kinoite/Bazzite),
+# Ubuntu-based Neon and Arch-based KDE Linux — upstream KDE builds it inside the
+# SUT for exactly this reason.
+#
+# Mitigations that keep this defensible:
+#   1. A distro package is always preferred; source build is a fallback only.
+#   2. The source is pinned to an immutable commit SHA, never a branch. The
+#      earlier prototype cloned --depth 1 from master, which was unpinned.
+#   3. The clone target is verified against that SHA after fetch.
+# Renovate should bump this pin; do not replace it with a tag or branch.
+readonly SELENIUM_AT_SPI_SHA="d45a21e8f1b3591dc921f0be85f1ecd834cbe413"
+readonly SELENIUM_AT_SPI_URL="https://github.com/KDE/selenium-webdriver-at-spi.git"
+
+log() { echo "[install-kde-webdriver] $*"; }
+
+# Detect distro family from os-release.
+ID=""
+ID_LIKE=""
+if [[ -r /etc/os-release ]]; then
+  source /etc/os-release
+fi
+
+distros="${ID} ${ID_LIKE}"
+
+is_distro() {
+  [[ " ${distros} " =~ \ $1\  ]]
+}
+
+# Version-skew check: require Plasma >= 6.0 or >= 5.27 LTS.
+plasma_version=""
+if command -v plasmashell >/dev/null 2>&1; then
+  plasma_version=$(plasmashell --version 2>/dev/null | head -1 || true)
+fi
+if [[ -z "${plasma_version}" ]] && command -v rpm >/dev/null 2>&1; then
+  plasma_version=$(rpm -q --qf '%{VERSION}' plasma-workspace 2>/dev/null || true)
+fi
+if [[ -z "${plasma_version}" ]] && command -v dpkg >/dev/null 2>&1; then
+  plasma_version=$(dpkg-query -W -f='${Version}' plasma-workspace 2>/dev/null || true)
+fi
+if [[ -z "${plasma_version}" ]] && command -v pacman >/dev/null 2>&1; then
+  plasma_version=$(pacman -Q plasma-workspace 2>/dev/null | awk '{print $2}' || true)
+fi
+
+major=$(echo "${plasma_version}" | grep -oE '[0-9]+' | head -1 || true)
+if [[ -z "${major}" ]]; then
+  log "WARNING: could not determine Plasma version; continuing but version skew is possible"
+elif [[ "${major}" -lt 5 ]]; then
+  log "KDE_WEBDRIVER_SKIP=Plasma version '${plasma_version}' is below the supported baseline (5.27+/6.x)"
+  exit 0
+elif [[ "${major}" -eq 5 ]]; then
+  minor=$(echo "${plasma_version}" | grep -oE '[0-9]+' | sed -n '2p' || true)
+  if [[ -n "${minor}" && "${minor}" -lt 27 ]]; then
+    log "KDE_WEBDRIVER_SKIP=Plasma version '${plasma_version}' is below the supported 5.27 LTS baseline"
+    exit 0
+  fi
+fi
+log "Plasma version: ${plasma_version:-unknown}"
+
+# Prefer distro packages when available.
+install_from_packages() {
+  if is_distro fedora; then
+    log "Trying Fedora packages..."
+    if sudo dnf install -y --setopt=install_weak_deps=False \
+        selenium-webdriver-at-spi selenium-webdriver-at-spi-inputsynth 2>/dev/null; then
+      log "Installed from Fedora packages"
+      return 0
+    fi
+  elif is_distro debian || is_distro ubuntu || is_distro neon; then
+    log "Trying Debian/Ubuntu/Neon packages..."
+    if sudo apt-get update -qq 2>/dev/null && \
+       sudo apt-get install -y --no-install-recommends \
+        selenium-webdriver-at-spi selenium-webdriver-at-spi-inputsynth 2>/dev/null; then
+      log "Installed from Debian family packages"
+      return 0
+    fi
+  elif is_distro arch || is_distro kde-linux; then
+    log "Trying Arch packages..."
+    if sudo pacman -Sy --noconfirm --needed \
+        selenium-webdriver-at-spi selenium-webdriver-at-spi-inputsynth 2>/dev/null; then
+      log "Installed from Arch packages"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Fall back to a pinned source build.
+build_from_source() {
+  log "Building selenium-webdriver-at-spi from pinned source (${SELENIUM_AT_SPI_SHA})..."
+
+  local build_dir="${HOME}/.cache/kde-webdriver-build"
+  rm -rf "${build_dir}"
+  mkdir -p "${build_dir}"
+
+  if is_distro fedora; then
+    sudo dnf install -y --setopt=install_weak_deps=False \
+      cmake extra-cmake-modules gcc-c++ make git ruby \
+      qt6-qtbase-devel qt6-qtwayland-devel plasma-wayland-protocols-devel \
+      libxkbcommon-devel wayland-devel python3-devel
+  elif is_distro debian || is_distro ubuntu || is_distro neon; then
+    sudo apt-get update -qq
+    sudo apt-get install -y --no-install-recommends \
+      cmake extra-cmake-modules g++ make git ruby \
+      qt6-base-dev qt6-wayland-dev libplasma-wayland-protocols-dev \
+      libxkbcommon-dev libwayland-dev python3-dev
+  elif is_distro arch || is_distro kde-linux; then
+    sudo pacman -Sy --noconfirm --needed \
+      base-devel cmake extra-cmake-modules git ruby \
+      qt6-base qt6-wayland plasma-wayland-protocols \
+      libxkbcommon wayland python
+  else
+    log "KDE_WEBDRIVER_SKIP=unsupported distro '${ID}'; cannot install build dependencies"
+    exit 0
+  fi
+
+  git clone --quiet --depth 1 "${SELENIUM_AT_SPI_URL}" "${build_dir}/src"
+  cd "${build_dir}/src"
+  git fetch --quiet --depth 1 origin "${SELENIUM_AT_SPI_SHA}"
+  git checkout --quiet "${SELENIUM_AT_SPI_SHA}"
+
+  actual_sha="$(git rev-parse HEAD)"
+  if [[ "${actual_sha}" != "${SELENIUM_AT_SPI_SHA}" ]]; then
+    log "ERROR: checkout landed on ${actual_sha}, expected ${SELENIUM_AT_SPI_SHA}"
+    exit 1
+  fi
+
+  # Strip heavy optional subdirectories and deps we do not need in CI.
+  sed -i \
+    -e 's/^add_subdirectory(screenshotter)/# add_subdirectory(screenshotter)/' \
+    -e 's/^add_subdirectory(videorecorder)/# add_subdirectory(videorecorder)/' \
+    -e 's/^add_subdirectory(autotests)/# add_subdirectory(autotests)/' \
+    -e 's/^add_subdirectory(appidlister)/# add_subdirectory(appidlister)/' \
+    -e 's/^find_package(KF6/# find_package(KF6/' \
+    -e 's/^find_package(KWayland/# find_package(KWayland/' \
+    -e 's/^find_package(KPipeWire/# find_package(KPipeWire/' \
+    CMakeLists.txt
+
+  mkdir -p "${build_dir}/build"
+  cd "${build_dir}/build"
+  cmake "${build_dir}/src" -DCMAKE_BUILD_TYPE=Release
+  make -j"$(nproc)"
+  sudo make install
+
+  log "Installed from pinned source build"
+}
+
+# Create a systemd --user unit to start the WebDriver server inside the
+# graphical session.  The unit inherits the Wayland / D-Bus / AT-SPI
+# environment from the user session, which is required for the server to
+# function.  A bare system unit would run outside the session and fail.
+#
+# The entry point is upstream's ``selenium-webdriver-at-spi-run``, a Ruby
+# wrapper that starts the Flask server and polls /status until ready.
+# It expects a test command argument; we use ``sleep infinity`` as a keepalive
+# so the server stays running for the duration of the test suite.
+#
+# SECURITY: The Flask server binds 127.0.0.1 by default.  Do NOT override
+# HOST to 0.0.0.0 — the server is an unauthenticated input-injection
+# service.  CI runners reach it via QEMU port forwarding (hostfwd).
+install_server_unit() {
+  local run_bin
+  run_bin="$(command -v selenium-webdriver-at-spi-run 2>/dev/null || true)"
+  if [[ -z "${run_bin}" ]]; then
+    # Check common install prefixes
+    for candidate in /usr/local/bin/selenium-webdriver-at-spi-run /usr/bin/selenium-webdriver-at-spi-run; do
+      if [[ -x "${candidate}" ]]; then
+        run_bin="${candidate}"
+        break
+      fi
+    done
+  fi
+  if [[ -z "${run_bin}" ]]; then
+    log "WARNING: selenium-webdriver-at-spi-run not found; skipping server unit"
+    return 0
+  fi
+
+  log "Creating systemd user unit for kde-webdriver (${run_bin})..."
+  mkdir -p "${HOME}/.config/systemd/user"
+  cat > "${HOME}/.config/systemd/user/kde-webdriver.service" << EOF
+[Unit]
+Description=KDE AT-SPI WebDriver server (selenium-webdriver-at-spi)
+# Require a graphical session — the server needs Wayland + AT-SPI bus.
+After=graphical-session.target
+
+[Service]
+Type=simple
+# SECURITY: Flask binds 127.0.0.1 only.  Do NOT set HOST=0.0.0.0.
+# The server is an unauthenticated input-injection service.
+# CI runners reach it via QEMU hostfwd, not by opening the port.
+Environment=FLASK_PORT=${FLASK_PORT:-4723}
+ExecStart=${run_bin} sleep infinity
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+
+  systemctl --user daemon-reload
+  systemctl --user enable kde-webdriver.service
+  # Start only if we are inside a graphical session (DISPLAY or WAYLAND_DISPLAY set).
+  if [[ -n "${WAYLAND_DISPLAY:-}" || -n "${DISPLAY:-}" ]]; then
+    systemctl --user start kde-webdriver.service || true
+    log "kde-webdriver.service started"
+  else
+    log "kde-webdriver.service enabled (will start with next graphical session)"
+  fi
+}
+
+if install_from_packages; then
+  # Distro packages installed; still need Ruby for the run.rb wrapper.
+  if ! command -v ruby >/dev/null 2>&1; then
+    log "Installing Ruby (required runtime for selenium-webdriver-at-spi-run)..."
+    if is_distro fedora; then
+      sudo dnf install -y --setopt=install_weak_deps=False ruby
+    elif is_distro debian || is_distro ubuntu || is_distro neon; then
+      sudo apt-get install -y --no-install-recommends ruby
+    elif is_distro arch || is_distro kde-linux; then
+      sudo pacman -Sy --noconfirm --needed ruby
+    fi
+  fi
+  install_server_unit
+  exit 0
+fi
+
+build_from_source
+install_server_unit
