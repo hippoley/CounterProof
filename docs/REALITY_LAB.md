@@ -37,6 +37,8 @@ A cross-reference is **not** adoption. The Lab separates outbound contact from a
 
 ### Demand-side probes
 
+- [Gradle #39129](https://github.com/gradle/gradle/pull/39129) — **NOT_WITNESSED as a candidate delta; claim provenance mismatch exposed before review.** The PR changes only `NormalizingExcludeFactoryTest.groovy`; no production file changes. Its submitted test passes on PR HEAD, so replaying the same test onto the exact PR BASE cannot establish a fix introduced by this PR. The historical linkage is also weaker than the PR description implied: #28962 reports a Gradle 8.7 dependency-resolution deadlock, while the fixed-point/simplification implementation touched by the test has an explicit later fix chain for [#32945](https://github.com/gradle/gradle/issues/32945), including commit `ceaa5c7` ("Fix exclude simplification logic", `Fixes #32945`). The Gradle maintainer later closed the PR because the test may or may not cover a specific fix. This is a strong demand-side example where claim/evidence binding could have been challenged before human review.
+
 These cases test whether CounterProof reduces **maintainer review cost**, not whether neighboring verification projects agree with its semantics.
 
 - [clash-verge-rev #8017](https://github.com/clash-verge-rev/clash-verge-rev/pull/8017) — trusted execution is complete. The result distinguishes a real red→green from a stronger behavior-level witness: BASE fails because the submitted test requires the new API type. Reviewer usefulness feedback is still pending.
