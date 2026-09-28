@@ -53,6 +53,10 @@ These are useful public probes, but **no external response is counted yet**:
 - [#48 — Vercel AI #17096 mixed evidence boundary](https://github.com/hippoley/CounterProof/issues/48)
 - [#64 — claimproof runtime receipt vs candidate-bound PR evidence](https://github.com/hippoley/CounterProof/issues/64) — outbound boundary probe only. Current claimproof receipts are session-local command + exit-code evidence; the open question is whether that ephemerality is intentional or whether a reusable candidate-bound export belongs upstream.
 - [PRTruth #361 — BASE→HEAD receipt as historical evidence](https://github.com/eissasoubhi/PRTruth/issues/361) — external interop probe. CounterProof has now supplied one executable Batch 29 witness; maintainer feedback on whether it fits PRTruth's existing evidence-plugin contract is still pending.
+- [Qwen Code #9124 — stale approve-on-green execution evidence](https://github.com/QwenLM/qwen-code/issues/9124) — direct external comment. CounterProof contributed one concrete boundary: evidence freshness should track the evidence-producing surface, not only changed test filenames. No response/adoption counted yet.
+- [#80 — AWS AI-DLC review-ladder execution-evidence boundary](https://github.com/hippoley/CounterProof/issues/80) — outbound maintainer probe after direct external write was blocked by GitHub App permissions. Asks whether BASE→HEAD execution semantics belong inside the multi-lane review ladder or should stay external.
+- [#81 — AVERA evidence-manifest interoperability](https://github.com/hippoley/CounterProof/issues/81) — outbound maintainer probe. Tests whether AVERA's pass→fail regression manifest is intentionally reusable by downstream claim-level review tools.
+- [#82 — agent-done-or-not receipt handoff](https://github.com/hippoley/CounterProof/issues/82) — outbound maintainer probe. Tests whether current-candidate proof-of-done receipts should be reusable as upstream evidence for BASE→HEAD reviewer verification.
 
 ### Closed probes with negative / no-adoption feedback
 
