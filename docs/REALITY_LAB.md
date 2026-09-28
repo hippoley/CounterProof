@@ -23,6 +23,8 @@ The rule is simple:
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
 | [mydcc/cachy-app#2279](https://github.com/mydcc/cachy-app/pull/2279) | Can CounterProof supply the before-state evidence another verifier correctly refuses to infer from current-head green CI? | **[WITNESSED](reality/cachy-app-2279-red-green.md)** | The exact submitted XSS component test was HEAD 3/3 PASS and BASE 2 FAIL / 1 PASS when transplanted unchanged. This turns a historical red-first clause from prose into candidate-bound execution evidence without claiming the whole requirement is proven. |
 | [gramps-project/gramps#2484](https://github.com/gramps-project/gramps/pull/2484) | What if the reviewer asks “did this fail before?” but the PR changes the fixture rather than the existing test file? | **WITNESSED + product learning, no adoption** | Trusted replay showed HEAD schema + submitted fixture PASS, BASE schema + the same submitted fixture FAIL, and BASE + original fixture PASS. This produced [#72](https://github.com/hippoley/CounterProof/pull/72), but the original reviewer later said the question was curiosity rather than a request for additional evidence. |
+| [clash-verge-rev/clash-verge-rev#8017](https://github.com/clash-verge-rev/clash-verge-rev/pull/8017) | Does a focused submitted regression prove the user-facing fix, or only the new implementation contract? | **RED→GREEN, but implementation-coupled** | [Trusted replay](https://github.com/hippoley/CounterProof/actions/runs/36369281601) showed HEAD + submitted test PASS and original BASE crate PASS, while BASE + the exact submitted test failed at compile time because BASE `Draft::apply()` returns `()`. The test discriminates candidates but does not directly execute the claimed exit-time file-write behavior. |
+| [mem0ai/mem0#7183](https://github.com/mem0ai/mem0/pull/7183) | What happens when executable evidence is already strong but the maintainer still cannot merge? | **Evidence independently confirmed; merge still blocked** | The maintainer independently reproduced BASE failures / HEAD passes and verified that the new tests bite the implementation. The remaining blockers were cross-language scope, an overlapping PR, and issue-closure semantics. CounterProof can reduce evidence uncertainty, but it does not replace scope/ownership/product decisions. |
 
 ## Reality-probe status
 
@@ -32,6 +34,13 @@ A cross-reference is **not** adoption. The Lab separates outbound contact from a
 
 - [#13 — codex-plugin-cc#731 claim boundary](https://github.com/hippoley/CounterProof/issues/13) — **completed**. An external reviewer confirmed the manual matrix shape, reviewed the automated artifact, and said they would use it in review. That feedback produced the merged `claim-matrix` surface.
 - [#42 — CounterProof as a verifier input to Codex PROVE](https://github.com/hippoley/CounterProof/issues/42) — **completed interoperability boundary**. The PROVE maintainer chose ordinary REQ-ID Evidence, rejected a new packet/adapter, and later clarified stale-evidence semantics: affected evidence must be rerun; demonstrably unrelated changes can permit scoped reuse only with an established dependency boundary and recorded reason. CounterProof captured those rules in the runnable handoff without expanding into orchestration.
+
+### Demand-side probes
+
+These cases test whether CounterProof reduces **maintainer review cost**, not whether neighboring verification projects agree with its semantics.
+
+- [clash-verge-rev #8017](https://github.com/clash-verge-rev/clash-verge-rev/pull/8017) — trusted execution is complete. The result distinguishes a real red→green from a stronger behavior-level witness: BASE fails because the submitted test requires the new API type. Reviewer usefulness feedback is still pending.
+- [mem0 #7183](https://github.com/mem0ai/mem0/pull/7183) — useful negative boundary. The maintainer manually performed strong before/after verification, yet review remained blocked by scope and competing implementation concerns. Evidence triage is only one slice of review cost.
 
 ### External feedback received; follow-up still active
 
