@@ -163,6 +163,7 @@ jobs:
             : > "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
             chmod +x "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
           done
+          mkdir -p "$repo/src-tauri/resources"
 
           rm -rf /tmp/counterproof-clash-head
           mkdir -p /tmp/counterproof-clash-head
@@ -190,6 +191,7 @@ jobs:
             : > "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
             chmod +x "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
           done
+          mkdir -p "$repo/src-tauri/resources"
 
           rm -rf /tmp/counterproof-clash-base
           mkdir -p /tmp/counterproof-clash-base
