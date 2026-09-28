@@ -152,6 +152,49 @@ Controller:
 
 If REQ-1 had instead required agreement with an authoritative product oracle, then `WITNESSED (submitted judge)` would also be insufficient.
 
+## 5. Candidate freshness and scoped reuse
+
+A CounterProof receipt stays evidence about the exact candidate it was produced from. It must not be relabeled as evidence for a newer candidate merely by changing the recorded SHA.
+
+The PROVE maintainer clarified two acceptance cases:
+
+### Relevant change → rerun
+
+```text
+receipt candidate: abc123
+new candidate:     def456
+
+relevant code / test / input / dependency changed
+        ↓
+old evidence is affected
+        ↓
+run the targeted check again
+```
+
+### Demonstrably unrelated change → scoped reuse
+
+```text
+receipt candidate: abc123
+new candidate:     def456
+
+Controller establishes that the relevant:
+  code
+  tests
+  inputs
+  dependencies
+are unchanged
+        ↓
+record the reuse reason
+        ↓
+reuse only for that scoped requirement
+```
+
+“Those files look unrelated” is not enough. If the Controller cannot establish the dependency boundary, it should rerun the targeted check.
+
+A commit SHA is also not a complete candidate identity when uncommitted edits exist. In that case the Controller needs an exact relevant diff or snapshot in addition to the commit identity.
+
+CounterProof does not implement PROVE's reuse decision here. Its own reviewer-note guard can reject a receipt when an explicit current HEAD does not match, while PROVE remains responsible for any broader scoped-reuse policy.
+
 ## Why this handoff stays small
 
 CounterProof does not:
