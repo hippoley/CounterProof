@@ -22,10 +22,25 @@ class OracleAlignment(str, Enum):
     UNVERIFIED = "UNVERIFIED"
 
 
+class EvidenceScope(str, Enum):
+    IMPLEMENTATION = "IMPLEMENTATION"
+    BEHAVIOR = "BEHAVIOR"
+    SAFETY = "SAFETY"
+
+    @property
+    def rank(self) -> int:
+        return {
+            EvidenceScope.IMPLEMENTATION: 1,
+            EvidenceScope.BEHAVIOR: 2,
+            EvidenceScope.SAFETY: 3,
+        }[self]
+
+
 class OverallClaim(str, Enum):
     PROVEN = "PROVEN"
     CONTRADICTED = "CONTRADICTED"
     WITNESSED_SUBMITTED_JUDGE = "WITNESSED (submitted judge)"
+    WITNESSED_SCOPE_INSUFFICIENT = "WITNESSED (scope insufficient)"
     UNPROVEN = "UNPROVEN"
 
 
@@ -37,6 +52,8 @@ class ClaimEvidence(BaseModel):
     base_result: str | None = None
     head_result: str | None = None
     submitted_test_evidence: SubmittedTestEvidence
+    evidence_scope: EvidenceScope = EvidenceScope.BEHAVIOR
+    required_scope: EvidenceScope = EvidenceScope.BEHAVIOR
     oracle_alignment: OracleAlignment = OracleAlignment.UNVERIFIED
     oracle_probe: str | None = None
     oracle_source_url: str | None = None
@@ -68,6 +85,10 @@ class ClaimEvidence(BaseModel):
         return self
 
     @property
+    def scope_sufficient(self) -> bool:
+        return self.evidence_scope.rank >= self.required_scope.rank
+
+    @property
     def overall_claim(self) -> OverallClaim:
         if self.oracle_alignment is OracleAlignment.CONTRADICTED:
             return OverallClaim.CONTRADICTED
@@ -76,6 +97,12 @@ class ClaimEvidence(BaseModel):
             and self.oracle_alignment is OracleAlignment.ALIGNED
         ):
             return OverallClaim.PROVEN
+        if (
+            self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
+            and self.oracle_alignment is OracleAlignment.UNVERIFIED
+            and not self.scope_sufficient
+        ):
+            return OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
         if (
             self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
             and self.oracle_alignment is OracleAlignment.UNVERIFIED
@@ -110,6 +137,7 @@ def load_claim_matrix(path: Path) -> ClaimMatrixManifest:
 def claim_matrix_to_dict(manifest: ClaimMatrixManifest) -> dict[str, Any]:
     payload = manifest.model_dump(mode="json")
     for claim, raw in zip(manifest.claims, payload["claims"], strict=True):
+        raw["scope_sufficient"] = claim.scope_sufficient
         raw["overall_claim"] = claim.overall_claim.value
     return payload
 
@@ -125,7 +153,8 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         f"# {manifest.title}",
         "",
         "> Evidence is scoped per claim. A green submitted test is not product-level proof",
-        "> unless the relevant oracle is independently aligned.",
+        "> unless the relevant oracle is independently aligned and the evidence scope reaches",
+        "> the scope required by the claim.",
         "",
     ]
 
@@ -154,9 +183,9 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             "",
             (
                 "| Claim | Exact test(s) | BASE | HEAD | Submitted-test evidence | "
-                "Oracle alignment | Overall claim |"
+                "Evidence scope | Required scope | Oracle alignment | Overall claim |"
             ),
-            "|---|---|---|---|---|---|---|",
+            "|---|---|---|---|---|---|---|---|---|",
         ]
     )
 
@@ -171,6 +200,8 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
                     _cell(claim.base_result),
                     _cell(claim.head_result),
                     f"**{claim.submitted_test_evidence.value}**",
+                    f"**{claim.evidence_scope.value}**",
+                    f"**{claim.required_scope.value}**",
                     f"**{claim.oracle_alignment.value}**",
                     f"**{claim.overall_claim.value}**",
                 ]
@@ -186,6 +217,7 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         or claim.note
         or claim.source_url
         or claim.oracle_source_url
+        or not claim.scope_sufficient
     ]
     if details:
         lines.extend(["", "## Evidence details", ""])
@@ -194,6 +226,11 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             lines.append("")
             if claim.source_url:
                 lines.append(f"- Claim source: {claim.source_url}")
+            lines.append(
+                f"- Scope: evidence `{claim.evidence_scope.value}` -> "
+                f"required `{claim.required_scope.value}` "
+                f"({'sufficient' if claim.scope_sufficient else 'INSUFFICIENT'})"
+            )
             if claim.oracle_probe:
                 lines.append(f"- Oracle probe: {_cell(claim.oracle_probe)}")
             if claim.oracle_source_url:
@@ -218,10 +255,16 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             "## Vocabulary",
             "",
             "- Submitted-test evidence: `WITNESSED / NOT_WITNESSED / UNPROVEN`",
+            "- Evidence scope: `IMPLEMENTATION < BEHAVIOR < SAFETY`",
             "- Oracle alignment: `ALIGNED / CONTRADICTED / UNVERIFIED`",
             (
+                "- `WITNESSED (scope insufficient)` means the candidate delta is real, "
+                "but the evidence only reaches a shallower scope than the claim requires."
+            ),
+            (
                 "- `WITNESSED (submitted judge)` means the submitted test distinguishes "
-                "BASE from HEAD while product-oracle alignment remains unverified."
+                "BASE from HEAD, reaches the declared claim scope, and product-oracle "
+                "alignment remains unverified."
             ),
             (
                 "- `PROVEN` requires both a witnessed submitted regression and an aligned "
