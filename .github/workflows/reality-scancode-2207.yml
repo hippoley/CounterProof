@@ -1,0 +1,124 @@
+name: Reality probe - ScanCode.io #2207
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reality-scancode-2207.yml'
+
+permissions:
+  contents: read
+
+env:
+  POSTGRES_DB: scancodeio
+  POSTGRES_USER: scancodeio
+  POSTGRES_PASSWORD: scancodeio
+  POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:17.9
+        env:
+          POSTGRES_DB: scancodeio
+          POSTGRES_USER: scancodeio
+          POSTGRES_PASSWORD: scancodeio
+          POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Check out CounterProof probe
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y universal-ctags gettext
+
+      - name: Fetch exact ScanCode.io candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/aboutcode-org/scancode.io.git /tmp/scancode
+          cd /tmp/scancode
+          git fetch origin \
+            41868632dcaba1ad9b6402d114b169564c08d121 \
+            f71185995aee043e2e9acfd31028501f23992aea \
+            --depth=1
+
+      - name: Install project dependencies from HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/scancode
+          git -C "$repo" checkout --detach f71185995aee043e2e9acfd31028501f23992aea
+          cd "$repo"
+          make dev envfile
+
+      - name: HEAD - run submitted behavior test
+        shell: bash
+        env:
+          SCANCODEIO_DB_NAME: scancodeio
+          SCANCODEIO_DB_USER: scancodeio
+          SCANCODEIO_DB_PASSWORD: scancodeio
+        run: |
+          set -euo pipefail
+          cd /tmp/scancode
+          .venv/bin/python manage.py test \
+            scanpipe.tests.test_commands.ScanPipeManagementCommandTest.test_scanpipe_management_command_run_without_input_location \
+            --verbosity=2 --noinput
+          echo "HEAD_SUBMITTED_TEST=PASS"
+
+      - name: BASE - transplant exact submitted test file
+        shell: bash
+        env:
+          SCANCODEIO_DB_NAME: scancodeio
+          SCANCODEIO_DB_USER: scancodeio
+          SCANCODEIO_DB_PASSWORD: scancodeio
+        run: |
+          set -euo pipefail
+          repo=/tmp/scancode
+          test_path=scanpipe/tests/test_commands.py
+
+          git -C "$repo" show f71185995aee043e2e9acfd31028501f23992aea:"$test_path" > /tmp/submitted-test.py
+          git -C "$repo" checkout --detach 41868632dcaba1ad9b6402d114b169564c08d121
+          cp /tmp/submitted-test.py "$repo/$test_path"
+
+          cd "$repo"
+          set +e
+          .venv/bin/python manage.py test \
+            scanpipe.tests.test_commands.ScanPipeManagementCommandTest.test_scanpipe_management_command_run_without_input_location \
+            --verbosity=2 --noinput 2>&1 | tee /tmp/base-replay.log
+          base_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$base_status" -eq 0 ]; then
+            echo "Expected the submitted behavior test to fail on BASE, but it passed."
+            exit 1
+          fi
+
+          echo "BASE_WITH_SUBMITTED_TEST=FAIL"
+
+          if grep -q "input_location" /tmp/base-replay.log; then
+            echo "BASE_FAILURE_MODE=CLAIM_RELEVANT_REQUIRED_INPUT"
+          else
+            echo "BASE_FAILURE_MODE=OTHER"
+            cat /tmp/base-replay.log
+            exit 1
+          fi
+
+          echo "COUNTERPROOF_REALITY_RESULT=WITNESSED_BEHAVIOR_DELTA"
+          echo "INTERPRETATION=The exact submitted test passes on HEAD and fails on BASE because BASE still requires input_location. This directly exercises the claimed CLI behavior rather than a new implementation-only API."
