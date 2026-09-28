@@ -18,12 +18,17 @@ from skill_factory.evolution.claim_matrix import (
 )
 from skill_factory.evolution.cli import cli
 
+# Synthetic test input under the reserved .test TLD; it is never fetched.
+TEST_ORACLE_SOURCE = "https://oracle-source.example.test/synthetic-test-input"
+ASSERTED_ORACLES = [OracleAlignment.ALIGNED, OracleAlignment.CONTRADICTED]
+
 
 def _claim(
     *,
     submitted: SubmittedTestEvidence,
     oracle: OracleAlignment,
     oracle_probe: str | None = None,
+    oracle_source_url: str | None = None,
 ) -> ClaimEvidence:
     replayed = submitted in {
         SubmittedTestEvidence.WITNESSED,
@@ -38,6 +43,7 @@ def _claim(
         submitted_test_evidence=submitted,
         oracle_alignment=oracle,
         oracle_probe=oracle_probe,
+        oracle_source_url=oracle_source_url,
     )
 
 
@@ -86,6 +92,7 @@ def test_overall_claim_is_mechanical(
         submitted=submitted,
         oracle=oracle,
         oracle_probe=oracle_probe,
+        oracle_source_url=TEST_ORACLE_SOURCE if oracle in ASSERTED_ORACLES else None,
     )
 
     assert claim.overall_claim is expected
@@ -100,14 +107,265 @@ def test_witnessed_claim_requires_exact_test_and_before_after_results():
         )
 
 
-def test_verified_or_contradicted_oracle_requires_probe():
-    with pytest.raises(ValidationError, match="requires an explicit oracle_probe"):
+@pytest.mark.parametrize("oracle", list(OracleAlignment))
+@pytest.mark.parametrize(
+    ("base_result", "head_result"),
+    [
+        ("PASS", "FAIL"),
+        ("PASS", "PASS"),
+        ("FAIL", "FAIL"),
+        ("ERROR", "PASS"),
+        ("FAIL", "SKIP"),
+        ("failed", "passed"),
+        ("FAIL", "PASS (2 tests)"),
+    ],
+)
+def test_witnessed_claim_rejects_inconsistent_or_ambiguous_results(
+    oracle: OracleAlignment, base_result: str, head_result: str
+):
+    with pytest.raises(ValidationError, match="WITNESSED claims require BASE=FAIL and HEAD=PASS"):
         ClaimEvidence(
-            id="claim-1",
-            claim="behavior",
-            submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
-            oracle_alignment=OracleAlignment.CONTRADICTED,
+            id="inconsistent-witness",
+            claim="the submitted regression distinguishes the fix",
+            tests=["tests/test_behavior.py"],
+            base_result=base_result,
+            head_result=head_result,
+            submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+            oracle_alignment=oracle,
+            oracle_probe="caller-declared probe; never executed by this renderer",
         )
+
+
+@pytest.mark.parametrize(
+    ("head_result", "oracle"),
+    [("FAIL", "ALIGNED"), ("PASS", "UNVERIFIED")],
+)
+def test_cli_rejects_inconsistent_witness_without_writing_outputs(
+    tmp_path: Path, head_result: str, oracle: str
+):
+    manifest = tmp_path / "claims.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "title": "Known-bad evidence controls",
+                "claims": [
+                    {
+                        "id": "inconsistent-witness",
+                        "claim": "a regression witness requires a failing BASE and passing HEAD",
+                        "tests": ["tests/nonexistent.py"],
+                        "base_result": "PASS",
+                        "head_result": head_result,
+                        "submitted_test_evidence": "WITNESSED",
+                        "oracle_alignment": oracle,
+                        "oracle_probe": "unverified caller assertion",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    md_out = tmp_path / "matrix.md"
+    json_out = tmp_path / "matrix.json"
+
+    result = CliRunner().invoke(
+        cli, ["claim-matrix", str(manifest), "--out", str(md_out), "--json-out", str(json_out)]
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "WITNESSED claims require BASE=FAIL and HEAD=PASS" in result.output
+    assert not md_out.exists()
+    assert not json_out.exists()
+
+
+@pytest.mark.parametrize("oracle", ASSERTED_ORACLES)
+@pytest.mark.parametrize("oracle_probe", [None, "", "   ", "\n\t"])
+def test_asserted_oracle_rejects_blank_probe(oracle: OracleAlignment, oracle_probe: str | None):
+    with pytest.raises(ValidationError, match="requires an explicit oracle_probe"):
+        _claim(
+            submitted=SubmittedTestEvidence.UNPROVEN,
+            oracle=oracle,
+            oracle_probe=oracle_probe,
+            oracle_source_url=TEST_ORACLE_SOURCE,
+        )
+
+
+@pytest.mark.parametrize("oracle", ASSERTED_ORACLES)
+@pytest.mark.parametrize(
+    "oracle_source_url",
+    [
+        None,
+        "",
+        "   ",
+        "oracle-source.example.test/no-scheme",
+        "/relative/oracle/evidence",
+        "//oracle-source.example.test/scheme-relative",
+        "ftp://oracle-source.example.test/synthetic-test-input",
+        "https://",
+        "https:///path-without-host",
+        "https://:443/port-without-host",
+        "https:oracle-source.example.test/missing-slashes",
+        " https://oracle-source.example.test/leading-space",
+        "https://oracle-source.example.test/trailing-newline\n",
+        "https://oracle-source.example.test/inner space",
+        "https://oracle-source.example.test/inner\u00a0space",
+        "https://oracle-source.example.test/control\x00char",
+        "https://oracle-source.example.test/control\x7fchar",
+        "https://oracle-source.example.test/control\x80char",
+        "https://example.test/\u202evidence",
+        "https://exam\u200bple.test/evidence",
+        "https://example.test/byte\ufefforder-mark",
+        "https://evil.example\\@github.com/hippoley/CounterProof/pull/50",
+        "https://example.test/evidence\\other",
+        "https://oracle-source.example.test:99999/port-out-of-range",
+        "https://oracle-source.example.test:port/non-numeric-port",
+        "https://[2001:db8::1/unclosed-ipv6",
+        "https://exa<mple.test/run",
+        "https://user@/missing-host-after-userinfo",
+        "https://[not-an-ip]/bad-literal",
+        "https://[2001:db8::1]suffix/bad-bracketed-host",
+    ],
+)
+def test_asserted_oracle_rejects_missing_or_malformed_source(
+    oracle: OracleAlignment,
+    oracle_source_url: str | None,
+):
+    with pytest.raises(ValidationError, match="requires oracle_source_url"):
+        _claim(
+            submitted=SubmittedTestEvidence.UNPROVEN,
+            oracle=oracle,
+            oracle_probe="caller-declared probe; never executed by this renderer",
+            oracle_source_url=oracle_source_url,
+        )
+
+
+@pytest.mark.parametrize(
+    ("oracle", "expected"),
+    [
+        (OracleAlignment.ALIGNED, OverallClaim.PROVEN),
+        (OracleAlignment.CONTRADICTED, OverallClaim.CONTRADICTED),
+    ],
+)
+@pytest.mark.parametrize(
+    "oracle_source_url",
+    [
+        TEST_ORACLE_SOURCE,
+        "http://oracle-source.example.test/synthetic-test-input",
+        "HTTPS://Oracle-Source.Example.Test/Synthetic?input=1#test",
+        "https://oracle-source.example.test:8443/synthetic-test-input",
+        "https://[2001:db8::1]/synthetic-test-input",
+        "https://example.test/oracle%20run#result",
+        "https://bücher.test/evidence",
+    ],
+)
+def test_asserted_oracle_accepts_absolute_http_source_verbatim(
+    oracle: OracleAlignment, expected: OverallClaim, oracle_source_url: str
+):
+    claim = _claim(
+        submitted=SubmittedTestEvidence.WITNESSED,
+        oracle=oracle,
+        oracle_probe="caller-declared probe; never executed by this renderer",
+        oracle_source_url=oracle_source_url,
+    )
+
+    assert claim.overall_claim is expected
+    assert claim.oracle_source_url == oracle_source_url
+
+
+@pytest.mark.parametrize(
+    ("submitted", "oracle_probe", "expected"),
+    [
+        (SubmittedTestEvidence.WITNESSED, None, OverallClaim.WITNESSED_SUBMITTED_JUDGE),
+        (SubmittedTestEvidence.UNPROVEN, None, OverallClaim.UNPROVEN),
+        (
+            SubmittedTestEvidence.WITNESSED,
+            "probe text without a source",
+            OverallClaim.WITNESSED_SUBMITTED_JUDGE,
+        ),
+    ],
+)
+def test_unverified_oracle_needs_neither_probe_nor_source(
+    submitted: SubmittedTestEvidence, oracle_probe: str | None, expected: OverallClaim
+):
+    claim = _claim(
+        submitted=submitted,
+        oracle=OracleAlignment.UNVERIFIED,
+        oracle_probe=oracle_probe,
+    )
+
+    assert claim.oracle_alignment is OracleAlignment.UNVERIFIED
+    assert claim.overall_claim is expected
+
+
+@pytest.mark.parametrize("oracle", ["ALIGNED", "CONTRADICTED"])
+@pytest.mark.parametrize(
+    "source_fields",
+    [
+        {},
+        {"oracle_source_url": "   "},
+        {"oracle_source_url": "oracle-source.example.test/no-scheme"},
+        {"oracle_source_url": "https://example.test:99999/invalid-port"},
+    ],
+)
+def test_cli_rejects_asserted_oracle_without_source_before_writing_outputs(
+    tmp_path: Path, oracle: str, source_fields: dict[str, str]
+):
+    manifest = tmp_path / "claims.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "title": "Known-bad provenance controls",
+                "claims": [
+                    {
+                        "id": "unsourced-oracle",
+                        "claim": "an asserted oracle state needs an inspectable source",
+                        "tests": ["tests/nonexistent.py"],
+                        "base_result": "FAIL",
+                        "head_result": "PASS",
+                        "submitted_test_evidence": "WITNESSED",
+                        "oracle_alignment": oracle,
+                        "oracle_probe": "unverified caller assertion",
+                        **source_fields,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    md_out = tmp_path / "matrix.md"
+    json_out = tmp_path / "matrix.json"
+
+    result = CliRunner().invoke(
+        cli, ["claim-matrix", str(manifest), "--out", str(md_out), "--json-out", str(json_out)]
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "requires oracle_source_url" in result.output
+    assert not md_out.exists()
+    assert not json_out.exists()
+
+
+@pytest.mark.parametrize("oracle", ASSERTED_ORACLES)
+def test_render_keeps_oracle_provenance_in_markdown_and_json(oracle: OracleAlignment):
+    probe = "caller-declared probe; never executed by this renderer"
+    manifest = ClaimMatrixManifest(
+        title="Provenance matrix",
+        claims=[
+            _claim(
+                submitted=SubmittedTestEvidence.WITNESSED,
+                oracle=oracle,
+                oracle_probe=probe,
+                oracle_source_url=TEST_ORACLE_SOURCE,
+            )
+        ],
+    )
+
+    markdown = render_claim_matrix_markdown(manifest)
+    payload = claim_matrix_to_dict(manifest)
+
+    assert f"- Oracle probe: {probe}" in markdown
+    assert f"- Oracle source: {TEST_ORACLE_SOURCE}" in markdown
+    assert payload["claims"][0]["oracle_probe"] == probe
+    assert payload["claims"][0]["oracle_source_url"] == TEST_ORACLE_SOURCE
 
 
 def test_render_keeps_submitted_judge_scope_explicit():
@@ -236,6 +494,18 @@ claims:
                 "CONTRADICTED",
                 "UNPROVEN",
             ],
+        ),
+        (
+            Path("examples/claim_matrix/cognee-5161.yml"),
+            ["UNPROVEN", "CONTRADICTED", "UNPROVEN"],
+        ),
+        (
+            Path("examples/claim_matrix/crewai-7721.yml"),
+            ["WITNESSED (submitted judge)", "CONTRADICTED", "UNPROVEN", "CONTRADICTED"],
+        ),
+        (
+            Path("examples/claim_matrix/vercel-ai-17096.yml"),
+            ["WITNESSED (submitted judge)", "UNPROVEN", "UNPROVEN"],
         ),
     ],
 )
