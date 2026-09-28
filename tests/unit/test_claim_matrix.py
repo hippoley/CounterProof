@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from skill_factory.evolution.claim_matrix import (
     ClaimEvidence,
     ClaimMatrixManifest,
+    EvidenceScope,
     OracleAlignment,
     OverallClaim,
     SubmittedTestEvidence,
@@ -24,6 +25,8 @@ def _claim(
     submitted: SubmittedTestEvidence,
     oracle: OracleAlignment,
     oracle_probe: str | None = None,
+    evidence_scope: EvidenceScope = EvidenceScope.BEHAVIOR,
+    required_scope: EvidenceScope = EvidenceScope.BEHAVIOR,
 ) -> ClaimEvidence:
     replayed = submitted in {
         SubmittedTestEvidence.WITNESSED,
@@ -36,6 +39,8 @@ def _claim(
         base_result="FAIL" if replayed else None,
         head_result="PASS" if replayed else None,
         submitted_test_evidence=submitted,
+        evidence_scope=evidence_scope,
+        required_scope=required_scope,
         oracle_alignment=oracle,
         oracle_probe=oracle_probe,
     )
@@ -91,6 +96,43 @@ def test_overall_claim_is_mechanical(
     assert claim.overall_claim is expected
 
 
+def test_witnessed_implementation_delta_cannot_prove_behavior_claim():
+    claim = _claim(
+        submitted=SubmittedTestEvidence.WITNESSED,
+        oracle=OracleAlignment.UNVERIFIED,
+        evidence_scope=EvidenceScope.IMPLEMENTATION,
+        required_scope=EvidenceScope.BEHAVIOR,
+    )
+
+    assert claim.scope_sufficient is False
+    assert claim.overall_claim is OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
+
+
+def test_behavior_evidence_is_insufficient_for_safety_claim_without_safety_oracle():
+    claim = _claim(
+        submitted=SubmittedTestEvidence.WITNESSED,
+        oracle=OracleAlignment.UNVERIFIED,
+        evidence_scope=EvidenceScope.BEHAVIOR,
+        required_scope=EvidenceScope.SAFETY,
+    )
+
+    assert claim.scope_sufficient is False
+    assert claim.overall_claim is OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
+
+
+def test_aligned_authoritative_oracle_can_close_scope_gap():
+    claim = _claim(
+        submitted=SubmittedTestEvidence.WITNESSED,
+        oracle=OracleAlignment.ALIGNED,
+        oracle_probe="real session proves safe startup and Secret portal availability",
+        evidence_scope=EvidenceScope.IMPLEMENTATION,
+        required_scope=EvidenceScope.SAFETY,
+    )
+
+    assert claim.scope_sufficient is False
+    assert claim.overall_claim is OverallClaim.PROVEN
+
+
 def test_witnessed_claim_requires_exact_test_and_before_after_results():
     with pytest.raises(ValidationError, match="require at least one exact test"):
         ClaimEvidence(
@@ -137,6 +179,7 @@ def test_render_keeps_submitted_judge_scope_explicit():
     payload = claim_matrix_to_dict(manifest)
 
     assert "**WITNESSED**" in markdown
+    assert "**BEHAVIOR**" in markdown
     assert "**UNVERIFIED**" in markdown
     assert "**WITNESSED (submitted judge)**" in markdown
     assert "expected false to be true" in markdown
@@ -145,7 +188,35 @@ def test_render_keeps_submitted_judge_scope_explicit():
     assert "sha256:abc123" in markdown
     assert payload["runner_url"] == "https://github.com/example/proof/actions/runs/9"
     assert payload["evidence_digest"] == "sha256:abc123"
+    assert payload["claims"][0]["scope_sufficient"] is True
     assert payload["claims"][0]["overall_claim"] == "WITNESSED (submitted judge)"
+
+
+def test_render_calls_out_insufficient_scope():
+    manifest = ClaimMatrixManifest(
+        title="Bluefin historical lab check",
+        claims=[
+            ClaimEvidence(
+                id="safe-login-path",
+                claim="keyring startup remains safe during login",
+                tests=["lab/systemd-ordering.sh"],
+                base_result="ABSENT",
+                head_result="PASS",
+                submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+                evidence_scope=EvidenceScope.IMPLEMENTATION,
+                required_scope=EvidenceScope.SAFETY,
+            )
+        ],
+    )
+
+    markdown = render_claim_matrix_markdown(manifest)
+    payload = claim_matrix_to_dict(manifest)
+
+    assert "**IMPLEMENTATION**" in markdown
+    assert "**SAFETY**" in markdown
+    assert "**WITNESSED (scope insufficient)**" in markdown
+    assert "INSUFFICIENT" in markdown
+    assert payload["claims"][0]["scope_sufficient"] is False
 
 
 def test_cli_renders_yaml_manifest_to_markdown_and_json(tmp_path: Path):
@@ -165,6 +236,8 @@ claims:
     base_result: FAIL
     head_result: PASS
     submitted_test_evidence: WITNESSED
+    evidence_scope: IMPLEMENTATION
+    required_scope: BEHAVIOR
     oracle_alignment: CONTRADICTED
     oracle_probe: product validator rejects the claimed-valid fixture
     oracle_source_url: https://github.com/example/repo/pull/7#issuecomment-1
@@ -193,6 +266,9 @@ claims:
     assert "**CONTRADICTED**" in md_out.read_text(encoding="utf-8")
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["claims"][0]["submitted_test_evidence"] == "WITNESSED"
+    assert payload["claims"][0]["evidence_scope"] == "IMPLEMENTATION"
+    assert payload["claims"][0]["required_scope"] == "BEHAVIOR"
+    assert payload["claims"][0]["scope_sufficient"] is False
     assert payload["claims"][0]["oracle_alignment"] == "CONTRADICTED"
     assert payload["claims"][0]["overall_claim"] == "CONTRADICTED"
 
@@ -248,3 +324,19 @@ def test_real_reviewer_cases_fit_mechanical_matrix(path: Path, expected: list[st
 
     assert [item["overall_claim"] for item in payload["claims"]] == expected
     assert "SUPPORTED" not in markdown
+
+
+def test_bluefin_example_preserves_green_but_wrong_oracle_boundary():
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(Path("examples/claim_matrix/bluefin-4539.yml"))
+    payload = claim_matrix_to_dict(manifest)
+
+    assert [item["overall_claim"] for item in payload["claims"]] == [
+        "WITNESSED (scope insufficient)",
+        "WITNESSED (scope insufficient)",
+    ]
+    assert [item["required_scope"] for item in payload["claims"]] == [
+        "BEHAVIOR",
+        "SAFETY",
+    ]
