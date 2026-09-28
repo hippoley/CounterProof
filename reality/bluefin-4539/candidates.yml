@@ -1,0 +1,29 @@
+schema_version: 1
+case: ublue-os/bluefin#4539
+purpose: freeze the historical three-candidate replay inputs before booting QEMU
+candidates:
+  - id: BASE
+    role: known-good-pre-change
+    image: ghcr.io/ublue-os/bluefin@sha256:6b8bb48f020ec3908fa650f529182ed20b6ae6d33f11689b99efef8af24a61c0
+    version: "44.20260519"
+    provenance: https://github.com/ublue-os/bluefin/issues/4683
+    trust: exact-user-reported-immutable-digest
+
+  - id: BAD_HEAD
+    role: shipped-regression
+    image: ghcr.io/ublue-os/bluefin@sha256:7d23a477e0c673489ced24af6d3180f9e7a90597847f4314a78e45dffde59fd3
+    version: "44.20260526"
+    provenance: https://github.com/ublue-os/bluefin/issues/4683
+    trust: exact-user-reported-immutable-digest
+
+  - id: REVERT_CANDIDATE
+    role: post-revert-recovery-candidate
+    image: ghcr.io/ublue-os/bluefin:stable-daily-44.20260529
+    version: "44.20260529"
+    provenance: https://github.com/ublue-os/bluefin/pull/4685
+    trust: candidate-tag-not-yet-bound-to-revert-commit
+    note: >
+      This candidate must not be promoted to historical REVERT until registry
+      availability and source-revision provenance show that it contains the
+      merged revert. If unavailable, reconstruct from the revert commit and
+      label the result reconstructed rather than original.
