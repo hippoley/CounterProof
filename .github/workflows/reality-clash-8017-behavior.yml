@@ -179,6 +179,7 @@ jobs:
         run: |
           set -euo pipefail
           repo=/tmp/clash-verge-rev
+          git -C "$repo" reset --hard
           git -C "$repo" checkout --detach b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
           git -C "$repo" clean -fd
           cat /tmp/counterproof-probe.rs >> "$repo/src-tauri/src/config/config.rs"
