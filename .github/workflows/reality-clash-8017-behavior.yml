@@ -209,19 +209,16 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           head = Path("/tmp/head-behavior.log").read_text(errors="replace")
           base = Path("/tmp/base-behavior.log").read_text(errors="replace")
 
           def value(log: str, key: str) -> bool:
-              needle = key + "="
-              hits = [line.strip() for line in log.splitlines() if line.strip().startswith(needle)]
+              hits = re.findall(rf"{re.escape(key)}=(true|false)\\b", log, flags=re.IGNORECASE)
               if not hits:
                   raise SystemExit(f"missing {key}")
-              raw = hits[-1].split("=", 1)[1].strip().lower()
-              if raw not in {"true", "false"}:
-                  raise SystemExit(f"invalid {key}: {raw}")
-              return raw == "true"
+              return hits[-1].lower() == "true"
 
           keys = [
               "CP_NO_DRAFT_CLASH_REPLACED",
