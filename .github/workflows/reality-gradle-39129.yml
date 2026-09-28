@@ -1,0 +1,66 @@
+name: Reality probe - gradle #39129
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reality-gradle-39129.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out CounterProof probe
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Fetch exact Gradle candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/gradle/gradle.git /tmp/gradle
+          cd /tmp/gradle
+          git fetch origin \
+            d39f41c9f0cac80b1f1f54140849e1e0093acc5d \
+            d0bf546a30bb7ffd4d1857c8c2f207731939f556 \
+            --depth=1
+
+      - name: HEAD - run submitted regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/gradle
+          git -C "$repo" checkout --detach d0bf546a30bb7ffd4d1857c8c2f207731939f556
+          cd "$repo"
+          ./gradlew :dependency-management:test \
+            --rerun \
+            --tests '*NormalizingExcludeFactoryTest.mixed exclusion union reaches a fixed point for operand order*' \
+            --no-daemon --no-scan --max-workers=2
+          echo "HEAD_SUBMITTED_TEST=PASS"
+
+      - name: BASE - transplant exact submitted test file
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/gradle
+          test_path=platforms/software/dependency-management/src/test/groovy/org/gradle/api/internal/artifacts/ivyservice/resolveengine/excludes/factories/NormalizingExcludeFactoryTest.groovy
+
+          git -C "$repo" show d0bf546a30bb7ffd4d1857c8c2f207731939f556:"$test_path" > /tmp/submitted-test.groovy
+          git -C "$repo" checkout --detach d39f41c9f0cac80b1f1f54140849e1e0093acc5d
+          cp /tmp/submitted-test.groovy "$repo/$test_path"
+
+          cd "$repo"
+          ./gradlew :dependency-management:test \
+            --rerun \
+            --tests '*NormalizingExcludeFactoryTest.mixed exclusion union reaches a fixed point for operand order*' \
+            --no-daemon --no-scan --max-workers=2
+          echo "BASE_WITH_SUBMITTED_TEST=PASS"
+          echo "COUNTERPROOF_REALITY_RESULT=NOT_WITNESSED"
+          echo "INTERPRETATION=The exact submitted test passes on the PR base as well as the PR head. It may describe useful historical behavior, but it does not witness a change introduced by this PR and cannot by itself establish which historical fix it covers."
