@@ -57,6 +57,7 @@ These are useful public probes, but **no external response is counted yet**:
 - [#80 — AWS AI-DLC review-ladder execution-evidence boundary](https://github.com/hippoley/CounterProof/issues/80) — outbound maintainer probe after direct external write was blocked by GitHub App permissions. Asks whether BASE→HEAD execution semantics belong inside the multi-lane review ladder or should stay external.
 - [#81 — AVERA evidence-manifest interoperability](https://github.com/hippoley/CounterProof/issues/81) — outbound maintainer probe. Tests whether AVERA's pass→fail regression manifest is intentionally reusable by downstream claim-level review tools.
 - [#82 — agent-done-or-not receipt handoff](https://github.com/hippoley/CounterProof/issues/82) — outbound maintainer probe. Tests whether current-candidate proof-of-done receipts should be reusable as upstream evidence for BASE→HEAD reviewer verification.
+- [#84 — KiroCrew computed-vs-published verdict boundary](https://github.com/hippoley/CounterProof/issues/84) — outbound architecture probe after direct upstream write was blocked. Tests whether required review lanes should expose an explicit publication receipt / `INCOMPLETE` state when a verdict was computed but never reached the authoritative slot.
 
 ### Closed probes with negative / no-adoption feedback
 
