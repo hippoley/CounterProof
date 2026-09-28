@@ -69,14 +69,20 @@ jobs:
           set -euo pipefail
           path=/usr/lib/systemd/user/xdg-desktop-portal.service.d/30-after-keyring.conf
 
-          test "$(docker run --rm "$CONTROL_BASE" sh -c "test -e $path; echo $?")" = "1"
+          if docker run --rm "$CONTROL_BASE" test -e "$path"; then
+            echo "::error::CONTROL unexpectedly contains intervention"
+            exit 1
+          fi
 
           bad_content="$(docker run --rm "${{ steps.refs.outputs.bad_image }}" cat "$path")"
           printf '%s\n' "$bad_content"
           grep -Fx 'After=gnome-keyring-daemon.service' <<<"$bad_content"
           grep -Fx 'Wants=gnome-keyring-daemon.service' <<<"$bad_content"
 
-          test "$(docker run --rm "${{ steps.refs.outputs.revert_image }}" sh -c "test -e $path; echo $?")" = "1"
+          if docker run --rm "${{ steps.refs.outputs.revert_image }}" test -e "$path"; then
+            echo "::error::REVERT still contains intervention"
+            exit 1
+          fi
 
       - name: Publish construction receipt
         shell: bash
