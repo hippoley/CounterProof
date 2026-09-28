@@ -1,0 +1,79 @@
+name: Reality — Bluefin 4539 candidate availability
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "reality/bluefin-4539/**"
+      - ".github/workflows/reality-bluefin-4539-candidates.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  registry-candidates:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE
+            ref: ghcr.io/ublue-os/bluefin@sha256:6b8bb48f020ec3908fa650f529182ed20b6ae6d33f11689b99efef8af24a61c0
+            trust: exact-user-reported-immutable-digest
+          - id: BAD_HEAD
+            ref: ghcr.io/ublue-os/bluefin@sha256:7d23a477e0c673489ced24af6d3180f9e7a90597847f4314a78e45dffde59fd3
+            trust: exact-user-reported-immutable-digest
+          - id: REVERT_CANDIDATE
+            ref: ghcr.io/ublue-os/bluefin:stable-daily-44.20260529
+            trust: candidate-tag-not-yet-bound-to-revert-commit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inspect candidate in GHCR
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          mkdir -p reality/bluefin-4539/availability
+          out="reality/bluefin-4539/availability/${{ matrix.id }}.txt"
+
+          {
+            echo "candidate=${{ matrix.id }}"
+            echo "ref=${{ matrix.ref }}"
+            echo "trust=${{ matrix.trust }}"
+            echo
+            docker buildx imagetools inspect "${{ matrix.ref }}"
+          } >"$out" 2>&1
+          rc=$?
+
+          if [[ $rc -eq 0 ]]; then
+            status=AVAILABLE
+          else
+            status=UNAVAILABLE
+          fi
+
+          {
+            echo
+            echo "status=$status"
+            echo "inspect_exit=$rc"
+          } >>"$out"
+
+          echo "status=$status" >>"$GITHUB_OUTPUT"
+          cat "$out"
+
+      - name: Publish candidate summary
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.id }}"
+            echo
+            echo "- ref: `${{ matrix.ref }}`"
+            echo "- trust: `${{ matrix.trust }}`"
+            echo "- registry: **${{ steps.inspect.outputs.status }}**"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bluefin-4539-${{ matrix.id }}-availability
+          path: reality/bluefin-4539/availability/${{ matrix.id }}.txt
+          if-no-files-found: error
