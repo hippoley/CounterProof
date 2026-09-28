@@ -1,0 +1,208 @@
+name: Reality Probe · clash-verge-rev #8017 behavior
+
+on:
+  push:
+    branches:
+      - probe/clash-8017-behavior
+
+permissions:
+  contents: read
+
+jobs:
+  behavior:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: BASE
+            repo: https://github.com/clash-verge-rev/clash-verge-rev.git
+            sha: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
+          - candidate: HEAD
+            repo: https://github.com/sdhfsl/clash-verge-rev.git
+            sha: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Linux dependencies used by upstream
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxslt1.1 \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Checkout exact candidate
+        run: |
+          git clone --filter=blob:none "${{ matrix.repo }}" candidate
+          cd candidate
+          git checkout --detach "${{ matrix.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ matrix.sha }}"
+
+      - name: Inject candidate-neutral behavior probe
+        working-directory: candidate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src-tauri/src/config/config.rs")
+          source = path.read_text()
+
+          probe = r'''
+
+#[cfg(all(test, target_os = "linux"))]
+mod counterproof_exit_save_probe {
+    use super::Config;
+    use crate::utils::dirs;
+    use std::{
+        fs,
+        os::unix::fs::MetadataExt,
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
+
+    #[derive(Debug)]
+    struct Fingerprint {
+        bytes: Vec<u8>,
+        inode: u64,
+        modified_ns: u128,
+    }
+
+    fn fingerprint(path: &std::path::Path) -> Fingerprint {
+        let metadata = fs::metadata(path).expect("metadata");
+        let modified_ns = metadata
+            .modified()
+            .unwrap_or(SystemTime::UNIX_EPOCH)
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        Fingerprint {
+            bytes: fs::read(path).expect("read config"),
+            inode: metadata.ino(),
+            modified_ns,
+        }
+    }
+
+    fn changed(before: &Fingerprint, after: &Fingerprint) -> bool {
+        before.bytes != after.bytes
+            || before.inode != after.inode
+            || before.modified_ns != after.modified_ns
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn counterproof_no_staged_exit_write() {
+        let app_home = dirs::app_home_dir().expect("app home");
+        fs::create_dir_all(&app_home).expect("create app home");
+
+        let verge = Config::verge().await;
+        verge.data_arc().save_file().await.expect("seed verge.yaml");
+
+        let path = dirs::verge_path().expect("verge path");
+        let before = fingerprint(&path);
+
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        Config::apply_all_and_save_file().await;
+
+        let after = fingerprint(&path);
+        println!(
+            "COUNTERPROOF_NO_STAGE changed={} inode_before={} inode_after={} mtime_before={} mtime_after={} bytes_changed={}",
+            changed(&before, &after),
+            before.inode,
+            after.inode,
+            before.modified_ns,
+            after.modified_ns,
+            before.bytes != after.bytes,
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn counterproof_staged_exit_write() {
+        let app_home = dirs::app_home_dir().expect("app home");
+        fs::create_dir_all(&app_home).expect("create app home");
+
+        let verge = Config::verge().await;
+        verge.data_arc().save_file().await.expect("seed verge.yaml");
+
+        let path = dirs::verge_path().expect("verge path");
+        let before = fingerprint(&path);
+
+        verge.edit_draft(|draft| {
+            draft.enable_tun_mode = Some(false);
+        });
+
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        Config::apply_all_and_save_file().await;
+
+        let after = fingerprint(&path);
+        println!(
+            "COUNTERPROOF_STAGED changed={} inode_before={} inode_after={} mtime_before={} mtime_after={} bytes_changed={}",
+            changed(&before, &after),
+            before.inode,
+            after.inode,
+            before.modified_ns,
+            after.modified_ns,
+            before.bytes != after.bytes,
+        );
+
+        assert!(
+            changed(&before, &after),
+            "a staged draft must still cause an observable save"
+        );
+    }
+}
+'''
+          if "counterproof_exit_save_probe" in source:
+              raise SystemExit("probe already present")
+          path.write_text(source + probe)
+          PY
+
+      - name: Run no-staged production-path probe
+        working-directory: candidate/src-tauri
+        env:
+          XDG_DATA_HOME: /tmp/counterproof-${{ matrix.candidate }}-no-stage
+          RUST_BACKTRACE: "1"
+        run: |
+          rm -rf "$XDG_DATA_HOME"
+          mkdir -p "$XDG_DATA_HOME"
+          cargo test --lib counterproof_no_staged_exit_write -- --nocapture | tee /tmp/no-stage.log
+          grep 'COUNTERPROOF_NO_STAGE' /tmp/no-stage.log | tee /tmp/no-stage.result
+
+      - name: Run staged safety-net probe
+        working-directory: candidate/src-tauri
+        env:
+          XDG_DATA_HOME: /tmp/counterproof-${{ matrix.candidate }}-staged
+          RUST_BACKTRACE: "1"
+        run: |
+          rm -rf "$XDG_DATA_HOME"
+          mkdir -p "$XDG_DATA_HOME"
+          cargo test --lib counterproof_staged_exit_write -- --nocapture | tee /tmp/staged.log
+          grep 'COUNTERPROOF_STAGED' /tmp/staged.log | tee /tmp/staged.result
+
+      - name: Publish candidate receipt
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## ${{ matrix.candidate }}"
+            echo
+            echo 'Exact candidate: `${{ matrix.sha }}`'
+            echo
+            echo '### No staged draft'
+            echo '~~~text'
+            cat /tmp/no-stage.result 2>/dev/null || echo "NO_RESULT"
+            echo '~~~'
+            echo
+            echo '### Staged draft'
+            echo '~~~text'
+            cat /tmp/staged.result 2>/dev/null || echo "NO_RESULT"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
