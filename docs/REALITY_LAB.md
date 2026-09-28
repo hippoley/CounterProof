@@ -10,7 +10,7 @@ The rule is simple:
 
 | External PR | Reality question | Result | What CounterProof learned |
 |---|---|---|---|
-| [rundef/async_rithmic#53](https://github.com/rundef/async_rithmic/pull/53) | Does the submitted Claude-written regression actually distinguish the fix from old code? | **WITNESSED** | Same changed test passed on HEAD and failed on BASE. A reviewer-facing receipt is useful when the question is genuinely before/after. |
+| [rundef/async_rithmic#53](https://github.com/rundef/async_rithmic/pull/53) | Does the submitted Claude-written regression actually distinguish the fix from old code? | **WITNESSED, but reviewer need not met** | Same changed test passed on HEAD and failed on BASE, but the maintainer said their real uncertainty was production reproduction, backward compatibility, and risk to existing users. The witness was technically valid without being decision-useful. |
 | [openai/codex-plugin-cc#731](https://github.com/openai/codex-plugin-cc/pull/731) | Do the changed tests prove the original fail-open bug, and do they also answer later reviewer concerns? | **WITNESSED + proof boundary** | The tests prove the original bug, but not later 0600/atomic-write concerns. Green evidence must not silently expand its claim. |
 | [openai/codex-plugin-cc#456](https://github.com/openai/codex-plugin-cc/pull/456) | What if the thing being fixed is the test harness/environment isolation itself? | **NOT WITNESSED + REVIEW REQUIRED** | Direct BASE/HEAD reproduction supports the bug, but ordinary witness is withheld because changed test support is part of the fix. |
 | [MetrolistGroup/Metrolist#4097](https://github.com/MetrolistGroup/Metrolist/pull/4097) | Does a BASE non-zero exit always count as regression evidence? | **INCONCLUSIVE** | No. The BASE failed during Kotlin test compilation, not at a behavioral assertion. This produced the structured `json-v1` result protocol. |
@@ -22,7 +22,7 @@ The rule is simple:
 | [PrefectHQ/prefect#23146](https://github.com/PrefectHQ/prefect/pull/23146) | What if a real regression is witnessed by **existing** tests only under a specific environment? | **NO CHANGED TESTS + environment witness** | Automatic changed-test discovery found 0 tests, but under `TZ=America/Los_Angeles` the same 126 existing tests were BASE 112/126 vs HEAD 126/126. Evidence set and environment can both be first-class proof inputs. |
 | [clash-verge-rev/clash-verge-rev#7991](https://github.com/clash-verge-rev/clash-verge-rev/pull/7991) | What if ownership evidence is strong but the production race is not stably reproducible? | **Open Reality Probe** | Ownership / anti-slop review and claim-level proof are complementary. A scoped, honest PR can deserve review while production-causal reproduction remains explicitly absent. |
 | [mydcc/cachy-app#2279](https://github.com/mydcc/cachy-app/pull/2279) | Can CounterProof supply the before-state evidence another verifier correctly refuses to infer from current-head green CI? | **[WITNESSED](reality/cachy-app-2279-red-green.md)** | The exact submitted XSS component test was HEAD 3/3 PASS and BASE 2 FAIL / 1 PASS when transplanted unchanged. This turns a historical red-first clause from prose into candidate-bound execution evidence without claiming the whole requirement is proven. |
-| [gramps-project/gramps#2484](https://github.com/gramps-project/gramps/pull/2484) | What if the reviewer asks “did this fail before?” but the PR changes the fixture rather than the existing test file? | **WITNESSED + explicit evidence set** | Trusted replay showed HEAD schema + submitted fixture PASS, BASE schema + the same submitted fixture FAIL, and BASE + original fixture PASS. This produced [#72](https://github.com/hippoley/CounterProof/pull/72): reviewers can now explicitly select an existing test plus changed support files instead of requiring CounterProof to guess the dependency graph. Reviewer usefulness feedback is still pending in [#71](https://github.com/hippoley/CounterProof/issues/71). |
+| [gramps-project/gramps#2484](https://github.com/gramps-project/gramps/pull/2484) | What if the reviewer asks “did this fail before?” but the PR changes the fixture rather than the existing test file? | **WITNESSED + product learning, no adoption** | Trusted replay showed HEAD schema + submitted fixture PASS, BASE schema + the same submitted fixture FAIL, and BASE + original fixture PASS. This produced [#72](https://github.com/hippoley/CounterProof/pull/72), but the original reviewer later said the question was curiosity rather than a request for additional evidence. |
 
 ## Reality-probe status
 
@@ -31,17 +31,16 @@ A cross-reference is **not** adoption. The Lab separates outbound contact from a
 ### Validated loop
 
 - [#13 — codex-plugin-cc#731 claim boundary](https://github.com/hippoley/CounterProof/issues/13) — **completed**. An external reviewer confirmed the manual matrix shape, reviewed the automated artifact, and said they would use it in review. That feedback produced the merged `claim-matrix` surface.
+- [#42 — CounterProof as a verifier input to Codex PROVE](https://github.com/hippoley/CounterProof/issues/42) — **completed interoperability boundary**. The PROVE maintainer chose ordinary REQ-ID Evidence, rejected a new packet/adapter, and later clarified stale-evidence semantics: affected evidence must be rerun; demonstrably unrelated changes can permit scoped reuse only with an established dependency boundary and recorded reason. CounterProof captured those rules in the runnable handoff without expanding into orchestration.
 
 ### External feedback received; follow-up still active
 
 - [#16 — submitted judge vs authoritative oracle](https://github.com/hippoley/CounterProof/issues/16) — external reviewers confirmed the oracle-alignment model and then identified a provenance trust boundary. An external contributor opened [#50](https://github.com/hippoley/CounterProof/pull/50) to harden it; review is still active.
-- [#42 — CounterProof as a verifier input to Codex PROVE](https://github.com/hippoley/CounterProof/issues/42) — the PROVE maintainer preferred ordinary REQ-ID Evidence over a new integration protocol. CounterProof implemented that suggestion as a runnable handoff example in [#53](https://github.com/hippoley/CounterProof/pull/53); final maintainer feedback on the example is still pending.
 
 ### Waiting for external feedback
 
 These are useful public probes, but **no external response is counted yet**:
 
-- [#11 — async_rithmic reviewer usefulness](https://github.com/hippoley/CounterProof/issues/11)
 - [#15 — when the PR fixes the judge itself](https://github.com/hippoley/CounterProof/issues/15)
 - [#20 — ownership evidence vs production reproduction](https://github.com/hippoley/CounterProof/issues/20)
 - [#22 — independent Continue #12576 witness](https://github.com/hippoley/CounterProof/issues/22)
@@ -54,7 +53,11 @@ These are useful public probes, but **no external response is counted yet**:
 - [#48 — Vercel AI #17096 mixed evidence boundary](https://github.com/hippoley/CounterProof/issues/48)
 - [#64 — claimproof runtime receipt vs candidate-bound PR evidence](https://github.com/hippoley/CounterProof/issues/64) — outbound boundary probe only. Current claimproof receipts are session-local command + exit-code evidence; the open question is whether that ephemerality is intentional or whether a reusable candidate-bound export belongs upstream.
 - [PRTruth #361 — BASE→HEAD receipt as historical evidence](https://github.com/eissasoubhi/PRTruth/issues/361) — external interop probe. CounterProof has now supplied one executable Batch 29 witness; maintainer feedback on whether it fits PRTruth's existing evidence-plugin contract is still pending.
-- [#71 — retrospective Gramps reviewer usefulness](https://github.com/hippoley/CounterProof/issues/71) — outbound reviewer probe only. The exact BASE→HEAD fixture replay is complete and produced #72, but no human adoption/usefulness response is counted until the original reviewer responds.
+
+### Closed probes with negative / no-adoption feedback
+
+- [#11 — async_rithmic reviewer usefulness](https://github.com/hippoley/CounterProof/issues/11) — **completed, negative usefulness signal**. The maintainer said the review blocker was production reproduction and backward-compatibility risk, not whether the submitted regression was red on BASE. Do not add features around this case.
+- [#71 — retrospective Gramps reviewer usefulness](https://github.com/hippoley/CounterProof/issues/71) — **completed, no adoption signal**. The replay exposed a real product gap and produced explicit test + support-file replay, but the original reviewer said the question was curiosity and had no additional evidence request.
 
 ### Open intake
 
