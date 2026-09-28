@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, probe/clash-8017-behavior]
   pull_request:
     branches: [main]
 
@@ -461,3 +461,38 @@ jobs:
 
       - name: Exercise worldline proof interaction in Chromium
         run: node tests/browser/evopr_smoke.mjs
+
+
+  clash-8017-behavior-probe:
+    if: github.ref == 'refs/heads/probe/clash-8017-behavior'
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: BASE
+            candidate_repo: https://github.com/clash-verge-rev/clash-verge-rev.git
+            candidate_sha: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
+          - candidate: HEAD
+            candidate_repo: https://github.com/sdhfsl/clash-verge-rev.git
+            candidate_sha: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install upstream Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxslt1.1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Run exact-candidate behavior probe
+        env:
+          CANDIDATE: ${{ matrix.candidate }}
+          CANDIDATE_REPO: ${{ matrix.candidate_repo }}
+          CANDIDATE_SHA: ${{ matrix.candidate_sha }}
+        run: bash scripts/reality_clash_8017_behavior.sh
