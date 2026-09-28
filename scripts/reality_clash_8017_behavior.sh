@@ -27,6 +27,11 @@ do
   chmod +x "src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
 done
 
+# The bundle config also requires the declared resources directory to exist.
+# Unit tests do not consume its contents.
+mkdir -p src-tauri/resources
+touch src-tauri/resources/.counterproof-placeholder
+
 python3 - <<'PY'
 from pathlib import Path
 
