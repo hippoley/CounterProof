@@ -121,3 +121,26 @@ jobs:
             printf '%s\n' '- ref: ${{ matrix.ref }}'
             printf '%s\n' '- registry: **${{ steps.inspect.outputs.status }}**'
           } >>"$GITHUB_STEP_SUMMARY"
+
+  control-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve current Bluefin stable to immutable digest
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/ublue-os/bluefin:stable"
+          docker buildx imagetools inspect "$ref" >inspect.txt
+          cat inspect.txt
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          test -n "$digest"
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/ublue-os/bluefin@$digest" >>"$GITHUB_OUTPUT"
+          {
+            echo '### Controlled replay base'
+            echo
+            echo "- mutable source tag: $ref"
+            echo "- frozen digest: $digest"
+            echo "- frozen ref: ghcr.io/ublue-os/bluefin@$digest"
+          } >>"$GITHUB_STEP_SUMMARY"
