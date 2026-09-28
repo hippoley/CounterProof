@@ -1,0 +1,140 @@
+name: Reality — Bluefin 4539 controlled causal replay
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "reality/bluefin-4539/controlled/**"
+      - ".github/workflows/reality-bluefin-4539-controlled.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CONTROL_BASE: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+
+jobs:
+  build-candidates:
+    runs-on: ubuntu-latest
+    outputs:
+      bad_image: ${{ steps.refs.outputs.bad_image }}
+      revert_image: ${{ steps.refs.outputs.revert_image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Freeze candidate refs
+        id: refs
+        shell: bash
+        run: |
+          owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          bad="ghcr.io/$owner/counterproof-bluefin-4539:bad-${{ github.run_id }}"
+          revert="ghcr.io/$owner/counterproof-bluefin-4539:revert-${{ github.run_id }}"
+          echo "bad_image=$bad" >>"$GITHUB_OUTPUT"
+          echo "revert_image=$revert" >>"$GITHUB_OUTPUT"
+
+      - name: Assert control does not already contain intervention
+        shell: bash
+        run: |
+          docker pull "$CONTROL_BASE"
+          if docker run --rm "$CONTROL_BASE"             test -e /usr/lib/systemd/user/xdg-desktop-portal.service.d/30-after-keyring.conf; then
+            echo "::error::Frozen control already contains the historical intervention"
+            exit 1
+          fi
+
+      - name: Build and push BAD candidate
+        shell: bash
+        working-directory: reality/bluefin-4539/controlled
+        run: |
+          docker build             --build-arg CONTROL_BASE="$CONTROL_BASE"             -f Containerfile.bad             -t "${{ steps.refs.outputs.bad_image }}" .
+          docker push "${{ steps.refs.outputs.bad_image }}"
+
+      - name: Build and push REVERT candidate
+        shell: bash
+        working-directory: reality/bluefin-4539/controlled
+        run: |
+          docker build             --build-arg BAD_IMAGE="${{ steps.refs.outputs.bad_image }}"             -f Containerfile.revert             -t "${{ steps.refs.outputs.revert_image }}" .
+          docker push "${{ steps.refs.outputs.revert_image }}"
+
+      - name: Verify intervention state in all candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          path=/usr/lib/systemd/user/xdg-desktop-portal.service.d/30-after-keyring.conf
+
+          if docker run --rm "$CONTROL_BASE" test -e "$path"; then
+            echo "::error::CONTROL unexpectedly contains intervention"
+            exit 1
+          fi
+
+          bad_content="$(docker run --rm "${{ steps.refs.outputs.bad_image }}" cat "$path")"
+          printf '%s\n' "$bad_content"
+          grep -Fx 'After=gnome-keyring-daemon.service' <<<"$bad_content"
+          grep -Fx 'Wants=gnome-keyring-daemon.service' <<<"$bad_content"
+
+          if docker run --rm "${{ steps.refs.outputs.revert_image }}" test -e "$path"; then
+            echo "::error::REVERT still contains intervention"
+            exit 1
+          fi
+
+      - name: Publish construction receipt
+        shell: bash
+        run: |
+          {
+            echo '## Controlled candidate construction'
+            echo
+            echo "- CONTROL: $CONTROL_BASE"
+            echo "- BAD: ${{ steps.refs.outputs.bad_image }}"
+            echo "- REVERT: ${{ steps.refs.outputs.revert_image }}"
+            echo
+            echo 'Only the historical 30-after-keyring.conf intervention is added and then removed.'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  e2e-control:
+    needs: build-candidates
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit
+
+  e2e-bad:
+    needs: build-candidates
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ${{ needs.build-candidates.outputs.bad_image }}
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit
+
+  e2e-revert:
+    needs: build-candidates
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ${{ needs.build-candidates.outputs.revert_image }}
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit

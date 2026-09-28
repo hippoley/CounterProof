@@ -65,11 +65,10 @@ jobs:
         shell: bash
         run: |
           {
-            echo "### ${{ matrix.id }}"
-            echo
-            echo "- ref: `${{ matrix.ref }}`"
-            echo "- trust: `${{ matrix.trust }}`"
-            echo "- registry: **${{ steps.inspect.outputs.status }}**"
+            printf '### %s\n\n' '${{ matrix.id }}'
+            printf '%s\n' '- ref: ${{ matrix.ref }}'
+            printf '%s\n' '- trust: ${{ matrix.trust }}'
+            printf '%s\n' '- registry: **${{ steps.inspect.outputs.status }}**'
           } >>"$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
@@ -77,3 +76,71 @@ jobs:
           name: bluefin-4539-${{ matrix.id }}-availability
           path: reality/bluefin-4539/availability/${{ matrix.id }}.txt
           if-no-files-found: error
+
+  reconstruction-dependencies:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE_SILVERBLUE
+            ref: ghcr.io/ublue-os/silverblue-main@sha256:9f41fa9a7706bf2607247884c8af2721d94905878862fae1278c73f8a81485a9
+          - id: BASE_COMMON
+            ref: ghcr.io/projectbluefin/common@sha256:51a753b108b115196e01b8ee11462c1f3888500947ae9a43906d5596cc99f651
+          - id: BASE_BREW
+            ref: ghcr.io/ublue-os/brew@sha256:a62826f010ad77dcbf3cba0ddafe1bf8ce7aa42e55c9f4ebb5ee096845270480
+          - id: BAD_REVERT_SILVERBLUE
+            ref: ghcr.io/ublue-os/silverblue-main@sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5
+          - id: BAD_REVERT_COMMON
+            ref: ghcr.io/projectbluefin/common@sha256:1e7f8c88b8efb67b3fc42ef29bf0d927e9b8366c26dcf71893169979b29a4418
+          - id: BAD_REVERT_BREW
+            ref: ghcr.io/ublue-os/brew@sha256:2369e2dc70dd8b12828604d22721d1812cd87611661d789e1a0ee2cb123cbe7e
+    steps:
+      - name: Inspect pinned dependency
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
+          rc=$?
+          if [[ $rc -eq 0 ]]; then
+            status=AVAILABLE
+          else
+            status=UNAVAILABLE
+          fi
+          echo "status=$status" >>"$GITHUB_OUTPUT"
+          cat inspect.txt
+          echo "status=$status"
+          echo "inspect_exit=$rc"
+
+      - name: Publish dependency summary
+        shell: bash
+        run: |
+          {
+            printf '### %s\n\n' '${{ matrix.id }}'
+            printf '%s\n' '- ref: ${{ matrix.ref }}'
+            printf '%s\n' '- registry: **${{ steps.inspect.outputs.status }}**'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  control-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve current Bluefin stable to immutable digest
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/ublue-os/bluefin:stable"
+          docker buildx imagetools inspect "$ref" >inspect.txt
+          cat inspect.txt
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          test -n "$digest"
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/ublue-os/bluefin@$digest" >>"$GITHUB_OUTPUT"
+          {
+            echo '### Controlled replay base'
+            echo
+            echo "- mutable source tag: $ref"
+            echo "- frozen digest: $digest"
+            echo "- frozen ref: ghcr.io/ublue-os/bluefin@$digest"
+          } >>"$GITHUB_STEP_SUMMARY"

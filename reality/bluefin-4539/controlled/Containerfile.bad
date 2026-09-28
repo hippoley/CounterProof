@@ -1,0 +1,3 @@
+ARG CONTROL_BASE
+FROM ${CONTROL_BASE}
+COPY 30-after-keyring.conf /usr/lib/systemd/user/xdg-desktop-portal.service.d/30-after-keyring.conf

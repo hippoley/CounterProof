@@ -1,0 +1,51 @@
+name: Reality — Bluefin 4539 QEMU replay existing candidates
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/reality-bluefin-4539-e2e-existing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  e2e-control:
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit
+
+  e2e-bad:
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ghcr.io/hippoley/counterproof-bluefin-4539:bad-36399042848
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit
+
+  e2e-revert:
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image: ghcr.io/hippoley/counterproof-bluefin-4539:revert-36399042848
+      suites: common
+      compose_image: true
+      test_repository: hippoley/CounterProof
+      test_ref: reality/bluefin-4539-testsuite-overlay
+    secrets: inherit
