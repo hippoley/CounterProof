@@ -1,5 +1,6 @@
 schema_version: 1
 case: ublue-os/bluefin#4539
+phase: registry-availability
 purpose: freeze the historical three-candidate replay inputs before booting QEMU
 candidates:
   - id: BASE
