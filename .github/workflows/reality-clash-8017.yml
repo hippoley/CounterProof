@@ -1,0 +1,108 @@
+name: Reality probe - clash-verge-rev #8017
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reality-clash-8017.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out CounterProof probe
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.98.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup default 1.98.0
+          rustc --version
+          cargo --version
+
+      - name: Fetch exact Clash Verge candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/clash-verge-rev/clash-verge-rev.git /tmp/clash-verge-rev
+          cd /tmp/clash-verge-rev
+          git fetch origin \
+            b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b \
+            2cb071998e2f14d76a5fbc3f4add5973e79cf138 \
+            --depth=1
+
+      - name: HEAD - run submitted test
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/clash-verge-rev
+          git -C "$repo" checkout --detach 2cb071998e2f14d76a5fbc3f4add5973e79cf138
+          cd "$repo"
+          cargo test -p clash-verge-draft apply_reports_whether_a_draft_was_staged -- --nocapture
+          echo "HEAD_SUBMITTED_TEST=PASS"
+
+      - name: BASE guard - original crate still builds/tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/clash-verge-rev
+          git -C "$repo" checkout --detach b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
+          cd "$repo"
+          cargo test -p clash-verge-draft --lib
+          echo "BASE_ORIGINAL_CRATE=PASS"
+
+      - name: BASE replay - transplant exact submitted test
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo=/tmp/clash-verge-rev
+          cd "$repo"
+
+          cat >> crates/clash-verge-draft/src/lib.rs <<'RS'
+
+          #[cfg(test)]
+          mod tests {
+              use super::Draft;
+
+              #[test]
+              fn apply_reports_whether_a_draft_was_staged() {
+                  let draft = Draft::new(vec![1]);
+
+                  assert!(!draft.apply(), "nothing staged yet");
+                  assert_eq!(**draft.data_arc(), vec![1]);
+
+                  draft.edit_draft(|data| data.push(2));
+
+                  assert!(draft.apply(), "a staged draft gets committed");
+                  assert_eq!(**draft.data_arc(), vec![1, 2]);
+                  assert!(!draft.apply(), "the draft is gone once committed");
+              }
+          }
+          RS
+
+          set +e
+          cargo test -p clash-verge-draft apply_reports_whether_a_draft_was_staged -- --nocapture 2>&1 | tee /tmp/base-replay.log
+          base_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$base_status" -eq 0 ]; then
+            echo "Expected the submitted test to fail on BASE, but it passed."
+            exit 1
+          fi
+
+          echo "BASE_WITH_SUBMITTED_TEST=FAIL"
+
+          if grep -Eq 'cannot apply unary operator.*!.*\(\)|expected.*bool.*found.*\(\)|mismatched types' /tmp/base-replay.log; then
+            echo "BASE_FAILURE_MODE=COMPILE_TYPE_COUPLING"
+          else
+            echo "BASE_FAILURE_MODE=OTHER"
+            echo "The replay failed, but not in the expected API-type-coupling mode."
+            exit 1
+          fi
+
+          echo "COUNTERPROOF_REALITY_RESULT=RED_GREEN_BUT_IMPLEMENTATION_COUPLED"
+          echo "INTERPRETATION=The submitted test discriminates HEAD from BASE because it requires the new bool-returning Draft::apply API. It does not directly execute the claimed exit-time file-rewrite behavior."
