@@ -16,8 +16,16 @@ test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
 # The probe never executes this sidecar; an empty executable placeholder is sufficient to
 # let the upstream Rust test target compile without altering application code paths.
 mkdir -p src-tauri/sidecar
-touch src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu
-chmod +x src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu
+for bin in \
+  clash-verge-service \
+  clash-verge-service-install \
+  clash-verge-service-uninstall \
+  verge-mihomo \
+  verge-mihomo-alpha
+do
+  touch "src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+  chmod +x "src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+done
 
 python3 - <<'PY'
 from pathlib import Path
