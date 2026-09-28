@@ -153,8 +153,16 @@ jobs:
           git -C "$repo" clean -fd
           cat /tmp/counterproof-probe.rs >> "$repo/src-tauri/src/config/config.rs"
           mkdir -p "$repo/src-tauri/sidecar"
-          : > "$repo/src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu"
-          chmod +x "$repo/src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu"
+          for bin in \
+            clash-verge-service \
+            clash-verge-service-install \
+            clash-verge-service-uninstall \
+            verge-mihomo \
+            verge-mihomo-alpha
+          do
+            : > "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+            chmod +x "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+          done
 
           rm -rf /tmp/counterproof-clash-head
           mkdir -p /tmp/counterproof-clash-head
@@ -172,8 +180,16 @@ jobs:
           git -C "$repo" clean -fd
           cat /tmp/counterproof-probe.rs >> "$repo/src-tauri/src/config/config.rs"
           mkdir -p "$repo/src-tauri/sidecar"
-          : > "$repo/src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu"
-          chmod +x "$repo/src-tauri/sidecar/clash-verge-service-x86_64-unknown-linux-gnu"
+          for bin in \
+            clash-verge-service \
+            clash-verge-service-install \
+            clash-verge-service-uninstall \
+            verge-mihomo \
+            verge-mihomo-alpha
+          do
+            : > "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+            chmod +x "$repo/src-tauri/sidecar/${bin}-x86_64-unknown-linux-gnu"
+          done
 
           rm -rf /tmp/counterproof-clash-base
           mkdir -p /tmp/counterproof-clash-base
