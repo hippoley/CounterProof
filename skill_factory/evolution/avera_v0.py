@@ -4,13 +4,14 @@ This module is intentionally consumer-side only. It validates the proposed
 mikheil-galoian/avera#12 envelope without claiming that the draft is stable or
 that CounterProof owns AVERA verdict semantics.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, model_validator, ValidationError
 
 
 AVERA_CHECK_V0 = "avera.check/v0"
@@ -64,7 +65,7 @@ class AveraCheckV0Envelope(BaseModel):
     digest: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
-    def validate_contract(self) -> "AveraCheckV0Envelope":
+    def validate_contract(self) -> AveraCheckV0Envelope:
         if self.schema_version != AVERA_CHECK_V0:
             raise ValueError(
                 f"unsupported AVERA schema_version: {self.schema_version!r}"
