@@ -81,7 +81,7 @@ def test_canonicalization_is_utf8_sorted_compact_and_rejects_nan():
     right = {"a": {"a": 1, "b": 2}, "z": "é"}
 
     assert canonical_json_bytes(left) == canonical_json_bytes(right)
-    assert canonical_json_bytes(left) == '{"a":{"a":1,"b":2},"z":"é"}'.encode("utf-8")
+    assert canonical_json_bytes(left) == '{"a":{"a":1,"b":2},"z":"é"}'.encode()
 
     with pytest.raises(ValueError):
         canonical_json_bytes({"score": float("nan")})
