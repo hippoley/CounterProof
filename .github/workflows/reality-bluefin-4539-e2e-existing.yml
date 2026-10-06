@@ -1,9 +1,8 @@
 name: Reality — Bluefin 4539 QEMU replay existing candidates
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/reality-bluefin-4539-e2e-existing.yml"
+  # Historical fixed-candidate QEMU replay is retained for explicit
+  # reproduction, not for every PR synchronization.
   workflow_dispatch:
 
 concurrency:
