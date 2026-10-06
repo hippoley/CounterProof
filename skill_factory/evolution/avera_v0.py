@@ -10,7 +10,6 @@ import json
 
 import pydantic
 
-
 AVERA_CHECK_V0 = "avera.check/v0"
 
 
