@@ -11,7 +11,7 @@ import hashlib
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
 AVERA_CHECK_V0 = "avera.check/v0"
