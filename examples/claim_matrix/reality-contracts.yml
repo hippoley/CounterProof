@@ -20,7 +20,8 @@ contracts:
         overall_claim: "WITNESSED (oracle precondition missing)"
 
   - id: clash-8017-candidate-bound-behavior
-    lifecycle: CURRENT
+    lifecycle: STALE
+    stale_reason: "Live PR base drift observed 2026-10-06: frozen replay BASE b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b, live PR BASE dba0f471bf242875e079e8978dc6eac760e06054. Historical behavior proof remains valid for the frozen candidates."
     manifest: clash-8017.yml
     expected_base_sha: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
     expected_head_sha: 2cb071998e2f14d76a5fbc3f4add5973e79cf138

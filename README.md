@@ -410,6 +410,22 @@ CONFLICTING
 
 Lifecycle is orthogonal to claim truth. A historically valid proof does not become false merely because it is stale, but it must not be presented as current evidence for a changed candidate. `STALE`, `SUPERSEDED`, and `CONFLICTING` states require explicit provenance about why the evidence moved out of `CURRENT`.
 
+CounterProof can also compare frozen candidates with the live upstream GitHub PR:
+
+```bash
+counterproof reality-freshness examples/claim_matrix/reality-contracts.yml
+```
+
+Freshness is reported separately from lifecycle:
+
+```text
+FRESH       frozen BASE/HEAD still match the live PR
+DRIFTED     live BASE and/or HEAD moved
+UNRESOLVED  the live check could not be interpreted; do not infer staleness
+```
+
+A `CURRENT` contract that is observed as `DRIFTED` requires an explicit lifecycle update to `STALE`. Stronger lifecycle states such as `SUPERSEDED` and `CONFLICTING` are never downgraded by a simple candidate-freshness check.
+
 ---
 
 ## It also checks whether the PR changed the judge

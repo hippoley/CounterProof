@@ -20,7 +20,7 @@ def test_reality_contract_cli_passes():
     assert result.exit_code == 0, result.output
     assert "Reality contracts: 3 passed" in result.output
     assert (
-        "Lifecycle: CURRENT=3 STALE=0 SUPERSEDED=0 CONFLICTING=0"
+        "Lifecycle: CURRENT=2 STALE=1 SUPERSEDED=0 CONFLICTING=0"
         in result.output
     )
 
