@@ -32,6 +32,7 @@ from .integrity import (
     render_integrity_markdown,
     write_integrity_json,
 )
+from .lifecycle_receipt import build_lifecycle_receipt, verify_lifecycle_receipt
 from .local_check import local_check_json, render_local_check, run_local_check
 from .models import (
     CandidateMutation,
@@ -135,33 +136,7 @@ def reality_lifecycle(
     except (OSError, ValueError, TypeError) as exc:
         raise click.ClickException(str(exc)) from exc
 
-    mismatches = 0
-    payload = {
-        "schema_version": 1,
-        "suite_file": suite_file,
-        "graph_file": graph_file,
-        "observations": [],
-    }
     for observation in observations:
-        item = {
-            "contract_id": observation.contract_id,
-            "evidence_id": observation.evidence_id,
-            "declared": observation.declared.value,
-            "freshness_signal": (
-                observation.freshness_signal.value
-                if observation.freshness_signal
-                else None
-            ),
-            "graph_signal": (
-                observation.graph_signal.value
-                if observation.graph_signal
-                else None
-            ),
-            "effective": observation.effective.value,
-            "freshness_reason": observation.freshness_reason,
-        }
-        payload["observations"].append(item)
-
         click.echo(
             f"{observation.contract_id}: "
             f"declared={observation.declared.value} "
@@ -173,22 +148,62 @@ def reality_lifecycle(
         )
         if observation.freshness_reason:
             click.echo(f"  freshness: {observation.freshness_reason}")
-        if observation.declared is not observation.effective:
-            mismatches += 1
 
-    payload["mismatch_count"] = mismatches
-    payload["status"] = "PASS" if mismatches == 0 else "UPDATE_REQUIRED"
-
+    payload = build_lifecycle_receipt(
+        observations,
+        suite_file=Path(suite_file),
+        graph_file=Path(graph_file) if graph_file else None,
+    )
     if output_file:
         Path(output_file).write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
+    mismatches = payload["mismatch_count"]
     if mismatches:
         raise click.ClickException(
             f"{mismatches} effective lifecycle update(s) required"
         )
+
+
+@cli.command("verify-lifecycle-receipt")
+@click.argument("receipt_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--suite",
+    "suite_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+@click.option(
+    "--graph",
+    "graph_file",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+)
+def verify_lifecycle_receipt_command(
+    receipt_file: str,
+    suite_file: str,
+    graph_file: str | None,
+) -> None:
+    """Verify lifecycle decision provenance against frozen input files."""
+    try:
+        receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
+        failures = verify_lifecycle_receipt(
+            receipt,
+            suite_file=Path(suite_file),
+            graph_file=Path(graph_file) if graph_file else None,
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if failures:
+        for failure in failures:
+            click.echo(f"FAIL {failure}", err=True)
+        raise click.ClickException(
+            f"{len(failures)} lifecycle receipt verification failure(s)"
+        )
+    click.echo("Lifecycle receipt verified")
 
 
 @cli.command("evidence-graph")

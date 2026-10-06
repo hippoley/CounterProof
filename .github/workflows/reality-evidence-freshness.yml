@@ -32,6 +32,13 @@ jobs:
             examples/claim_matrix/reality-contracts.yml \
             --output effective-lifecycle.json
 
+      - name: Verify lifecycle decision provenance
+        if: always() && hashFiles('effective-lifecycle.json') != ''
+        run: |
+          counterproof verify-lifecycle-receipt \
+            effective-lifecycle.json \
+            --suite examples/claim_matrix/reality-contracts.yml
+
       - name: Upload lifecycle receipt
         if: always()
         uses: actions/upload-artifact@v4

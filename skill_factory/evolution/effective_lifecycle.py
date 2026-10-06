@@ -18,7 +18,13 @@ class EffectiveLifecycleObservation:
     freshness_signal: EvidenceLifecycle | None
     graph_signal: EvidenceLifecycle | None
     effective: EvidenceLifecycle
-    freshness_reason: str | None
+    freshness_status: str | None = None
+    source_pr: str | None = None
+    frozen_base_sha: str | None = None
+    frozen_head_sha: str | None = None
+    live_base_sha: str | None = None
+    live_head_sha: str | None = None
+    freshness_reason: str | None = None
 
 
 def resolve_effective_contract_lifecycles(
@@ -46,8 +52,20 @@ def resolve_effective_contract_lifecycles(
         )
         freshness_item = freshness_by_id.get(contract_id)
         freshness_signal: EvidenceLifecycle | None = None
+        freshness_status: str | None = None
+        source_pr: str | None = None
+        frozen_base_sha: str | None = None
+        frozen_head_sha: str | None = None
+        live_base_sha: str | None = None
+        live_head_sha: str | None = None
         freshness_reason: str | None = None
         if freshness_item is not None:
+            freshness_status = freshness_item.freshness.value
+            source_pr = freshness_item.source_pr
+            frozen_base_sha = freshness_item.frozen_base_sha
+            frozen_head_sha = freshness_item.frozen_head_sha
+            live_base_sha = freshness_item.live_base_sha
+            live_head_sha = freshness_item.live_head_sha
             freshness_reason = freshness_item.reason
             if freshness_item.suggested_lifecycle is not declared:
                 freshness_signal = freshness_item.suggested_lifecycle
@@ -76,6 +94,12 @@ def resolve_effective_contract_lifecycles(
                 freshness_signal=freshness_signal,
                 graph_signal=graph_signal,
                 effective=effective,
+                freshness_status=freshness_status,
+                source_pr=source_pr,
+                frozen_base_sha=frozen_base_sha,
+                frozen_head_sha=frozen_head_sha,
+                live_base_sha=live_base_sha,
+                live_head_sha=live_head_sha,
                 freshness_reason=freshness_reason,
             )
         )
