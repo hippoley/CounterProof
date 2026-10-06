@@ -24,6 +24,7 @@ from .discriminate import (
     run_discrimination_manifest,
 )
 from .doctor import doctor_json, render_doctor, run_doctor
+from .effective_lifecycle import resolve_effective_contract_lifecycles
 from .evidence_freshness import FreshnessStatus, resolve_contract_freshness
 from .evidence_supersession import load_evidence_graph
 from .integrity import (
@@ -102,6 +103,47 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("reality-lifecycle")
+@click.argument("suite_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--graph",
+    "graph_file",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Optional evidence graph manifest to merge with live freshness.",
+)
+def reality_lifecycle(suite_file: str, graph_file: str | None) -> None:
+    """Resolve the effective lifecycle from declared, freshness, and graph signals."""
+    try:
+        observations = resolve_effective_contract_lifecycles(
+            Path(suite_file),
+            graph_file=Path(graph_file) if graph_file else None,
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    mismatches = 0
+    for observation in observations:
+        click.echo(
+            f"{observation.contract_id}: "
+            f"declared={observation.declared.value} "
+            f"freshness="
+            f"{observation.freshness_signal.value if observation.freshness_signal else '-'} "
+            f"graph="
+            f"{observation.graph_signal.value if observation.graph_signal else '-'} "
+            f"effective={observation.effective.value}"
+        )
+        if observation.freshness_reason:
+            click.echo(f"  freshness: {observation.freshness_reason}")
+        if observation.declared is not observation.effective:
+            mismatches += 1
+
+    if mismatches:
+        raise click.ClickException(
+            f"{mismatches} effective lifecycle update(s) required"
+        )
 
 
 @cli.command("evidence-graph")

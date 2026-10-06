@@ -51,3 +51,17 @@ def merge_lifecycle_signals(
     if not signals:
         raise ValueError("at least one evidence lifecycle signal is required")
     return max(signals, key=_LIFECYCLE_PRECEDENCE.__getitem__)
+
+
+def resolve_effective_lifecycle(
+    declared: EvidenceLifecycle,
+    *,
+    freshness_signal: EvidenceLifecycle | None = None,
+    graph_signal: EvidenceLifecycle | None = None,
+) -> EvidenceLifecycle:
+    signals = [declared]
+    if freshness_signal is not None:
+        signals.append(freshness_signal)
+    if graph_signal is not None:
+        signals.append(graph_signal)
+    return merge_lifecycle_signals(*signals)
