@@ -30,6 +30,9 @@ claims:
     oracle_alignment: UNVERIFIED
     oracle_probe: "Run a real GNOME user session and observe whether xdg-desktop-portal pulls in gnome-keyring-daemon before the normal PAM-unlock path; capture user journal and Secret portal availability."
     oracle_source_url: "https://github.com/ublue-os/bluefin/issues/4683#issuecomment-4548807716"
+    receipt_file: "receipts/bluefin-4539-controlled-causal.json"
+    receipt_expected_verdicts:
+      - WITNESSED_CONTROLLED_CAUSAL
     note: "This is the invariant that the merge-time lab check did not test; the PR was later reverted after users reported the regression."
 
   - id: login-keyring-unlocked-fixture
