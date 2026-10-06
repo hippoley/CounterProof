@@ -22,6 +22,11 @@ class OracleAlignment(str, Enum):
     UNVERIFIED = "UNVERIFIED"
 
 
+class OracleApplicability(str, Enum):
+    APPLICABLE = "APPLICABLE"
+    PRECONDITION_MISSING = "PRECONDITION_MISSING"
+
+
 class EvidenceScope(str, Enum):
     IMPLEMENTATION = "IMPLEMENTATION"
     BEHAVIOR = "BEHAVIOR"
@@ -41,6 +46,9 @@ class OverallClaim(str, Enum):
     CONTRADICTED = "CONTRADICTED"
     WITNESSED_SUBMITTED_JUDGE = "WITNESSED (submitted judge)"
     WITNESSED_SCOPE_INSUFFICIENT = "WITNESSED (scope insufficient)"
+    WITNESSED_ORACLE_PRECONDITION_MISSING = (
+        "WITNESSED (oracle precondition missing)"
+    )
     UNPROVEN = "UNPROVEN"
 
 
@@ -55,6 +63,8 @@ class ClaimEvidence(BaseModel):
     evidence_scope: EvidenceScope = EvidenceScope.BEHAVIOR
     required_scope: EvidenceScope = EvidenceScope.BEHAVIOR
     oracle_alignment: OracleAlignment = OracleAlignment.UNVERIFIED
+    oracle_applicability: OracleApplicability = OracleApplicability.APPLICABLE
+    oracle_precondition: str | None = None
     oracle_probe: str | None = None
     oracle_source_url: str | None = None
     assertion_excerpt: str | None = None
@@ -82,6 +92,18 @@ class ClaimEvidence(BaseModel):
             raise ValueError(
                 "ALIGNED / CONTRADICTED oracle status requires an explicit oracle_probe"
             )
+
+        if self.oracle_applicability is OracleApplicability.PRECONDITION_MISSING:
+            if self.oracle_alignment is not OracleAlignment.UNVERIFIED:
+                raise ValueError(
+                    "PRECONDITION_MISSING oracle applicability requires "
+                    "oracle_alignment=UNVERIFIED"
+                )
+            if not self.oracle_precondition:
+                raise ValueError(
+                    "PRECONDITION_MISSING oracle applicability requires "
+                    "an explicit oracle_precondition"
+                )
         return self
 
     @property
@@ -90,19 +112,28 @@ class ClaimEvidence(BaseModel):
 
     @property
     def overall_claim(self) -> OverallClaim:
-        if self.oracle_alignment is OracleAlignment.CONTRADICTED:
-            return OverallClaim.CONTRADICTED
         if (
             self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
-            and self.oracle_alignment is OracleAlignment.ALIGNED
-        ):
-            return OverallClaim.PROVEN
-        if (
-            self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
-            and self.oracle_alignment is OracleAlignment.UNVERIFIED
             and not self.scope_sufficient
         ):
             return OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
+        if (
+            self.oracle_applicability
+            is OracleApplicability.PRECONDITION_MISSING
+            and self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
+        ):
+            return OverallClaim.WITNESSED_ORACLE_PRECONDITION_MISSING
+        if (
+            self.oracle_applicability is OracleApplicability.APPLICABLE
+            and self.oracle_alignment is OracleAlignment.CONTRADICTED
+        ):
+            return OverallClaim.CONTRADICTED
+        if (
+            self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
+            and self.oracle_applicability is OracleApplicability.APPLICABLE
+            and self.oracle_alignment is OracleAlignment.ALIGNED
+        ):
+            return OverallClaim.PROVEN
         if (
             self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
             and self.oracle_alignment is OracleAlignment.UNVERIFIED
@@ -183,9 +214,10 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             "",
             (
                 "| Claim | Exact test(s) | BASE | HEAD | Submitted-test evidence | "
-                "Evidence scope | Required scope | Oracle alignment | Overall claim |"
+                "Evidence scope | Required scope | Oracle applicability | "
+                "Oracle alignment | Overall claim |"
             ),
-            "|---|---|---|---|---|---|---|---|---|",
+            "|---|---|---|---|---|---|---|---|---|---|",
         ]
     )
 
@@ -202,6 +234,7 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
                     f"**{claim.submitted_test_evidence.value}**",
                     f"**{claim.evidence_scope.value}**",
                     f"**{claim.required_scope.value}**",
+                    f"**{claim.oracle_applicability.value}**",
                     f"**{claim.oracle_alignment.value}**",
                     f"**{claim.overall_claim.value}**",
                 ]
@@ -217,6 +250,7 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         or claim.note
         or claim.source_url
         or claim.oracle_source_url
+        or claim.oracle_precondition
         or not claim.scope_sufficient
     ]
     if details:
@@ -231,6 +265,13 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
                 f"required `{claim.required_scope.value}` "
                 f"({'sufficient' if claim.scope_sufficient else 'INSUFFICIENT'})"
             )
+            lines.append(
+                f"- Oracle applicability: `{claim.oracle_applicability.value}`"
+            )
+            if claim.oracle_precondition:
+                lines.append(
+                    f"- Oracle precondition: {_cell(claim.oracle_precondition)}"
+                )
             if claim.oracle_probe:
                 lines.append(f"- Oracle probe: {_cell(claim.oracle_probe)}")
             if claim.oracle_source_url:
@@ -256,6 +297,7 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             "",
             "- Submitted-test evidence: `WITNESSED / NOT_WITNESSED / UNPROVEN`",
             "- Evidence scope: `IMPLEMENTATION < BEHAVIOR < SAFETY`",
+            "- Oracle applicability: `APPLICABLE / PRECONDITION_MISSING`",
             "- Oracle alignment: `ALIGNED / CONTRADICTED / UNVERIFIED`",
             (
                 "- `WITNESSED (scope insufficient)` means the candidate delta is real, "
@@ -267,8 +309,13 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
                 "alignment remains unverified."
             ),
             (
-                "- `PROVEN` requires both a witnessed submitted regression and an aligned "
-                "authoritative oracle."
+                "- `WITNESSED (oracle precondition missing)` means the candidate delta "
+                "is real, but the authoritative oracle cannot be interpreted on the "
+                "current fixture because a declared prerequisite is absent."
+            ),
+            (
+                "- `PROVEN` requires both a witnessed submitted regression and an "
+                "applicable, aligned authoritative oracle."
             ),
             "- `CONTRADICTED` wins whenever the authoritative oracle contradicts the claim.",
             "- Otherwise the overall claim remains `UNPROVEN`.",
