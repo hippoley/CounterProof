@@ -90,11 +90,18 @@ def build_receipt(
         },
         "dependency_availability": availability,
         "missing_dependencies": missing,
-        "reconstruction_level": (
-            "SOURCE_EQUIVALENT_BASE_READY"
-            if source_equivalent_base_ready
-            else "SOURCE_CONTRACT_ONLY"
-        ),
+        "reconstruction_level": recovery_level,
+        "recovery_ladder": {
+            "original_historical_base": (
+                availability.get("silverblue-main") == "AVAILABLE"
+            ),
+            "source_equivalent_base": source_equivalent_base_ready,
+            "source_contract": source_match and intervention_match,
+            "executable_rebuild": (
+                availability.get("silverblue-main") == "AVAILABLE"
+                or source_equivalent_base_ready
+            ),
+        },
         "base_rebuild": {
             "source_repository": "ublue-os/main",
             "source_commit": "0273c246618919cf48a3c71a67d1c68aed209b24",
