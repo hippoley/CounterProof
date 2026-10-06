@@ -44,14 +44,17 @@ jobs:
           probe() {
             local name="$1"
             local ref="$2"
-            if docker buildx imagetools inspect "$ref" >/tmp/"$name".inspect 2>&1; then
-              echo "$name=AVAILABLE" >>"$GITHUB_OUTPUT"
-              echo "$name=AVAILABLE"
+            local out="/tmp/$name.inspect"
+            if docker buildx imagetools inspect "$ref" >"$out" 2>&1; then
+              status=AVAILABLE
+            elif grep -Eqi 'manifest unknown|name unknown|not found|does not exist' "$out"; then
+              status=UNAVAILABLE
             else
-              echo "$name=UNAVAILABLE" >>"$GITHUB_OUTPUT"
-              echo "$name=UNAVAILABLE"
-              cat /tmp/"$name".inspect
+              status=PROBE_FAILED
             fi
+            echo "$name=$status" >>"$GITHUB_OUTPUT"
+            echo "$name=$status"
+            cat "$out"
           }
 
           probe silverblue-main "ghcr.io/ublue-os/silverblue-main@sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5"
@@ -68,6 +71,7 @@ jobs:
           python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs['silverblue-main'] }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --upstream-silverblue-status "${{ steps.deps.outputs['upstream-silverblue'] }}"             --akmods-status "${{ steps.deps.outputs.akmods }}"             --akmods-nvidia-status "${{ steps.deps.outputs['akmods-nvidia'] }}"             --output "receipts/${{ matrix.candidate }}.json"
 
       - name: Publish reconstruction gate summary
+        if: always()
         shell: bash
         run: |
           python3 - <<'PY' >>"$GITHUB_STEP_SUMMARY"
@@ -88,6 +92,7 @@ jobs:
           PY
 
       - name: Upload reconstruction gate receipt
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bluefin-4539-reconstruction-${{ matrix.candidate }}
