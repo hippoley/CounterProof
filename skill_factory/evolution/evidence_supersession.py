@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from .claim_matrix import EvidenceScope, OverallClaim
+from .claim_matrix import EvidenceScope, OverallClaim, load_claim_matrix
 from .evidence_lifecycle import EvidenceLifecycle
 
 
@@ -133,6 +133,47 @@ def evidence_record_from_mapping(raw: dict[str, Any]) -> EvidenceRecord:
         raise ValueError(f"invalid evidence record: {exc}") from exc
 
 
+def evidence_record_from_claim_reference(
+    graph_path: Path,
+    raw: dict[str, Any],
+) -> EvidenceRecord:
+    graph_dir = graph_path.parent.resolve()
+    manifest_path = (graph_dir / str(raw["manifest"])).resolve()
+    try:
+        manifest_path.relative_to(graph_dir)
+    except ValueError as exc:
+        raise ValueError(
+            "evidence graph manifest references must stay within the graph directory"
+        ) from exc
+
+    manifest = load_claim_matrix(manifest_path)
+    claim_id = str(raw["claim_id"])
+    claim = next((item for item in manifest.claims if item.id == claim_id), None)
+    if claim is None:
+        raise ValueError(
+            f"claim {claim_id!r} not found in {raw['manifest']!r}"
+        )
+
+    try:
+        observed_at = datetime.fromisoformat(
+            str(raw["observed_at"]).replace("Z", "+00:00")
+        )
+        if observed_at.tzinfo is None:
+            raise ValueError("observed_at must include a timezone")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"invalid evidence record: {exc}") from exc
+
+    stable_source = claim.receipt_case or manifest.source_pr or manifest.title
+    claim_key = str(raw.get("claim_key") or f"{stable_source}:{claim.id}")
+    return EvidenceRecord(
+        id=str(raw["id"]),
+        claim_key=claim_key,
+        observed_at=observed_at,
+        scope=claim.evidence_scope,
+        overall_claim=claim.overall_claim,
+    )
+
+
 def build_evidence_graph(records: list[EvidenceRecord]) -> EvidenceGraph:
     ids = [record.id for record in records]
     if len(ids) != len(set(ids)):
@@ -173,5 +214,10 @@ def load_evidence_graph(path: Path) -> EvidenceGraph:
     evidence = raw.get("evidence")
     if not isinstance(evidence, list):
         raise TypeError("evidence graph requires an evidence list")
-    records = [evidence_record_from_mapping(item) for item in evidence]
+    records = [
+        evidence_record_from_claim_reference(path, item)
+        if isinstance(item, dict) and "manifest" in item
+        else evidence_record_from_mapping(item)
+        for item in evidence
+    ]
     return build_evidence_graph(records)
