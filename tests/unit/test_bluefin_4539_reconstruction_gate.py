@@ -42,6 +42,8 @@ def test_bad_reconstruction_is_blocked_only_by_missing_historical_base(tmp_path:
     assert receipt["source_contract"]["intervention_match"] is True
     assert receipt["missing_dependencies"] == ["silverblue-main"]
     assert receipt["verdict"] == "BLOCKED_MISSING_HISTORICAL_BASE"
+    assert receipt["reconstruction_level"] == "PROVENANCE_ONLY"
+    assert receipt["recovery_ladder"]["executable_rebuild"] is False
 
 
 def test_revert_reconstruction_has_same_dependency_contract_without_dropin(tmp_path: Path):
@@ -104,6 +106,8 @@ def test_source_equivalent_base_can_unblock_historical_reconstruction(tmp_path: 
         receipt["verdict"]
         == "READY_FOR_SOURCE_EQUIVALENT_BASE_REBUILD"
     )
+    assert receipt["reconstruction_level"] == "SOURCE_EQUIVALENT_BASE_READY"
+    assert receipt["recovery_ladder"]["executable_rebuild"] is True
     assert receipt["base_rebuild"]["claim_boundary"].startswith(
         "source-equivalent rebuild only"
     )
@@ -125,3 +129,22 @@ def test_reconstruction_refuses_wrong_source_commit(tmp_path: Path):
 
     assert receipt["source_identity"]["source_commit_match"] is False
     assert receipt["verdict"] == "INVALID_RECONSTRUCTION_SOURCE_IDENTITY"
+
+
+def test_original_historical_base_is_highest_recovery_level(tmp_path: Path):
+    _write_source(tmp_path, with_dropin=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        candidate="BAD",
+        source_commit="60e72be",
+        availability={
+            "silverblue-main": "AVAILABLE",
+            "common": "AVAILABLE",
+            "brew": "AVAILABLE",
+        },
+    )
+
+    assert receipt["verdict"] == "READY_FOR_SOURCE_PINNED_REBUILD"
+    assert receipt["reconstruction_level"] == "ORIGINAL_HISTORICAL_BASE_AVAILABLE"
+    assert receipt["recovery_ladder"]["original_historical_base"] is True
