@@ -126,8 +126,15 @@ jobs:
           subject = os.environ["TARGET_DIGEST"]
           attestation_status = os.environ["ATTESTATION_STATUS"]
           package_status = os.environ["PACKAGE_STATUS"]
+          producer_sha = os.environ["PRODUCER_SHA"]
+          producer_identity_ok = (
+              run.get("head_sha") == producer_sha
+              and run.get("conclusion") == "success"
+          )
 
-          if attestation_status == "AVAILABLE":
+          if not producer_identity_ok:
+              recovery = "INVALID_PRODUCER_PROVENANCE"
+          elif attestation_status == "AVAILABLE":
               recovery = "ATTESTATION_RECOVERED"
           elif package_status == "METADATA_FOUND":
               recovery = "PACKAGE_METADATA_RECOVERED"
@@ -150,6 +157,7 @@ jobs:
               "producer": {
                   "repository": os.environ["PRODUCER_REPO"],
                   "workflow_run": int(os.environ["PRODUCER_RUN"]),
+                  "identity_valid": producer_identity_ok,
                   "workflow_run_url": run.get("html_url"),
                   "workflow_head_sha": run.get("head_sha"),
                   "workflow_event": run.get("event"),
@@ -175,6 +183,14 @@ jobs:
               fh.write(f"- package metadata: `{package_status}`\n")
               fh.write(f"- producer run: `{run.get('html_url')}`\n")
               fh.write(f"- producer head SHA: `{run.get('head_sha')}`\n")
+              fh.write(f"- producer identity valid: `{producer_identity_ok}`\n")
+
+          if not producer_identity_ok:
+              raise SystemExit(
+                  "producer workflow identity mismatch: "
+                  f"expected successful {producer_sha}, "
+                  f"got sha={run.get('head_sha')} conclusion={run.get('conclusion')}"
+              )
           PY
 
       - name: Upload provenance recovery receipt
