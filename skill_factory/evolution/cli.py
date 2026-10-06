@@ -40,8 +40,8 @@ from .models import (
 )
 from .onboarding import init_github
 from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
-from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .reality_contracts import validate_reality_contracts
+from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
