@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import json
-import os
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+import json
+import os
 from pathlib import Path
+import re
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
