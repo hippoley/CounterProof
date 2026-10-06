@@ -104,3 +104,14 @@ def test_unknown_fields_are_rejected_instead_of_being_dropped_from_digest_scope(
 
     with pytest.raises(ValueError, match="invalid AVERA v0 evidence envelope"):
         load_avera_check_v0(payload)
+
+
+def test_digest_is_checked_before_numeric_coercion():
+    payload = _payload()
+    payload["result"]["confidence_score"] = 1
+    unsigned = {k: v for k, v in payload.items() if k != "digest"}
+    payload["digest"] = envelope_digest(unsigned)
+
+    envelope = load_avera_check_v0(payload)
+
+    assert envelope.result.confidence_score == 1.0
