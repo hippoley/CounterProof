@@ -92,6 +92,8 @@ claims:
     claim: behavior
     tests:
       - behavior probe
+    base_result: FAIL
+    head_result: PASS
     submitted_test_evidence: WITNESSED
     evidence_scope: BEHAVIOR
     required_scope: BEHAVIOR
@@ -156,6 +158,8 @@ claims:
     claim: behavior
     tests:
       - behavior probe
+    base_result: FAIL
+    head_result: PASS
     submitted_test_evidence: WITNESSED
     evidence_scope: BEHAVIOR
     required_scope: BEHAVIOR
