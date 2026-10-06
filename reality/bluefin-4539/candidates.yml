@@ -25,7 +25,7 @@ historical_release_candidates:
     role: shipped-known-good-before-regression
     version: "44.20260519"
     official_tag: ghcr.io/ublue-os/bluefin:stable-20260519
-    release_source_head: 5de075a
+    release_source_head: 5de075a6ccbcc37d2551cc8d3cf854d96f8e4845
     release_url: https://github.com/ublue-os/bluefin/releases/tag/stable-20260519
     historical_image_digest: ghcr.io/ublue-os/bluefin@sha256:6b8bb48f020ec3908fa650f529182ed20b6ae6d33f11689b99efef8af24a61c0
     digest_provenance: https://github.com/ublue-os/bluefin/issues/4683
