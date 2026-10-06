@@ -67,6 +67,10 @@ class ClaimEvidence(BaseModel):
     oracle_precondition: str | None = None
     oracle_probe: str | None = None
     oracle_source_url: str | None = None
+    receipt_file: str | None = None
+    receipt_expected_verdicts: list[str] = Field(default_factory=list)
+    receipt_observed_verdict: str | None = None
+    receipt_case: str | None = None
     assertion_excerpt: str | None = None
     note: str | None = None
 
@@ -156,6 +160,40 @@ class ClaimMatrixManifest(BaseModel):
     claims: list[ClaimEvidence] = Field(min_length=1)
 
 
+def _bind_receipt(path: Path, claim: ClaimEvidence) -> None:
+    if not claim.receipt_file:
+        return
+
+    receipt_path = (path.parent / claim.receipt_file).resolve()
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            f"claim {claim.id!r} receipt could not be loaded: "
+            f"{claim.receipt_file}: {exc}"
+        ) from exc
+
+    verdict = receipt.get("verdict")
+    if not isinstance(verdict, str) or not verdict:
+        raise ValueError(
+            f"claim {claim.id!r} receipt must contain a non-empty string verdict"
+        )
+
+    claim.receipt_observed_verdict = verdict
+    case = receipt.get("case")
+    claim.receipt_case = case if isinstance(case, str) and case else None
+
+    if (
+        claim.receipt_expected_verdicts
+        and verdict not in claim.receipt_expected_verdicts
+    ):
+        expected = ", ".join(claim.receipt_expected_verdicts)
+        raise ValueError(
+            f"claim {claim.id!r} receipt verdict {verdict!r} does not match "
+            f"expected verdict(s): {expected}"
+        )
+
+
 def load_claim_matrix(path: Path) -> ClaimMatrixManifest:
     text = path.read_text(encoding="utf-8")
     try:
@@ -163,7 +201,10 @@ def load_claim_matrix(path: Path) -> ClaimMatrixManifest:
             raw: Any = json.loads(text)
         else:
             raw = yaml.safe_load(text)
-        return ClaimMatrixManifest.model_validate(raw)
+        manifest = ClaimMatrixManifest.model_validate(raw)
+        for claim in manifest.claims:
+            _bind_receipt(path, claim)
+        return manifest
     except (json.JSONDecodeError, yaml.YAMLError, ValidationError, TypeError) as exc:
         raise ValueError(f"invalid claim matrix manifest: {exc}") from exc
 
@@ -254,6 +295,7 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
         or claim.source_url
         or claim.oracle_source_url
         or claim.oracle_precondition
+        or claim.receipt_file
         or not claim.scope_sufficient
     ]
     if details:
@@ -279,6 +321,14 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
                 lines.append(f"- Oracle probe: {_cell(claim.oracle_probe)}")
             if claim.oracle_source_url:
                 lines.append(f"- Oracle source: {claim.oracle_source_url}")
+            if claim.receipt_file:
+                lines.append(f"- Receipt file: `{claim.receipt_file}`")
+                lines.append(
+                    f"- Receipt verdict: "
+                    f"`{claim.receipt_observed_verdict or 'UNBOUND'}`"
+                )
+                if claim.receipt_case:
+                    lines.append(f"- Receipt case: {_cell(claim.receipt_case)}")
             if claim.note:
                 lines.append(f"- Note: {_cell(claim.note)}")
             if claim.assertion_excerpt:
