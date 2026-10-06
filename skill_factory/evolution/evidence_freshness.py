@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 import yaml
 
-from skill_factory.evolution.evidence_lifecycle import EvidenceLifecycle
+from .evidence_lifecycle import EvidenceLifecycle
 
 
 _GITHUB_PR_RE = re.compile(
