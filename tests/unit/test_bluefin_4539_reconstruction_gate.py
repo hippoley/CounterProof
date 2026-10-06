@@ -148,3 +148,47 @@ def test_original_historical_base_is_highest_recovery_level(tmp_path: Path):
     assert receipt["verdict"] == "READY_FOR_SOURCE_PINNED_REBUILD"
     assert receipt["reconstruction_level"] == "ORIGINAL_HISTORICAL_BASE_AVAILABLE"
     assert receipt["recovery_ladder"]["original_historical_base"] is True
+
+
+def test_dependency_probe_failure_is_inconclusive(tmp_path: Path):
+    _write_source(tmp_path, with_dropin=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        candidate="BAD",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
+        availability={
+            "silverblue-main": "PROBE_FAILED",
+            "common": "AVAILABLE",
+            "brew": "AVAILABLE",
+        },
+    )
+
+    assert receipt["missing_dependencies"] == []
+    assert receipt["unresolved_dependencies"] == ["silverblue-main"]
+    assert receipt["verdict"] == "INCONCLUSIVE_DEPENDENCY_AVAILABILITY"
+
+
+def test_source_equivalent_input_probe_failure_is_inconclusive(tmp_path: Path):
+    _write_source(tmp_path, with_dropin=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        candidate="BAD",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
+        availability={
+            "silverblue-main": "UNAVAILABLE",
+            "common": "AVAILABLE",
+            "brew": "AVAILABLE",
+        },
+        base_rebuild_inputs={
+            "fedora-silverblue-44": "PROBE_FAILED",
+            "akmods-44": "AVAILABLE",
+            "akmods-nvidia-open-44": "AVAILABLE",
+        },
+    )
+
+    assert receipt["base_rebuild"]["missing_inputs"] == []
+    assert receipt["base_rebuild"]["unresolved_inputs"] == ["fedora-silverblue-44"]
+    assert receipt["base_rebuild"]["ready"] is False
+    assert receipt["verdict"] == "INCONCLUSIVE_DEPENDENCY_AVAILABILITY"
