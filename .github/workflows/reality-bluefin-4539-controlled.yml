@@ -110,7 +110,7 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
+      test_ref: 1c0a23317d420b77396770ae2a8fdf71804cde4e
     secrets: inherit
 
   e2e-bad:
@@ -124,7 +124,7 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
+      test_ref: 1c0a23317d420b77396770ae2a8fdf71804cde4e
     secrets: inherit
 
   e2e-revert:
@@ -138,7 +138,7 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
+      test_ref: 1c0a23317d420b77396770ae2a8fdf71804cde4e
     secrets: inherit
 
 
@@ -165,7 +165,7 @@ jobs:
           CONTROL_IMAGE: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
           BAD_IMAGE: ${{ needs.build-candidates.outputs.bad_image }}
           REVERT_IMAGE: ${{ needs.build-candidates.outputs.revert_image }}
-          ORACLE_REVISION: 8b206d4f461c21e85adf555145eb33ce6928edfe
+          ORACLE_REVISION: 1c0a23317d420b77396770ae2a8fdf71804cde4e
         run: |
           python3 scripts/reality_bluefin_4539_receipt.py replay-results \
             --control-image "$CONTROL_IMAGE" \
