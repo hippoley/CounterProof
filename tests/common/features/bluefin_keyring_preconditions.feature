@@ -10,6 +10,7 @@ Feature: Login keyring oracle preconditions
     * Run SSH command: "gdbus introspect --session --dest org.freedesktop.secrets --object-path /org/freedesktop/secrets >/dev/null"
     * SSH command return code is "0"
 
+  @requires_login_collection
   Scenario: Login collection exists after automatic login
     * Run SSH command: "gdbus call --session --dest org.freedesktop.secrets --object-path /org/freedesktop/secrets --method org.freedesktop.Secret.Service.ReadAlias login"
     * SSH command return code is "0"
