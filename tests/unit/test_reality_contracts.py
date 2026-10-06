@@ -193,3 +193,102 @@ contracts:
 
     assert len(failures) == 1
     assert "receipt git blob sha" in failures[0].message
+
+
+def test_reality_contract_requires_stale_reason(tmp_path: Path):
+    (tmp_path / "claims.yml").write_text(
+        """
+schema_version: 1
+title: Lifecycle
+claims:
+  - id: example
+    claim: example
+    submitted_test_evidence: UNPROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: stale-without-reason
+    lifecycle: STALE
+    manifest: claims.yml
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert failures[0].message == "STALE evidence requires stale_reason"
+
+
+def test_reality_contract_requires_superseding_receipt(tmp_path: Path):
+    (tmp_path / "claims.yml").write_text(
+        """
+schema_version: 1
+title: Lifecycle
+claims:
+  - id: example
+    claim: example
+    submitted_test_evidence: UNPROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: superseded-without-target
+    lifecycle: SUPERSEDED
+    manifest: claims.yml
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert failures[0].message == "SUPERSEDED evidence requires superseded_by"
+
+
+def test_reality_contract_requires_conflict_peer(tmp_path: Path):
+    (tmp_path / "claims.yml").write_text(
+        """
+schema_version: 1
+title: Lifecycle
+claims:
+  - id: example
+    claim: example
+    submitted_test_evidence: UNPROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: conflicting-without-peer
+    lifecycle: CONFLICTING
+    manifest: claims.yml
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert failures[0].message == "CONFLICTING evidence requires non-empty conflicts_with"
