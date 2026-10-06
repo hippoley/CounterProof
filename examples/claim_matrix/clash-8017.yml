@@ -1,0 +1,25 @@
+schema_version: 1
+title: "Behavior Receipt Matrix — clash-verge-rev #8017"
+source_pr: "https://github.com/clash-verge-rev/clash-verge-rev/pull/8017"
+base_sha: "b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b"
+head_sha: "2cb071998e2f14d76a5fbc3f4add5973e79cf138"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/36391467118"
+claims:
+  - id: unchanged-config-not-rewritten-on-exit
+    claim: "Exiting with no staged draft does not rewrite an unchanged verge.yaml"
+    source_url: "https://github.com/clash-verge-rev/clash-verge-rev/pull/8017"
+    tests:
+      - "candidate-neutral production-path probe calling Config::apply_all_and_save_file()"
+    base_result: "changed=true; inode and mtime changed; bytes unchanged"
+    head_result: "changed=false; inode, mtime, and bytes unchanged"
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_applicability: APPLICABLE
+    oracle_alignment: ALIGNED
+    oracle_probe: "Call the production exit-save path with no staged draft and observe file inode, mtime, and bytes."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36391467118"
+    receipt_file: "receipts/clash-8017-behavior.json"
+    receipt_expected_verdicts:
+      - WITNESSED_BEHAVIOR
+    note: "The receipt is bound to the exact BASE replayed in run 36391467118. The live PR base later moved and must not replace the historical candidate identity."
