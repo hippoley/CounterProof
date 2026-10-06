@@ -112,17 +112,7 @@ class ClaimEvidence(BaseModel):
 
     @property
     def overall_claim(self) -> OverallClaim:
-        if (
-            self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
-            and not self.scope_sufficient
-        ):
-            return OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
-        if (
-            self.oracle_applicability
-            is OracleApplicability.PRECONDITION_MISSING
-            and self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
-        ):
-            return OverallClaim.WITNESSED_ORACLE_PRECONDITION_MISSING
+        # An applicable authoritative oracle outranks the submitted judge.
         if (
             self.oracle_applicability is OracleApplicability.APPLICABLE
             and self.oracle_alignment is OracleAlignment.CONTRADICTED
@@ -134,6 +124,19 @@ class ClaimEvidence(BaseModel):
             and self.oracle_alignment is OracleAlignment.ALIGNED
         ):
             return OverallClaim.PROVEN
+
+        # Without an authoritative resolution, preserve independent limits.
+        if (
+            self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
+            and not self.scope_sufficient
+        ):
+            return OverallClaim.WITNESSED_SCOPE_INSUFFICIENT
+        if (
+            self.oracle_applicability
+            is OracleApplicability.PRECONDITION_MISSING
+            and self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
+        ):
+            return OverallClaim.WITNESSED_ORACLE_PRECONDITION_MISSING
         if (
             self.submitted_test_evidence is SubmittedTestEvidence.WITNESSED
             and self.oracle_alignment is OracleAlignment.UNVERIFIED
