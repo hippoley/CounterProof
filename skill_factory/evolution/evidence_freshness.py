@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -92,7 +93,7 @@ def resolve_contract_freshness(
 ) -> list[FreshnessObservation]:
     raw = yaml.safe_load(suite_file.read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or not isinstance(raw.get("contracts"), list):
-        raise ValueError("invalid reality contract suite")
+        raise TypeError("invalid reality contract suite")
 
     observations: list[FreshnessObservation] = []
     for contract in raw["contracts"]:
