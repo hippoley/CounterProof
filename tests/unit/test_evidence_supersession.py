@@ -193,3 +193,103 @@ def test_graph_rejects_duplicate_ids():
 
     with pytest.raises(ValueError, match="ids must be unique"):
         build_evidence_graph(records)
+
+
+def _write_proven_claim_manifest(
+    path: Path,
+    *,
+    title: str,
+    scope: str,
+) -> None:
+    path.write_text(
+        f"""
+schema_version: 1
+title: {title}
+source_pr: https://github.com/example/repo/pull/1
+claims:
+  - id: behavior
+    claim: stable behavior
+    tests:
+      - exact behavior test
+    base_result: FAIL
+    head_result: PASS
+    submitted_test_evidence: WITNESSED
+    evidence_scope: {scope}
+    required_scope: BEHAVIOR
+    oracle_applicability: APPLICABLE
+    oracle_alignment: ALIGNED
+    oracle_probe: authoritative behavior oracle
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_graph_can_bind_claim_matrix_nodes(tmp_path: Path):
+    from skill_factory.evolution.evidence_supersession import load_evidence_graph
+
+    _write_proven_claim_manifest(
+        tmp_path / "old.yml",
+        title="Old evidence",
+        scope="BEHAVIOR",
+    )
+    _write_proven_claim_manifest(
+        tmp_path / "new.yml",
+        title="New evidence",
+        scope="SAFETY",
+    )
+    graph_file = tmp_path / "graph.yml"
+    graph_file.write_text(
+        """
+schema_version: 1
+evidence:
+  - id: old
+    manifest: old.yml
+    claim_id: behavior
+    observed_at: 2026-10-06T08:01:00+00:00
+  - id: new
+    manifest: new.yml
+    claim_id: behavior
+    observed_at: 2026-10-06T08:02:00+00:00
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    graph = load_evidence_graph(graph_file)
+
+    assert graph.records[0].claim_key == (
+        "https://github.com/example/repo/pull/1:behavior"
+    )
+    assert graph.records[0].scope is EvidenceScope.BEHAVIOR
+    assert graph.records[1].scope is EvidenceScope.SAFETY
+    assert graph.relations[0].relation is EvidenceRelation.SUPERSEDES
+
+
+def test_graph_rejects_claim_manifest_path_escape(tmp_path: Path):
+    from skill_factory.evolution.evidence_supersession import load_evidence_graph
+
+    outside = tmp_path / "outside.yml"
+    _write_proven_claim_manifest(
+        outside,
+        title="Outside evidence",
+        scope="BEHAVIOR",
+    )
+    graph_dir = tmp_path / "graph"
+    graph_dir.mkdir()
+    graph_file = graph_dir / "graph.yml"
+    graph_file.write_text(
+        """
+schema_version: 1
+evidence:
+  - id: escaped
+    manifest: ../outside.yml
+    claim_id: behavior
+    observed_at: 2026-10-06T08:01:00+00:00
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="must stay within the graph directory"):
+        load_evidence_graph(graph_file)
