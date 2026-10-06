@@ -399,6 +399,17 @@ The suite is intentionally cross-domain. A semantic change is rejected if it wou
 
 Reality Contracts therefore protect both **meaning** and **evidence identity**. A matching verdict from a different receipt is not automatically the same proof.
 
+They also track an explicit evidence lifecycle:
+
+```text
+CURRENT
+SUPERSEDED
+STALE
+CONFLICTING
+```
+
+Lifecycle is orthogonal to claim truth. A historically valid proof does not become false merely because it is stale, but it must not be presented as current evidence for a changed candidate. `STALE`, `SUPERSEDED`, and `CONFLICTING` states require explicit provenance about why the evidence moved out of `CURRENT`.
+
 ---
 
 ## It also checks whether the PR changed the judge
