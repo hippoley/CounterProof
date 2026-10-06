@@ -58,6 +58,7 @@ def capture_counterproof_keyring_causal_diagnostics(context):
     # Persist the same diagnostic into the testsuite result volume so the
     # parent workflow can build a machine-readable three-candidate receipt.
     slug = re.sub(r"[^a-zA-Z0-9_.-]+", "-", payload["image"]).strip("-") or "unknown"
-    out = Path("/tmp/results") / f"counterproof-keyring-diagnostic-{slug}.json"
+    results_dir = Path(os.environ.get("COUNTERPROOF_RESULTS_DIR", "results"))
+    out = results_dir / f"counterproof-keyring-diagnostic-{slug}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(encoded + "\n", encoding="utf-8")
