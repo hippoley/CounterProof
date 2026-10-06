@@ -333,31 +333,52 @@ counterproof claim-matrix examples/claim_matrix/codex-plugin-cc-731.yml
 
 The manifest is explicit. CounterProof does **not** use an LLM to invent claims or decide which product behavior is authoritative.
 
-Each row has two mechanical evidence axes:
+Each row now has four mechanical evidence dimensions:
 
 ```text
 submitted-test evidence
   WITNESSED / NOT_WITNESSED / UNPROVEN
 
+evidence scope
+  IMPLEMENTATION < BEHAVIOR < SAFETY
+
+oracle applicability
+  APPLICABLE / PRECONDITION_MISSING
+
 oracle alignment
   ALIGNED / CONTRADICTED / UNVERIFIED
 ```
 
-The overall claim is derived conservatively:
+The overall claim is derived conservatively. In particular:
 
 ```text
-WITNESSED + ALIGNED      -> PROVEN
-anything + CONTRADICTED  -> CONTRADICTED
-WITNESSED + UNVERIFIED   -> WITNESSED (submitted judge)
-otherwise                -> UNPROVEN
+witnessed but scope too shallow
+  -> WITNESSED (scope insufficient)
+
+witnessed + oracle fixture prerequisite missing
+  -> WITNESSED (oracle precondition missing)
+
+witnessed + APPLICABLE + ALIGNED
+  -> PROVEN
+
+APPLICABLE + CONTRADICTED
+  -> CONTRADICTED
 ```
 
-That means a red→green regression can stay useful without silently becoming a product-correctness claim.
+A missing oracle prerequisite is **not** allowed to become a product contradiction.
+That distinction came from a real GNOME/QEMU replay of Bluefin #4539: the first
+keyring oracle assumed the synthetic CI account had a Secret Service `login`
+collection, but that fixture prerequisite was absent.
 
-The first two acceptance fixtures come directly from public reviewer feedback:
+That means a red→green regression can stay useful without silently becoming a
+product-correctness claim, and an invalid fixture cannot manufacture a false red
+product verdict.
+
+Acceptance fixtures come directly from public reviewer / maintainer reality:
 
 - `examples/claim_matrix/codex-plugin-cc-731.yml` — one witnessed submitted regression, later review concerns still unproven;
-- `examples/claim_matrix/claude-code-89404.yml` — product-oracle contradiction stays stronger than an internally green submitted judge.
+- `examples/claim_matrix/claude-code-89404.yml` — product-oracle contradiction stays stronger than an internally green submitted judge;
+- `examples/claim_matrix/bluefin-4539.yml` — distinguishes shallow implementation evidence from behavior/safety claims and records an oracle precondition that is missing in the CI fixture.
 
 ---
 
