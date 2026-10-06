@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.reality_bluefin_4539_receipt import build_receipt
 
 
@@ -72,3 +74,33 @@ def test_bluefin_controlled_receipt_stays_inconclusive_without_revert_recovery(t
     )
 
     assert receipt["verdict"] == "INCONCLUSIVE_CONTROLLED_CAUSAL"
+
+
+def test_bluefin_controlled_receipt_rejects_duplicate_diagnostics(tmp_path: Path):
+    _write_diag(tmp_path, "control", active=False, dep=False, late=False)
+    _write_diag(tmp_path, "control", active=True, dep=True, late=True)
+    _write_diag(tmp_path, "bad", active=True, dep=True, late=True)
+    _write_diag(tmp_path, "revert", active=False, dep=False, late=False)
+
+    with pytest.raises(ValueError, match="AMBIGUOUS_EVIDENCE"):
+        build_receipt(
+            tmp_path,
+            control_image="control",
+            bad_image="bad",
+            revert_image="revert",
+            oracle_revision="oracle-sha",
+        )
+
+
+def test_bluefin_controlled_receipt_requires_distinct_candidate_images(tmp_path: Path):
+    _write_diag(tmp_path, "shared", active=False, dep=False, late=False)
+    _write_diag(tmp_path, "bad", active=True, dep=True, late=True)
+
+    with pytest.raises(ValueError, match="INVALID_EXPERIMENT"):
+        build_receipt(
+            tmp_path,
+            control_image="shared",
+            bad_image="bad",
+            revert_image="shared",
+            oracle_revision="oracle-sha",
+        )
