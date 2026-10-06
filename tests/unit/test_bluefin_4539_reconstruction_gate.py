@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from scripts.reality_bluefin_4539_reconstruction_gate import build_receipt
