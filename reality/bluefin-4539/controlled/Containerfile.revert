@@ -1,0 +1,3 @@
+ARG BAD_IMAGE
+FROM ${BAD_IMAGE}
+RUN rm -f /usr/lib/systemd/user/xdg-desktop-portal.service.d/30-after-keyring.conf

@@ -1,11 +1,14 @@
 name: Reality — Bluefin 4539 candidate availability
 
 on:
+  # Reality evidence is intentionally refreshed explicitly. GitHub PR path
+  # filters match the whole PR diff and would otherwise rerun this probe on
+  # unrelated synchronization commits.
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "reality/bluefin-4539/**"
-      - ".github/workflows/reality-bluefin-4539-candidates.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -48,8 +51,10 @@ jobs:
 
           if [[ $rc -eq 0 ]]; then
             status=AVAILABLE
-          else
+          elif grep -Eqi 'manifest unknown|name unknown|not found|does not exist' "$out"; then
             status=UNAVAILABLE
+          else
+            status=PROBE_FAILED
           fi
 
           {
@@ -65,11 +70,10 @@ jobs:
         shell: bash
         run: |
           {
-            echo "### ${{ matrix.id }}"
-            echo
-            echo "- ref: `${{ matrix.ref }}`"
-            echo "- trust: `${{ matrix.trust }}`"
-            echo "- registry: **${{ steps.inspect.outputs.status }}**"
+            printf '### %s\n\n' '${{ matrix.id }}'
+            printf '%s\n' '- ref: ${{ matrix.ref }}'
+            printf '%s\n' '- trust: ${{ matrix.trust }}'
+            printf '%s\n' '- registry: **${{ steps.inspect.outputs.status }}**'
           } >>"$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
@@ -77,3 +81,212 @@ jobs:
           name: bluefin-4539-${{ matrix.id }}-availability
           path: reality/bluefin-4539/availability/${{ matrix.id }}.txt
           if-no-files-found: error
+
+  reconstruction-dependencies:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE_SILVERBLUE
+            ref: ghcr.io/ublue-os/silverblue-main@sha256:9f41fa9a7706bf2607247884c8af2721d94905878862fae1278c73f8a81485a9
+          - id: BASE_COMMON
+            ref: ghcr.io/projectbluefin/common@sha256:51a753b108b115196e01b8ee11462c1f3888500947ae9a43906d5596cc99f651
+          - id: BASE_BREW
+            ref: ghcr.io/ublue-os/brew@sha256:a62826f010ad77dcbf3cba0ddafe1bf8ce7aa42e55c9f4ebb5ee096845270480
+          - id: BAD_REVERT_SILVERBLUE
+            ref: ghcr.io/ublue-os/silverblue-main@sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5
+          - id: BAD_REVERT_COMMON
+            ref: ghcr.io/projectbluefin/common@sha256:1e7f8c88b8efb67b3fc42ef29bf0d927e9b8366c26dcf71893169979b29a4418
+          - id: BAD_REVERT_BREW
+            ref: ghcr.io/ublue-os/brew@sha256:2369e2dc70dd8b12828604d22721d1812cd87611661d789e1a0ee2cb123cbe7e
+    steps:
+      - name: Inspect pinned dependency
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
+          rc=$?
+          if [[ $rc -eq 0 ]]; then
+            status=AVAILABLE
+          elif grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
+            status=UNAVAILABLE
+          else
+            status=PROBE_FAILED
+          fi
+          echo "status=$status" >>"$GITHUB_OUTPUT"
+          cat inspect.txt
+          echo "status=$status"
+          echo "inspect_exit=$rc"
+
+      - name: Publish dependency summary
+        shell: bash
+        run: |
+          {
+            printf '### %s\n\n' '${{ matrix.id }}'
+            printf '%s\n' '- ref: ${{ matrix.ref }}'
+            printf '%s\n' '- registry: **${{ steps.inspect.outputs.status }}**'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  control-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve current Bluefin stable to immutable digest
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/ublue-os/bluefin:stable"
+          docker buildx imagetools inspect "$ref" >inspect.txt
+          cat inspect.txt
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          test -n "$digest"
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          echo "image=ghcr.io/ublue-os/bluefin@$digest" >>"$GITHUB_OUTPUT"
+          {
+            echo '### Controlled replay base'
+            echo
+            echo "- mutable source tag: $ref"
+            echo "- frozen digest: $digest"
+            echo "- frozen ref: ghcr.io/ublue-os/bluefin@$digest"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  historical-tags:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE_TAG
+            ref: ghcr.io/ublue-os/bluefin:stable-daily-44.20260519
+            expected_version: "44.20260519"
+          - id: BAD_HEAD_TAG
+            ref: ghcr.io/ublue-os/bluefin:stable-daily-44.20260526
+            expected_version: "44.20260526"
+          - id: REVERT_TAG
+            ref: ghcr.io/ublue-os/bluefin:stable-daily-44.20260529
+            expected_version: "44.20260529"
+    steps:
+      - name: Inspect historical version tag and OCI labels
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
+          rc=$?
+          if [[ $rc -ne 0 ]]; then
+            if grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
+              echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            else
+              echo "status=PROBE_FAILED" >>"$GITHUB_OUTPUT"
+            fi
+            cat inspect.txt
+            exit 0
+          fi
+          echo "status=AVAILABLE" >>"$GITHUB_OUTPUT"
+          cat inspect.txt
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          set -e
+          docker pull --platform linux/amd64 "${{ matrix.ref }}"
+          version=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')
+          revision=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+          source=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')
+          created=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')
+          printf 'version=%s\nrevision=%s\nsource=%s\ncreated=%s\n' "$version" "$revision" "$source" "$created" | tee labels.txt
+          if [[ "$version" == "${{ matrix.expected_version }}" ]]; then
+            echo "version_match=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "version_match=false" >>"$GITHUB_OUTPUT"
+          fi
+      - name: Publish historical tag provenance
+        if: always()
+        shell: bash
+        run: |
+          echo "### ${{ matrix.id }}" >>"$GITHUB_STEP_SUMMARY"
+          echo "ref: ${{ matrix.ref }}" >>"$GITHUB_STEP_SUMMARY"
+          echo "registry: ${{ steps.inspect.outputs.status }}" >>"$GITHUB_STEP_SUMMARY"
+          echo "digest: ${{ steps.inspect.outputs.digest }}" >>"$GITHUB_STEP_SUMMARY"
+          echo "expected_version: ${{ matrix.expected_version }}" >>"$GITHUB_STEP_SUMMARY"
+          echo "version_match: ${{ steps.inspect.outputs.version_match }}" >>"$GITHUB_STEP_SUMMARY"
+          if [[ -f labels.txt ]]; then cat labels.txt >>"$GITHUB_STEP_SUMMARY"; fi
+
+  official-release-tags:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260519
+            expected_revision: 5de075a6ccbcc37d2551cc8d3cf854d96f8e4845
+          - id: BAD_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260526
+            expected_revision: 60e72be24878ce01b4849cfb4b8efc18932a133e
+          - id: REVERT_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260527
+            expected_revision: 42c737ee6d232f7351dc3af08a9bd1dbea57dd47
+    steps:
+      - name: Inspect official historical release tag
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
+          rc=$?
+          if [[ $rc -ne 0 ]]; then
+            if grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
+              echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            else
+              echo "status=PROBE_FAILED" >>"$GITHUB_OUTPUT"
+            fi
+            cat inspect.txt
+            exit 0
+          fi
+
+          echo "status=AVAILABLE" >>"$GITHUB_OUTPUT"
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          cat inspect.txt
+
+          set -e
+          docker pull --platform linux/amd64 "${{ matrix.ref }}"
+          revision=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+          version=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')
+          source=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')
+          created=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')
+
+          {
+            echo "revision=$revision"
+            echo "version=$version"
+            echo "source=$source"
+            echo "created=$created"
+          } | tee labels.txt
+
+          if [[ "$revision" == "${{ matrix.expected_revision }}" ]]; then
+            echo "revision_match=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "revision_match=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish official release provenance
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.id }}"
+            echo
+            echo "- ref: ${{ matrix.ref }}"
+            echo "- registry: **${{ steps.inspect.outputs.status }}**"
+            echo "- digest: \`${{ steps.inspect.outputs.digest }}\`"
+            echo "- expected revision: \`${{ matrix.expected_revision }}\`"
+            echo "- revision label matches: \`${{ steps.inspect.outputs.revision_match }}\`"
+            if [[ -f labels.txt ]]; then
+              echo
+              echo 'OCI labels:'
+              echo '~~~text'
+              cat labels.txt
+              echo '~~~'
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"

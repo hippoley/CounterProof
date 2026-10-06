@@ -1,5 +1,5 @@
 schema_version: 1
-title: "Oracle Scope Matrix — ublue-os/bluefin #4539"
+title: "Oracle Scope + Applicability Matrix — ublue-os/bluefin #4539"
 source_pr: "https://github.com/ublue-os/bluefin/pull/4539"
 base_sha: "f2a60b9b6e62880b38b70595f035e7a6ac571bc5"
 head_sha: "42b32a75fbfb83a316bd3473e80043d551af20da"
@@ -31,3 +31,19 @@ claims:
     oracle_probe: "Run a real GNOME user session and observe whether xdg-desktop-portal pulls in gnome-keyring-daemon before the normal PAM-unlock path; capture user journal and Secret portal availability."
     oracle_source_url: "https://github.com/ublue-os/bluefin/issues/4683#issuecomment-4548807716"
     note: "This is the invariant that the merge-time lab check did not test; the PR was later reverted after users reported the regression."
+
+  - id: login-keyring-unlocked-fixture
+    claim: "The login keyring is unlocked after automatic login"
+    source_url: "https://github.com/ublue-os/bluefin/issues/4683"
+    tests:
+      - "QEMU GNOME session: Secret Service login alias Locked == false"
+    base_result: "oracle precondition missing"
+    head_result: "oracle precondition missing"
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_applicability: PRECONDITION_MISSING
+    oracle_precondition: "The synthetic CI user must have a Secret Service login collection alias."
+    oracle_alignment: UNVERIFIED
+    oracle_probe: "ReadAlias login, then query org.freedesktop.Secret.Collection Locked."
+    note: "The first real QEMU replay showed that this fixture prerequisite is absent. That result is not evidence that CONTROL, BAD, or REVERT violates the product claim."

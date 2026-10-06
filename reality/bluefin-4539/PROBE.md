@@ -95,3 +95,56 @@ If this receipt can be reproduced, return it to the Bluefin thread and ask only:
 > #4539 → #4685 merge/revert loop?
 
 Do not claim adoption until a maintainer answers.
+
+
+## Controlled causal replay result
+
+The original historical OCI artifacts are no longer retrievable from GHCR, so
+the current executable result is deliberately labeled **controlled-causal**,
+not an original-image historical replay.
+
+Using one frozen Bluefin control image, CounterProof constructed:
+
+```text
+CONTROL
+  -> add exactly #4539's 30-after-keyring.conf
+BAD
+  -> remove exactly that file
+REVERT
+```
+
+All three candidates booted through projectbluefin/testsuite into real GNOME
+sessions under QEMU.
+
+The first unlock oracle exposed a fixture-precondition problem: the synthetic
+CI user has no `login` Secret Service alias. That condition is now reported as
+`ORACLE_PRECONDITION_MISSING` rather than being misclassified as a product
+failure.
+
+The candidate-neutral diagnostic produced this causal signature:
+
+| candidate | keyring user unit | portal dependency | NotInInitialization |
+|---|---|---|---|
+| CONTROL | inactive | absent | absent |
+| BAD | active | present | present |
+| REVERT | inactive | absent | absent |
+
+In BAD, `xdg-desktop-portal.service` explicitly depends on
+`gnome-keyring-daemon.service`; systemd starts the keyring unit immediately
+before the portal; and the daemon emits the historical
+`org.gnome.SessionManager.NotInInitialization` error. CONTROL and REVERT do
+not show that behavior.
+
+This is therefore a reproducible:
+
+```text
+Y -> Y' -> Y
+```
+
+controlled causal witness for the activation-path effect of the #4539
+intervention.
+
+It is **not yet** evidence that the original 2026-05-26 shipped BAD image has
+been replayed byte-for-byte. Historical registry artifacts were garbage
+collected, so that stronger claim remains blocked pending source-pinned
+reconstruction or another surviving original artifact.

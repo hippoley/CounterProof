@@ -12,6 +12,7 @@ from skill_factory.evolution.claim_matrix import (
     ClaimMatrixManifest,
     EvidenceScope,
     OracleAlignment,
+    OracleApplicability,
     OverallClaim,
     SubmittedTestEvidence,
     claim_matrix_to_dict,
@@ -335,8 +336,94 @@ def test_bluefin_example_preserves_green_but_wrong_oracle_boundary():
     assert [item["overall_claim"] for item in payload["claims"]] == [
         "WITNESSED (scope insufficient)",
         "WITNESSED (scope insufficient)",
+        "WITNESSED (oracle precondition missing)",
     ]
     assert [item["required_scope"] for item in payload["claims"]] == [
         "BEHAVIOR",
         "SAFETY",
+        "BEHAVIOR",
     ]
+    assert payload["claims"][2]["oracle_applicability"] == "PRECONDITION_MISSING"
+
+
+def test_missing_oracle_precondition_cannot_contradict_claim():
+    claim = ClaimEvidence(
+        id="bluefin-login-keyring",
+        claim="login keyring is unlocked after automatic login",
+        tests=["tests/common/features/bluefin_keyring.feature"],
+        base_result="PASS",
+        head_result="FAIL",
+        submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+        evidence_scope=EvidenceScope.BEHAVIOR,
+        required_scope=EvidenceScope.BEHAVIOR,
+        oracle_applicability=OracleApplicability.PRECONDITION_MISSING,
+        oracle_precondition="synthetic CI user must have a Secret Service login alias",
+        oracle_alignment=OracleAlignment.UNVERIFIED,
+    )
+
+    assert (
+        claim.overall_claim
+        is OverallClaim.WITNESSED_ORACLE_PRECONDITION_MISSING
+    )
+
+
+def test_missing_oracle_precondition_requires_description():
+    with pytest.raises(ValidationError, match="requires an explicit oracle_precondition"):
+        ClaimEvidence(
+            id="missing-fixture",
+            claim="behavior",
+            tests=["tests/test_behavior.py"],
+            base_result="FAIL",
+            head_result="PASS",
+            submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+            oracle_applicability=OracleApplicability.PRECONDITION_MISSING,
+            oracle_alignment=OracleAlignment.UNVERIFIED,
+        )
+
+
+def test_missing_oracle_precondition_cannot_be_marked_contradicted():
+    with pytest.raises(
+        ValidationError,
+        match="requires oracle_alignment=UNVERIFIED",
+    ):
+        ClaimEvidence(
+            id="invalid-interpretation",
+            claim="behavior",
+            tests=["tests/test_behavior.py"],
+            base_result="FAIL",
+            head_result="PASS",
+            submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+            oracle_applicability=OracleApplicability.PRECONDITION_MISSING,
+            oracle_precondition="login alias must exist",
+            oracle_alignment=OracleAlignment.CONTRADICTED,
+            oracle_probe="read login collection Locked property",
+        )
+
+
+def test_render_exposes_oracle_applicability_boundary():
+    manifest = ClaimMatrixManifest(
+        title="Bluefin oracle applicability",
+        claims=[
+            ClaimEvidence(
+                id="login-keyring",
+                claim="login collection is unlocked after automatic login",
+                tests=["bluefin_keyring.feature"],
+                base_result="PASS",
+                head_result="FAIL",
+                submitted_test_evidence=SubmittedTestEvidence.WITNESSED,
+                oracle_applicability=OracleApplicability.PRECONDITION_MISSING,
+                oracle_precondition="synthetic CI user has a login collection alias",
+                oracle_alignment=OracleAlignment.UNVERIFIED,
+            )
+        ],
+    )
+
+    markdown = render_claim_matrix_markdown(manifest)
+    payload = claim_matrix_to_dict(manifest)
+
+    assert "**PRECONDITION_MISSING**" in markdown
+    assert "synthetic CI user has a login collection alias" in markdown
+    assert (
+        payload["claims"][0]["overall_claim"]
+        == "WITNESSED (oracle precondition missing)"
+    )
