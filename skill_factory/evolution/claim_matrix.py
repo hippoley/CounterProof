@@ -164,7 +164,16 @@ def _bind_receipt(path: Path, claim: ClaimEvidence) -> None:
     if not claim.receipt_file:
         return
 
-    receipt_path = (path.parent / claim.receipt_file).resolve()
+    manifest_dir = path.parent.resolve()
+    receipt_path = (manifest_dir / claim.receipt_file).resolve()
+    try:
+        receipt_path.relative_to(manifest_dir)
+    except ValueError as exc:
+        raise ValueError(
+            f"claim {claim.id!r} receipt_file must stay within the "
+            "claim-matrix directory"
+        ) from exc
+
     try:
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
