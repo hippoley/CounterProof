@@ -77,6 +77,11 @@ def build_receipt(
         },
         "dependency_availability": availability,
         "missing_dependencies": missing,
+        "reconstruction_level": (
+            "SOURCE_EQUIVALENT_BASE_READY"
+            if source_equivalent_base_ready
+            else "SOURCE_CONTRACT_ONLY"
+        ),
         "base_rebuild": {
             "source_repository": "ublue-os/main",
             "source_commit": "0273c246618919cf48a3c71a67d1c68aed209b24",
@@ -87,6 +92,11 @@ def build_receipt(
             "claim_boundary": (
                 "source-equivalent rebuild only; not bit-for-bit original OCI"
             ),
+            "remaining_unfrozen_inputs": [
+                "Bluefin stable build historically resolved "
+                "ghcr.io/ublue-os/akmods:coreos-stable-44 by mutable tag "
+                "to derive KERNEL; its historical digest is not yet bound."
+            ],
         },
         "verdict": verdict,
     }
