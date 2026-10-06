@@ -15,7 +15,6 @@ import yaml
 
 from .evidence_lifecycle import EvidenceLifecycle
 
-
 _GITHUB_PR_RE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<number>\d+)$"
 )
