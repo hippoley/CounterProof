@@ -1,0 +1,87 @@
+name: Reality — Bluefin 4539 source reconstruction gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "reality/bluefin-4539/**"
+      - "scripts/reality_bluefin_4539_reconstruction_gate.py"
+      - "tests/unit/test_bluefin_4539_reconstruction_gate.py"
+      - ".github/workflows/reality-bluefin-4539-reconstruction.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruction-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: BAD
+            source_commit: 60e72be24878ce01b4849cfb4b8efc18932a133e
+          - candidate: REVERT
+            source_commit: bd12c2e29f6ecb2cabd5bfb53bc00281a7d9118f
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+
+      - name: Checkout exact Bluefin source
+        uses: actions/checkout@v4
+        with:
+          repository: ublue-os/bluefin
+          ref: ${{ matrix.source_commit }}
+          path: upstream-bluefin
+          fetch-depth: 1
+
+      - name: Probe pinned dependency availability
+        id: deps
+        shell: bash
+        run: |
+          set -u
+          probe() {
+            local name="$1"
+            local ref="$2"
+            if docker buildx imagetools inspect "$ref" >/tmp/"$name".inspect 2>&1; then
+              echo "$name=AVAILABLE" >>"$GITHUB_OUTPUT"
+              echo "$name=AVAILABLE"
+            else
+              echo "$name=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+              echo "$name=UNAVAILABLE"
+              cat /tmp/"$name".inspect
+            fi
+          }
+
+          probe silverblue-main "ghcr.io/ublue-os/silverblue-main@sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5"
+          probe common "ghcr.io/projectbluefin/common@sha256:1e7f8c88b8efb67b3fc42ef29bf0d927e9b8366c26dcf71893169979b29a4418"
+          probe brew "ghcr.io/ublue-os/brew@sha256:2369e2dc70dd8b12828604d22721d1812cd87611661d789e1a0ee2cb123cbe7e"
+
+      - name: Build reconstruction gate receipt
+        shell: bash
+        run: |
+          mkdir -p receipts
+          python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs.silverblue-main }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --output "receipts/${{ matrix.candidate }}.json"
+
+      - name: Publish reconstruction gate summary
+        shell: bash
+        run: |
+          python3 - <<'PY' >>"$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p = next(Path("receipts").glob("*.json"))
+          r = json.loads(p.read_text())
+          print(f"## {r['candidate']} reconstruction gate")
+          print()
+          print(f"- source commit: `{r['source_commit']}`")
+          print(f"- source contract: `{'MATCH' if r['source_contract']['dependencies_match'] and r['source_contract']['intervention_match'] else 'MISMATCH'}`")
+          print(f"- missing dependencies: `{', '.join(r['missing_dependencies']) or 'none'}`")
+          print(f"- verdict: **{r['verdict']}**")
+          PY
+
+      - name: Upload reconstruction gate receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluefin-4539-reconstruction-${{ matrix.candidate }}
+          path: receipts/${{ matrix.candidate }}.json
+          if-no-files-found: error
