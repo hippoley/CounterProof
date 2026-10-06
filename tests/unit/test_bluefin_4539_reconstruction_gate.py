@@ -137,7 +137,7 @@ def test_original_historical_base_is_highest_recovery_level(tmp_path: Path):
     receipt = build_receipt(
         tmp_path,
         candidate="BAD",
-        source_commit="60e72be",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
         availability={
             "silverblue-main": "AVAILABLE",
             "common": "AVAILABLE",
