@@ -1,13 +1,10 @@
 name: Reality — Bluefin 4539 controlled causal replay
 
 on:
+  # This is intentionally manual: the QEMU/GNOME replay is expensive and its
+  # last successful receipt is immutable evidence. Re-run only when the
+  # intervention, oracle, or receipt semantics materially change.
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "reality/bluefin-4539/controlled/**"
-      - "scripts/reality_bluefin_4539_receipt.py"
-      - "tests/unit/test_bluefin_4539_receipt.py"
-      - ".github/workflows/reality-bluefin-4539-controlled.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
