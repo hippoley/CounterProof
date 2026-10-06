@@ -427,3 +427,105 @@ def test_render_exposes_oracle_applicability_boundary():
         payload["claims"][0]["overall_claim"]
         == "WITNESSED (oracle precondition missing)"
     )
+
+
+def test_claim_matrix_binds_machine_receipt(tmp_path: Path):
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "case": "ublue-os/bluefin#4539",
+                "verdict": "WITNESSED_CONTROLLED_CAUSAL",
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "claims.yml"
+    manifest_path.write_text(
+        """
+schema_version: 1
+title: Receipt binding
+claims:
+  - id: causal-witness
+    claim: intervention changes activation path
+    tests:
+      - reality replay
+    base_result: CONTROL
+    head_result: BAD
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    receipt_file: receipt.json
+    receipt_expected_verdicts:
+      - WITNESSED_CONTROLLED_CAUSAL
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(manifest_path)
+    payload = claim_matrix_to_dict(manifest)
+    markdown = render_claim_matrix_markdown(manifest)
+
+    assert payload["claims"][0]["receipt_observed_verdict"] == "WITNESSED_CONTROLLED_CAUSAL"
+    assert payload["claims"][0]["receipt_case"] == "ublue-os/bluefin#4539"
+    assert "Receipt verdict: `WITNESSED_CONTROLLED_CAUSAL`" in markdown
+
+
+def test_claim_matrix_rejects_receipt_verdict_mismatch(tmp_path: Path):
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps({"verdict": "INCONCLUSIVE_CONTROLLED_CAUSAL"}),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "claims.yml"
+    manifest_path.write_text(
+        """
+schema_version: 1
+title: Receipt mismatch
+claims:
+  - id: causal-witness
+    claim: intervention changes activation path
+    tests:
+      - reality replay
+    base_result: CONTROL
+    head_result: BAD
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    receipt_file: receipt.json
+    receipt_expected_verdicts:
+      - WITNESSED_CONTROLLED_CAUSAL
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    with pytest.raises(ValueError, match="does not match expected verdict"):
+        load_claim_matrix(manifest_path)
+
+
+def test_claim_matrix_rejects_receipt_without_verdict(tmp_path: Path):
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(json.dumps({"case": "example"}), encoding="utf-8")
+    manifest_path = tmp_path / "claims.yml"
+    manifest_path.write_text(
+        """
+schema_version: 1
+title: Missing verdict
+claims:
+  - id: receipt
+    claim: evidence
+    submitted_test_evidence: UNPROVEN
+    receipt_file: receipt.json
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    with pytest.raises(ValueError, match="non-empty string verdict"):
+        load_claim_matrix(manifest_path)
