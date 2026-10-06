@@ -83,8 +83,10 @@ jobs:
           print(f"- source commit: `{r['source_commit']}`")
           print(f"- source contract: `{'MATCH' if r['source_contract']['dependencies_match'] and r['source_contract']['intervention_match'] else 'MISMATCH'}`")
           print(f"- missing dependencies: `{', '.join(r['missing_dependencies']) or 'none'}`")
+          print(f"- reconstruction level: **{r['reconstruction_level']}**")
           print(f"- source-equivalent base ready: `{r['base_rebuild']['ready']}`")
           print(f"- base-rebuild missing inputs: `{', '.join(r['base_rebuild']['missing_inputs']) or 'none'}`")
+          print(f"- executable rebuild: `{r['recovery_ladder']['executable_rebuild']}`")
           print(f"- verdict: **{r['verdict']}**")
           PY
 
