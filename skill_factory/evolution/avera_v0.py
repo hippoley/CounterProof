@@ -87,7 +87,7 @@ class AveraCheckV0Envelope(_StrictModel):
                 )
         return data
 
-    @model_validator(mode="after")
+    @pydantic.model_validator(mode="after")
     def validate_contract(self) -> AveraCheckV0Envelope:
         if self.schema_version != AVERA_CHECK_V0:
             raise ValueError(
