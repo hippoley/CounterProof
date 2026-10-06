@@ -90,7 +90,9 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
                 "receipt_case": "receipt_case",
             }
             receipt_expectations = expected.get("receipt_expectations", {})
-            if receipt_expectations:
+            expected_blob_sha = expected.get("receipt_git_blob_sha")
+            needs_receipt_inspection = bool(receipt_expectations) or expected_blob_sha is not None
+            if needs_receipt_inspection:
                 receipt_file = claim.get("receipt_file")
                 if not receipt_file:
                     failures.append(
@@ -113,7 +115,6 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
                     )
                     continue
 
-                expected_blob_sha = expected.get("receipt_git_blob_sha")
                 if expected_blob_sha is not None:
                     observed_blob_sha = _git_blob_sha(receipt_path)
                     if observed_blob_sha != expected_blob_sha:
