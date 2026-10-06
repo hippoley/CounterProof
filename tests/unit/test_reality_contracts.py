@@ -90,6 +90,8 @@ title: Receipt identity drift
 claims:
   - id: behavior
     claim: behavior
+    tests:
+      - behavior probe
     submitted_test_evidence: WITNESSED
     evidence_scope: BEHAVIOR
     required_scope: BEHAVIOR
@@ -152,6 +154,8 @@ title: Receipt blob drift
 claims:
   - id: behavior
     claim: behavior
+    tests:
+      - behavior probe
     submitted_test_evidence: WITNESSED
     evidence_scope: BEHAVIOR
     required_scope: BEHAVIOR
