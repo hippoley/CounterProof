@@ -7,8 +7,6 @@ that CounterProof owns AVERA verdict semantics.
 
 import hashlib
 import json
-from typing import Any
-
 import pydantic
 
 
@@ -21,7 +19,7 @@ class _StrictModel(pydantic.BaseModel):
     model_config = {"extra": "forbid"}
 
 
-def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
+def canonical_json_bytes(payload: dict[str, object]) -> bytes:
     """Return the exact v0 digest serialization proposed for interop testing.
 
     The contract is deliberately explicit: UTF-8, sorted object keys, no
@@ -37,7 +35,7 @@ def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def envelope_digest(payload_without_digest: dict[str, Any]) -> str:
+def envelope_digest(payload_without_digest: dict[str, object]) -> str:
     return hashlib.sha256(canonical_json_bytes(payload_without_digest)).hexdigest()
 
 
@@ -70,7 +68,7 @@ class AveraCheckV0Envelope(_StrictModel):
 
     @pydantic.model_validator(mode="before")
     @classmethod
-    def validate_digest_on_raw_payload(cls, data: Any) -> Any:
+    def validate_digest_on_raw_payload(cls, data: object) -> object:
         """Verify the digest before Pydantic can coerce or normalize values."""
         if not isinstance(data, dict):
             return data
@@ -97,7 +95,7 @@ class AveraCheckV0Envelope(_StrictModel):
         return self
 
 
-def load_avera_check_v0(payload: dict[str, Any]) -> AveraCheckV0Envelope:
+def load_avera_check_v0(payload: dict[str, object]) -> AveraCheckV0Envelope:
     """Validate an experimental AVERA v0 envelope.
 
     A valid envelope is still ordinary external evidence. It does not become a
