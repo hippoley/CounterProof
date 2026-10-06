@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "reality/bluefin-4539/controlled/**"
+      - "reality/bluefin-4539/**"
+      - "scripts/reality_bluefin_4539_receipt.py"
+      - "tests/unit/test_bluefin_4539_receipt.py"
       - ".github/workflows/reality-bluefin-4539-controlled.yml"
 
 permissions:
