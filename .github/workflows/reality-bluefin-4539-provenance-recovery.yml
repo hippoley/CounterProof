@@ -55,6 +55,7 @@ jobs:
         run: |
           set +e
           found=false
+          probe_ok=true
           : > package-matches.jsonl
           for page in 1 2 3 4 5; do
             code=$(curl -sS -o "package-page-$page.json" -w '%{http_code}' \
@@ -64,6 +65,8 @@ jobs:
               "https://api.github.com/orgs/ublue-os/packages/container/silverblue-main/versions?per_page=100&page=$page")
             if [[ "$code" != "200" ]]; then
               echo "package API page $page HTTP $code"
+              probe_ok=false
+              echo "http_status=$code" >>"$GITHUB_OUTPUT"
               break
             fi
             jq -c --arg digest "$TARGET_DIGEST" \
@@ -80,8 +83,10 @@ jobs:
           if [[ "$found" == "true" ]]; then
             echo "status=METADATA_FOUND" >>"$GITHUB_OUTPUT"
             cat package-matches.jsonl
-          else
+          elif [[ "$probe_ok" == "true" ]]; then
             echo "status=NO_METADATA_MATCH" >>"$GITHUB_OUTPUT"
+          else
+            echo "status=PROBE_UNAVAILABLE" >>"$GITHUB_OUTPUT"
           fi
 
       - name: Freeze producer run and source metadata
@@ -108,6 +113,7 @@ jobs:
           ATTESTATION_STATUS: ${{ steps.attestation.outputs.status }}
           ATTESTATION_HTTP: ${{ steps.attestation.outputs.http_status }}
           PACKAGE_STATUS: ${{ steps.package.outputs.status }}
+          PACKAGE_HTTP: ${{ steps.package.outputs.http_status }}
         run: |
           python3 - <<'PY'
           import json
@@ -160,7 +166,10 @@ jobs:
                   "bundle_count": attestation_bundle_count,
                   "evidence_valid": attestation_evidence_ok,
               },
-              "package_metadata": {"status": package_status},
+              "package_metadata": {
+                  "status": package_status,
+                  "http_status": os.environ.get("PACKAGE_HTTP") or None,
+              },
               "producer": {
                   "repository": os.environ["PRODUCER_REPO"],
                   "workflow_run": int(os.environ["PRODUCER_RUN"]),
