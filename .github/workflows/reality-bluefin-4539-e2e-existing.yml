@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   e2e-control:
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
@@ -29,7 +29,7 @@ jobs:
     secrets: inherit
 
   e2e-bad:
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
@@ -42,7 +42,7 @@ jobs:
     secrets: inherit
 
   e2e-revert:
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
