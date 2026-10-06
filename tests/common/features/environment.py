@@ -161,6 +161,7 @@ def before_all(context):
     context.last_ssh_result = None
     context.ssh_rc = 0
     context.has_brew = None
+    context.has_login_collection = None
 
 
 def before_scenario(context, scenario):
@@ -191,6 +192,22 @@ def before_scenario(context, scenario):
     if "requires_toggle_action" in scenario_tags and not _has_toggle_action(context):
         scenario.skip("ujust toggle-updates ACTION support not present on this image")
         return
+    if "requires_login_collection" in scenario_tags:
+        cached = getattr(context, "has_login_collection", None)
+        if cached is None:
+            out, rc = run_ssh(
+                context,
+                "gdbus call --session --dest org.freedesktop.secrets "
+                "--object-path /org/freedesktop/secrets "
+                "--method org.freedesktop.Secret.Service.ReadAlias login 2>/dev/null || true",
+            )
+            cached = rc == 0 and "/org/freedesktop/secrets/collection/" in out
+            context.has_login_collection = cached
+        if not cached:
+            scenario.skip(
+                "ORACLE_PRECONDITION_MISSING: synthetic CI account has no login collection alias"
+            )
+            return
     feature_name = getattr(getattr(scenario, "feature", None), "name", "")
     if _is_container_target(context):
         if "portal" in feature_name.lower():
