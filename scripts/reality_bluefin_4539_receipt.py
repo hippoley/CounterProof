@@ -56,16 +56,26 @@ def build_receipt(
     revert_image: str,
     oracle_revision: str,
 ) -> dict:
-    by_image: dict[str, dict] = {}
-    for path in sorted(diagnostics_dir.rglob("counterproof-keyring-diagnostic-*.json")):
-        data = json.loads(path.read_text(encoding="utf-8"))
-        by_image[data["image"]] = data["snapshot"]
-
     roles = {
         "CONTROL": control_image,
         "BAD": bad_image,
         "REVERT": revert_image,
     }
+    if len(set(roles.values())) != len(roles):
+        raise ValueError(
+            "INVALID_EXPERIMENT: CONTROL, BAD, and REVERT must reference distinct images"
+        )
+
+    by_image: dict[str, dict] = {}
+    for path in sorted(diagnostics_dir.rglob("counterproof-keyring-diagnostic-*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        image = data["image"]
+        if image in by_image:
+            raise ValueError(
+                "AMBIGUOUS_EVIDENCE: multiple published diagnostics found "
+                f"for image {image!r}"
+            )
+        by_image[image] = data["snapshot"]
 
     missing = {role: image for role, image in roles.items() if image not in by_image}
     if missing:
