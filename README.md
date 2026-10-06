@@ -426,6 +426,14 @@ UNRESOLVED  the live check could not be interpreted; do not infer staleness
 
 A `CURRENT` contract that is observed as `DRIFTED` requires an explicit lifecycle update to `STALE`. Stronger lifecycle states such as `SUPERSEDED` and `CONFLICTING` are never downgraded by a simple candidate-freshness check.
 
+When multiple lifecycle signals apply at once, CounterProof merges them deterministically:
+
+```text
+SUPERSEDED > CONFLICTING > STALE > CURRENT
+```
+
+For example, an old receipt that has already been superseded stays `SUPERSEDED` even if its upstream PR later drifts; freshness cannot demote a stronger lifecycle conclusion.
+
 When multiple evidence records exist for the same claim, CounterProof can resolve their relationship:
 
 ```bash
