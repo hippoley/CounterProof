@@ -393,7 +393,11 @@ The suite is intentionally cross-domain. A semantic change is rejected if it wou
 - turn Bluefin's missing fixture prerequisite into a contradiction;
 - detach Clash evidence from the exact BASE that was actually replayed;
 - weaken ScanCode's DB-backed behavior witness into an environment/setup failure;
-- change a frozen receipt verdict without updating the explicit contract.
+- change a frozen receipt verdict without updating the explicit contract;
+- swap the receipt's case, source run, candidate SHA, oracle revision, or other pinned provenance while keeping the same verdict;
+- mutate any unlisted receipt content when the contract pins the receipt's Git blob identity.
+
+Reality Contracts therefore protect both **meaning** and **evidence identity**. A matching verdict from a different receipt is not automatically the same proof.
 
 ---
 
