@@ -458,6 +458,30 @@ different claims
 
 Only claim-directional outcomes (`PROVEN` and `CONTRADICTED`) participate in automatic supersession. A newer `WITNESSED (scope insufficient)`, `WITNESSED (oracle precondition missing)`, or other inconclusive result cannot silently retire an older proof.
 
+Effective lifecycle decisions can be emitted as machine-readable receipts and independently verified against the exact frozen inputs. The explicit lifecycle workflow then signs `effective-lifecycle.json` with GitHub Artifact Attestations / Sigstore using `actions/attest@v4`.
+
+```text
+CounterProof verifier
+  -> checks suite/graph blob identity and receipt consistency
+
+GitHub artifact attestation
+  -> binds the lifecycle receipt digest to the workflow identity
+     and short-lived signing certificate
+```
+
+A downloaded lifecycle receipt can be checked both ways:
+
+```bash
+counterproof verify-lifecycle-receipt \
+  effective-lifecycle.json \
+  --suite examples/claim_matrix/reality-contracts.yml
+
+gh attestation verify effective-lifecycle.json \
+  --repo hippoley/CounterProof
+```
+
+Decision provenance is not a new claim oracle. It proves which evidence inputs, live candidate snapshot, and workflow produced the lifecycle decision; Claim Matrix semantics still decide claim truth.
+
 ---
 
 ## It also checks whether the PR changed the judge

@@ -9,6 +9,9 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   freshness:
@@ -38,6 +41,22 @@ jobs:
           counterproof verify-lifecycle-receipt \
             effective-lifecycle.json \
             --suite examples/claim_matrix/reality-contracts.yml
+
+      - name: Attest lifecycle receipt provenance
+        id: attest
+        if: always() && hashFiles('effective-lifecycle.json') != ''
+        uses: actions/attest@v4
+        with:
+          subject-path: effective-lifecycle.json
+
+      - name: Summarize lifecycle attestation
+        if: always() && steps.attest.outputs.attestation-url != ''
+        run: |
+          {
+            echo "## Effective lifecycle attestation"
+            echo
+            echo "${{ steps.attest.outputs.attestation-url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload lifecycle receipt
         if: always()
