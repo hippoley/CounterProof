@@ -30,7 +30,7 @@ def test_bad_reconstruction_is_blocked_only_by_missing_historical_base(tmp_path:
     receipt = build_receipt(
         tmp_path,
         candidate="BAD",
-        source_commit="60e72be",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
         availability={
             "silverblue-main": "UNAVAILABLE",
             "common": "AVAILABLE",
@@ -50,7 +50,7 @@ def test_revert_reconstruction_has_same_dependency_contract_without_dropin(tmp_p
     receipt = build_receipt(
         tmp_path,
         candidate="REVERT",
-        source_commit="bd12c2e",
+        source_commit="bd12c2e29f6ecb2cabd5bfb53bc00281a7d9118f",
         availability={
             "silverblue-main": "UNAVAILABLE",
             "common": "AVAILABLE",
@@ -69,7 +69,7 @@ def test_reconstruction_refuses_wrong_intervention_state(tmp_path: Path):
     receipt = build_receipt(
         tmp_path,
         candidate="BAD",
-        source_commit="60e72be",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
         availability={
             "silverblue-main": "AVAILABLE",
             "common": "AVAILABLE",
@@ -86,7 +86,7 @@ def test_source_equivalent_base_can_unblock_historical_reconstruction(tmp_path: 
     receipt = build_receipt(
         tmp_path,
         candidate="BAD",
-        source_commit="60e72be",
+        source_commit="60e72be24878ce01b4849cfb4b8efc18932a133e",
         availability={
             "silverblue-main": "UNAVAILABLE",
             "common": "AVAILABLE",
@@ -107,3 +107,21 @@ def test_source_equivalent_base_can_unblock_historical_reconstruction(tmp_path: 
     assert receipt["base_rebuild"]["claim_boundary"].startswith(
         "source-equivalent rebuild only"
     )
+
+
+def test_reconstruction_refuses_wrong_source_commit(tmp_path: Path):
+    _write_source(tmp_path, with_dropin=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        candidate="BAD",
+        source_commit="deadbeef",
+        availability={
+            "silverblue-main": "AVAILABLE",
+            "common": "AVAILABLE",
+            "brew": "AVAILABLE",
+        },
+    )
+
+    assert receipt["source_identity"]["source_commit_match"] is False
+    assert receipt["verdict"] == "INVALID_RECONSTRUCTION_SOURCE_IDENTITY"
