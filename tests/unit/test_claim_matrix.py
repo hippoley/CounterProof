@@ -576,3 +576,25 @@ def test_clash_example_binds_behavior_receipt_without_live_base_drift():
     assert payload["claims"][0]["oracle_applicability"] == "APPLICABLE"
     assert payload["claims"][0]["oracle_alignment"] == "ALIGNED"
     assert payload["claims"][0]["overall_claim"] == "PROVEN"
+
+
+def test_scancode_example_binds_db_backed_behavior_receipt():
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(Path("examples/claim_matrix/scancode-2207.yml"))
+    payload = claim_matrix_to_dict(manifest)
+
+    assert manifest.base_sha == "41868632dcaba1ad9b6402d114b169564c08d121"
+    assert manifest.head_sha == "f71185995aee043e2e9acfd31028501f23992aea"
+    assert (
+        payload["claims"][0]["receipt_observed_verdict"]
+        == "WITNESSED_BEHAVIOR_DELTA"
+    )
+    assert (
+        payload["claims"][0]["receipt_case"]
+        == "aboutcode-org/scancode.io#2207"
+    )
+    assert payload["claims"][0]["evidence_scope"] == "BEHAVIOR"
+    assert payload["claims"][0]["oracle_applicability"] == "APPLICABLE"
+    assert payload["claims"][0]["oracle_alignment"] == "ALIGNED"
+    assert payload["claims"][0]["overall_claim"] == "PROVEN"
