@@ -28,7 +28,7 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
         raise ValueError("invalid reality contract suite")
     contracts = raw.get("contracts")
     if not isinstance(contracts, list):
-        raise ValueError("reality contract suite requires contracts")
+        raise TypeError("reality contract suite requires contracts")
 
     failures: list[ContractFailure] = []
     for contract in contracts:
