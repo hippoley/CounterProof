@@ -213,7 +213,7 @@ jobs:
         include:
           - id: BASE_RELEASE
             ref: ghcr.io/ublue-os/bluefin:stable-20260519
-            expected_revision: f2a60b9b6e62880b38b70595f035e7a6ac571bc5
+            expected_revision: 5de075a6ccbcc37d2551cc8d3cf854d96f8e4845
           - id: BAD_RELEASE
             ref: ghcr.io/ublue-os/bluefin:stable-20260526
             expected_revision: 60e72be24878ce01b4849cfb4b8efc18932a133e
