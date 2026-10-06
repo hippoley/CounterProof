@@ -18,13 +18,13 @@ class EffectiveLifecycleObservation:
     freshness_signal: EvidenceLifecycle | None
     graph_signal: EvidenceLifecycle | None
     effective: EvidenceLifecycle
-    freshness_status: str | None
-    source_pr: str | None
-    frozen_base_sha: str | None
-    frozen_head_sha: str | None
-    live_base_sha: str | None
-    live_head_sha: str | None
-    freshness_reason: str | None
+    freshness_status: str | None = None
+    source_pr: str | None = None
+    frozen_base_sha: str | None = None
+    frozen_head_sha: str | None = None
+    live_base_sha: str | None = None
+    live_head_sha: str | None = None
+    freshness_reason: str | None = None
 
 
 def resolve_effective_contract_lifecycles(
