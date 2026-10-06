@@ -114,7 +114,18 @@ def cli() -> None:
     default=None,
     help="Optional evidence graph manifest to merge with live freshness.",
 )
-def reality_lifecycle(suite_file: str, graph_file: str | None) -> None:
+@click.option(
+    "--output",
+    "output_file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Write a machine-readable lifecycle receipt as JSON.",
+)
+def reality_lifecycle(
+    suite_file: str,
+    graph_file: str | None,
+    output_file: str | None,
+) -> None:
     """Resolve the effective lifecycle from declared, freshness, and graph signals."""
     try:
         observations = resolve_effective_contract_lifecycles(
@@ -125,7 +136,32 @@ def reality_lifecycle(suite_file: str, graph_file: str | None) -> None:
         raise click.ClickException(str(exc)) from exc
 
     mismatches = 0
+    payload = {
+        "schema_version": 1,
+        "suite_file": suite_file,
+        "graph_file": graph_file,
+        "observations": [],
+    }
     for observation in observations:
+        item = {
+            "contract_id": observation.contract_id,
+            "evidence_id": observation.evidence_id,
+            "declared": observation.declared.value,
+            "freshness_signal": (
+                observation.freshness_signal.value
+                if observation.freshness_signal
+                else None
+            ),
+            "graph_signal": (
+                observation.graph_signal.value
+                if observation.graph_signal
+                else None
+            ),
+            "effective": observation.effective.value,
+            "freshness_reason": observation.freshness_reason,
+        }
+        payload["observations"].append(item)
+
         click.echo(
             f"{observation.contract_id}: "
             f"declared={observation.declared.value} "
@@ -139,6 +175,15 @@ def reality_lifecycle(suite_file: str, graph_file: str | None) -> None:
             click.echo(f"  freshness: {observation.freshness_reason}")
         if observation.declared is not observation.effective:
             mismatches += 1
+
+    payload["mismatch_count"] = mismatches
+    payload["status"] = "PASS" if mismatches == 0 else "UPDATE_REQUIRED"
+
+    if output_file:
+        Path(output_file).write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
     if mismatches:
         raise click.ClickException(
