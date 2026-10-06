@@ -105,7 +105,7 @@ jobs:
 
   e2e-control:
     needs: build-candidates
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
@@ -119,7 +119,7 @@ jobs:
 
   e2e-bad:
     needs: build-candidates
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
@@ -133,7 +133,7 @@ jobs:
 
   e2e-revert:
     needs: build-candidates
-    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@main
+    uses: projectbluefin/testsuite/.github/workflows/e2e.yml@a99ca5ea0553f778a74f5d5152fefbbb47d86da4
     permissions:
       contents: read
       packages: write
