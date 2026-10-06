@@ -11,13 +11,7 @@ import hashlib
 import json
 from typing import Any
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    ValidationError,
-    model_validator,
-)
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
 AVERA_CHECK_V0 = "avera.check/v0"
@@ -26,7 +20,7 @@ AVERA_CHECK_V0 = "avera.check/v0"
 class _StrictModel(BaseModel):
     """Reject fields outside the experimental v0 envelope contract."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = {"extra": "forbid"}
 
 
 def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
