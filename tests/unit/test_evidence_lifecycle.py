@@ -3,6 +3,7 @@ import pytest
 from skill_factory.evolution.evidence_lifecycle import (
     EvidenceLifecycle,
     merge_lifecycle_signals,
+    resolve_effective_lifecycle,
     validate_lifecycle_transition,
 )
 
@@ -67,3 +68,24 @@ def test_lifecycle_signal_precedence(signals, expected):
 def test_lifecycle_signal_merge_requires_input():
     with pytest.raises(ValueError, match="at least one"):
         merge_lifecycle_signals()
+
+
+def test_effective_lifecycle_merges_declared_freshness_and_graph():
+    assert (
+        resolve_effective_lifecycle(
+            EvidenceLifecycle.CURRENT,
+            freshness_signal=EvidenceLifecycle.STALE,
+            graph_signal=EvidenceLifecycle.SUPERSEDED,
+        )
+        is EvidenceLifecycle.SUPERSEDED
+    )
+
+
+def test_effective_lifecycle_preserves_conflict_when_freshness_unresolved():
+    assert (
+        resolve_effective_lifecycle(
+            EvidenceLifecycle.STALE,
+            graph_signal=EvidenceLifecycle.CONFLICTING,
+        )
+        is EvidenceLifecycle.CONFLICTING
+    )
