@@ -7,6 +7,10 @@ on:
       - "reality/bluefin-4539/**"
       - ".github/workflows/reality-bluefin-4539-candidates.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
