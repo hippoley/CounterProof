@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "case": "aboutcode-org/scancode.io#2207",
+  "verdict": "WITNESSED_BEHAVIOR_DELTA",
+  "source_run": {
+    "repository": "hippoley/CounterProof",
+    "workflow_run": 36373412716,
+    "workflow_job": 108774251504
+  },
+  "candidates": {
+    "BASE": {
+      "commit": "41868632dcaba1ad9b6402d114b169564c08d121",
+      "submitted_test": "scanpipe.tests.test_commands.ScanPipeManagementCommandTest.test_scanpipe_management_command_run_without_input_location",
+      "result": "FAIL",
+      "failure_mode": "CLAIM_RELEVANT_REQUIRED_INPUT",
+      "failure_excerpt": "django.core.management.base.CommandError: Error: the following arguments are required: input_location"
+    },
+    "HEAD": {
+      "commit": "f71185995aee043e2e9acfd31028501f23992aea",
+      "submitted_test": "scanpipe.tests.test_commands.ScanPipeManagementCommandTest.test_scanpipe_management_command_run_without_input_location",
+      "result": "PASS"
+    }
+  },
+  "environment": {
+    "database": "PostgreSQL",
+    "framework": "Django",
+    "test_database": "test_scancodeio"
+  },
+  "behavior_contract": "The run management command accepts invocation without input_location.",
+  "interpretation": "The exact submitted test passes on HEAD and fails on BASE because BASE still requires input_location. The failure is claim-relevant product behavior rather than setup or an implementation-only API."
+}
