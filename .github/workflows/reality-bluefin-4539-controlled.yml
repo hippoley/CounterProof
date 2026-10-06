@@ -9,6 +9,10 @@ on:
       - "tests/unit/test_bluefin_4539_receipt.py"
       - ".github/workflows/reality-bluefin-4539-controlled.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write
