@@ -51,8 +51,10 @@ jobs:
 
           if [[ $rc -eq 0 ]]; then
             status=AVAILABLE
-          else
+          elif grep -Eqi 'manifest unknown|name unknown|not found|does not exist' "$out"; then
             status=UNAVAILABLE
+          else
+            status=PROBE_FAILED
           fi
 
           {
@@ -108,8 +110,10 @@ jobs:
           rc=$?
           if [[ $rc -eq 0 ]]; then
             status=AVAILABLE
-          else
+          elif grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
             status=UNAVAILABLE
+          else
+            status=PROBE_FAILED
           fi
           echo "status=$status" >>"$GITHUB_OUTPUT"
           cat inspect.txt
@@ -172,7 +176,11 @@ jobs:
           docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
           rc=$?
           if [[ $rc -ne 0 ]]; then
-            echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            if grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
+              echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            else
+              echo "status=PROBE_FAILED" >>"$GITHUB_OUTPUT"
+            fi
             cat inspect.txt
             exit 0
           fi
@@ -228,7 +236,11 @@ jobs:
           docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
           rc=$?
           if [[ $rc -ne 0 ]]; then
-            echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            if grep -Eqi 'manifest unknown|name unknown|not found|does not exist' inspect.txt; then
+              echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            else
+              echo "status=PROBE_FAILED" >>"$GITHUB_OUTPUT"
+            fi
             cat inspect.txt
             exit 0
           fi
