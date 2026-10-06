@@ -1,75 +1,145 @@
 # Bluefin #4539 replay boundary
 
-## What can no longer be replayed exactly
+## Evidence states are intentionally separate
 
-Registry probe:
+This case now has three different candidate identities that must not be collapsed:
 
-- https://github.com/hippoley/CounterProof/actions/runs/36397806254
+1. **PR source states** — exact review/merge commits.
+2. **Shipped stable releases** — the images users actually moved between.
+3. **Controlled causal candidates** — one frozen modern boot environment with the
+   exact #4539 intervention added and then removed.
 
-returned `not found` for all of:
-
-- known-good Bluefin 44.20260519 immutable digest;
-- shipped-regression Bluefin 44.20260526 immutable digest;
-- post-revert historical tag candidate.
-
-A second dependency probe:
-
-- https://github.com/hippoley/CounterProof/actions/runs/36398053967
-
-found:
-
-| Historical dependency | BASE | BAD / REVERT |
-|---|---|---|
-| `projectbluefin/common` pinned digest | available | available |
-| `ublue-os/brew` pinned digest | available | available |
-| `ublue-os/silverblue-main` pinned digest | **unavailable** | **unavailable** |
-
-Therefore CounterProof must **not** claim a bit-for-bit historical image replay.
-
-Current verdict:
+## PR-level source provenance
 
 ```text
-historical source provenance       AVAILABLE
-historical Bluefin output OCI      UNAVAILABLE
-historical common/brew OCI         AVAILABLE
-historical silverblue base OCI     UNAVAILABLE
-
-exact historical replay            INCOMPLETE
+PR_BASE       f2a60b9b6e62880b38b70595f035e7a6ac571bc5
+PR_HEAD       42b32a75fbfb83a316bd3473e80043d551af20da
+MERGED_BAD    60e72be24878ce01b4849cfb4b8efc18932a133e
+MERGED_REVERT bd12c2e29f6ecb2cabd5bfb53bc00281a7d9118f
 ```
 
-## Two experiments, not one
+BAD and MERGED_REVERT have the same historical `image-versions.yml` dependency
+digests. Their relevant source delta is the presence/removal of
+`30-after-keyring.conf`.
 
-### 1. Historical provenance replay
+## Shipped release provenance
 
-Preserve the exact source states:
-
-- BASE: `f2a60b9b6e62880b38b70595f035e7a6ac571bc5`
-- BAD: `60e72be24878ce01b4849cfb4b8efc18932a133e`
-- REVERT: `bd12c2e29f6ecb2cabd5bfb53bc00281a7d9118f`
-
-This answers **what source changed**, while recording the missing environment artifacts.
-
-### 2. Controlled causal replay
-
-Freeze one retrievable Bluefin image:
+Official Bluefin release metadata establishes:
 
 ```text
-ghcr.io/ublue-os/bluefin@
-sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+stable-20260519 -> source head 5de075a6ccbcc37d2551cc8d3cf854d96f8e4845
+stable-20260526 -> source head 60e72be24878ce01b4849cfb4b8efc18932a133e
+stable-20260527 -> source head 42c737ee6d232f7351dc3af08a9bd1dbea57dd47
 ```
 
-Then construct:
+The 2026-05-27 release head is two commits ahead of merged revert
+`bd12c2e` and zero commits behind it, so it is a genuine post-revert shipped
+release.
+
+This also fixes an earlier identity ambiguity: PR_BASE `f2a60b9` is **not** the
+same thing as the shipped known-good `stable-20260519` release.
+
+## Registry executability
+
+Current probes show that these final historical artifacts are no longer
+retrievable from GHCR:
+
+- user-reported immutable BASE digest;
+- user-reported immutable BAD digest;
+- `stable-daily-44.20260519`;
+- `stable-daily-44.20260526`;
+- `stable-daily-44.20260529`;
+- official `stable-20260519`;
+- official `stable-20260527`.
+
+The official BAD release `stable-20260526` is probed in the same workflow; its
+availability must be read from the current run rather than inferred from release
+metadata.
+
+Historical dependency availability is narrower:
+
+| Historical dependency | status |
+|---|---|
+| `projectbluefin/common` pinned digest | AVAILABLE |
+| `ublue-os/brew` pinned digest | AVAILABLE |
+| `ublue-os/silverblue-main` pinned digest | UNAVAILABLE |
+
+Therefore a bit-for-bit historical rebuild must not be claimed while the pinned
+Silverblue base is missing.
+
+## Controlled causal replay — witnessed
+
+CounterProof freezes one retrievable Bluefin control image and constructs:
 
 ```text
-CONTROL = frozen image
-BAD     = CONTROL + exact historical 30-after-keyring.conf
-REVERT  = BAD - exact historical 30-after-keyring.conf
+CONTROL
+  -> add exactly #4539's 30-after-keyring.conf
+BAD
+  -> remove exactly that file
+REVERT
 ```
 
-This does not recreate May 2026. It asks a narrower causal question:
+All three candidates boot in real GNOME sessions under
+`projectbluefin/testsuite` QEMU.
 
-> Holding the boot environment fixed, does adding the exact #4539 intervention
-> break the real GNOME-session keyring invariant, and does removing it restore
-> that invariant?
+Observed signature:
 
-That distinction must remain visible in every receipt.
+| candidate | keyring unit active | portal -> keyring dependency | NotInInitialization |
+|---|---:|---:|---:|
+| CONTROL | false | false | false |
+| BAD | true | true | true |
+| REVERT | false | false | false |
+
+This is a reproducible `Y -> Y' -> Y` controlled causal witness for the
+activation-path effect of the historical intervention.
+
+It is **not** the same claim as replaying the original May 2026 shipped images.
+
+## Oracle applicability
+
+The first behavior probe assumed the synthetic CI user would have a Secret
+Service `login` collection. It did not.
+
+That condition is now classified as:
+
+```text
+ORACLE_PRECONDITION_MISSING
+```
+
+rather than product failure.
+
+CounterProof therefore needs two distinct boundaries:
+
+```text
+Evidence Scope          — is this probe deep enough for the claim?
+Oracle Applicability    — are this probe's prerequisites true here?
+```
+
+## Source reconstruction gate
+
+The reconstruction workflow now checks, mechanically:
+
+1. exact BAD / MERGED_REVERT source commit;
+2. exact historical dependency digests;
+3. exact intervention presence/absence;
+4. current registry availability for every historical dependency.
+
+Its allowed verdicts include:
+
+```text
+READY_FOR_SOURCE_PINNED_REBUILD
+BLOCKED_MISSING_HISTORICAL_BASE
+BLOCKED_MISSING_HISTORICAL_DEPENDENCIES
+INVALID_RECONSTRUCTION_SOURCE_CONTRACT
+```
+
+With the current registry state, the expected honest boundary is:
+
+```text
+official release provenance          AVAILABLE
+controlled causal replay             WITNESSED
+historical common/brew               AVAILABLE
+historical Silverblue base           UNAVAILABLE
+source-pinned historical rebuild     BLOCKED_MISSING_HISTORICAL_BASE
+bit-for-bit original replay          INCOMPLETE
+```
