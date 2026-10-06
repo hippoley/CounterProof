@@ -5,7 +5,6 @@ from click.testing import CliRunner
 from skill_factory.evolution.cli import cli
 from skill_factory.evolution.reality_contracts import validate_reality_contracts
 
-
 SUITE = Path("examples/claim_matrix/reality-contracts.yml")
 
 
