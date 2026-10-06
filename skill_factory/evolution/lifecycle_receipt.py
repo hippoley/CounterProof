@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from hashlib import sha1
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .effective_lifecycle import EffectiveLifecycleObservation
 
