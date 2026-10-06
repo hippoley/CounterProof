@@ -94,3 +94,13 @@ def test_valid_envelope_does_not_claim_counterproof_candidate_provenance():
     # Commit/PR identity belongs to the consuming review claim, not this envelope.
     assert not hasattr(envelope, "base_sha")
     assert not hasattr(envelope, "head_sha")
+
+
+def test_unknown_fields_are_rejected_instead_of_being_dropped_from_digest_scope():
+    payload = _payload()
+    payload["unexpected"] = {"note": "not part of avera.check/v0"}
+    unsigned = {k: v for k, v in payload.items() if k != "digest"}
+    payload["digest"] = envelope_digest(unsigned)
+
+    with pytest.raises(ValueError, match="invalid AVERA v0 evidence envelope"):
+        load_avera_check_v0(payload)
