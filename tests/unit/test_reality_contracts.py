@@ -126,3 +126,62 @@ contracts:
     assert len(failures) == 2
     assert "source_run.workflow_run" in failures[0].message
     assert "candidates.BASE.commit" in failures[1].message
+
+
+def test_reality_contract_rejects_receipt_blob_drift(tmp_path: Path):
+    matrix_dir = tmp_path / "matrix"
+    receipts_dir = matrix_dir / "receipts"
+    receipts_dir.mkdir(parents=True)
+
+    (receipts_dir / "receipt.json").write_text(
+        """
+{
+  "schema_version": 1,
+  "case": "example/repo#1",
+  "verdict": "WITNESSED_BEHAVIOR",
+  "note": "content changed while verdict stayed the same"
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (matrix_dir / "claims.yml").write_text(
+        """
+schema_version: 1
+title: Receipt blob drift
+claims:
+  - id: behavior
+    claim: behavior
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_applicability: APPLICABLE
+    oracle_alignment: ALIGNED
+    oracle_probe: behavior oracle
+    receipt_file: receipts/receipt.json
+    receipt_expected_verdicts:
+      - WITNESSED_BEHAVIOR
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = matrix_dir / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: frozen-blob
+    manifest: claims.yml
+    expectations:
+      - claim_id: behavior
+        receipt_verdict: WITNESSED_BEHAVIOR
+        receipt_git_blob_sha: 0000000000000000000000000000000000000000
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert "receipt git blob sha" in failures[0].message
