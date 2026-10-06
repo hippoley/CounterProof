@@ -336,11 +336,14 @@ def test_bluefin_example_preserves_green_but_wrong_oracle_boundary():
     assert [item["overall_claim"] for item in payload["claims"]] == [
         "WITNESSED (scope insufficient)",
         "WITNESSED (scope insufficient)",
+        "WITNESSED (oracle precondition missing)",
     ]
     assert [item["required_scope"] for item in payload["claims"]] == [
         "BEHAVIOR",
         "SAFETY",
+        "BEHAVIOR",
     ]
+    assert payload["claims"][2]["oracle_applicability"] == "PRECONDITION_MISSING"
 
 
 def test_missing_oracle_precondition_cannot_contradict_claim():
