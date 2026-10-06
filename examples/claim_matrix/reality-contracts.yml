@@ -1,6 +1,7 @@
 schema_version: 1
 contracts:
   - id: bluefin-4539-oracle-applicability
+    lifecycle: CURRENT
     manifest: bluefin-4539.yml
     expectations:
       - claim_id: keyring-login-safety
@@ -19,6 +20,7 @@ contracts:
         overall_claim: "WITNESSED (oracle precondition missing)"
 
   - id: clash-8017-candidate-bound-behavior
+    lifecycle: CURRENT
     manifest: clash-8017.yml
     expected_base_sha: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
     expected_head_sha: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
@@ -39,6 +41,7 @@ contracts:
           candidates.HEAD.commit: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
 
   - id: scancode-2207-db-backed-behavior
+    lifecycle: CURRENT
     manifest: scancode-2207.yml
     expected_base_sha: 41868632dcaba1ad9b6402d114b169564c08d121
     expected_head_sha: f71185995aee043e2e9acfd31028501f23992aea

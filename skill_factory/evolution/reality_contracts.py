@@ -11,6 +11,7 @@ from skill_factory.evolution.claim_matrix import (
     claim_matrix_to_dict,
     load_claim_matrix,
 )
+from skill_factory.evolution.evidence_lifecycle import EvidenceLifecycle
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,36 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
         manifest_path = (path.parent / contract["manifest"]).resolve()
         manifest = load_claim_matrix(manifest_path)
         payload = claim_matrix_to_dict(manifest)
+
+        lifecycle_raw = contract.get("lifecycle", EvidenceLifecycle.CURRENT.value)
+        try:
+            lifecycle = EvidenceLifecycle(lifecycle_raw)
+        except ValueError:
+            failures.append(
+                ContractFailure(
+                    contract_id,
+                    f"invalid evidence lifecycle {lifecycle_raw!r}",
+                )
+            )
+            lifecycle = None
+
+        if lifecycle is EvidenceLifecycle.STALE and not contract.get("stale_reason"):
+            failures.append(
+                ContractFailure(contract_id, "STALE evidence requires stale_reason")
+            )
+        if lifecycle is EvidenceLifecycle.SUPERSEDED and not contract.get("superseded_by"):
+            failures.append(
+                ContractFailure(contract_id, "SUPERSEDED evidence requires superseded_by")
+            )
+        if lifecycle is EvidenceLifecycle.CONFLICTING:
+            conflicts_with = contract.get("conflicts_with")
+            if not isinstance(conflicts_with, list) or not conflicts_with:
+                failures.append(
+                    ContractFailure(
+                        contract_id,
+                        "CONFLICTING evidence requires non-empty conflicts_with",
+                    )
+                )
 
         expected_base = contract.get("expected_base_sha")
         if expected_base is not None and manifest.base_sha != expected_base:
