@@ -557,3 +557,22 @@ claims:
 
     with pytest.raises(ValueError, match="must stay within the claim-matrix directory"):
         load_claim_matrix(manifest_path)
+
+
+def test_clash_example_binds_behavior_receipt_without_live_base_drift():
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(Path("examples/claim_matrix/clash-8017.yml"))
+    payload = claim_matrix_to_dict(manifest)
+
+    assert manifest.base_sha == "b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b"
+    assert manifest.head_sha == "2cb071998e2f14d76a5fbc3f4add5973e79cf138"
+    assert payload["claims"][0]["receipt_observed_verdict"] == "WITNESSED_BEHAVIOR"
+    assert (
+        payload["claims"][0]["receipt_case"]
+        == "clash-verge-rev/clash-verge-rev#8017"
+    )
+    assert payload["claims"][0]["evidence_scope"] == "BEHAVIOR"
+    assert payload["claims"][0]["oracle_applicability"] == "APPLICABLE"
+    assert payload["claims"][0]["oracle_alignment"] == "ALIGNED"
+    assert payload["claims"][0]["overall_claim"] == "PROVEN"

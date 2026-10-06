@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "case": "clash-verge-rev/clash-verge-rev#8017",
+  "verdict": "WITNESSED_BEHAVIOR",
+  "source_run": {
+    "repository": "hippoley/CounterProof",
+    "workflow_run": 36391467118,
+    "workflow_head_sha": "9c722e40d6cd3e28f1657fdc31ac398fecfb2b1d"
+  },
+  "candidates": {
+    "BASE": {
+      "repository": "https://github.com/clash-verge-rev/clash-verge-rev.git",
+      "commit": "b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b",
+      "no_stage": {
+        "changed": true,
+        "inode_changed": true,
+        "mtime_changed": true,
+        "bytes_changed": false
+      },
+      "staged": {
+        "changed": true,
+        "bytes_changed": true
+      }
+    },
+    "HEAD": {
+      "repository": "https://github.com/sdhfsl/clash-verge-rev.git",
+      "commit": "2cb071998e2f14d76a5fbc3f4add5973e79cf138",
+      "no_stage": {
+        "changed": false,
+        "inode_changed": false,
+        "mtime_changed": false,
+        "bytes_changed": false
+      },
+      "staged": {
+        "changed": true,
+        "bytes_changed": true
+      }
+    }
+  },
+  "behavior_contract": {
+    "no_staged_exit": "unchanged config must not be rewritten",
+    "staged_exit": "real staged changes must still be persisted"
+  },
+  "candidate_identity_boundary": {
+    "replay_base": "b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b",
+    "live_pr_base_observed_later": "dba0f471bf242875e079e8978dc6eac760e06054",
+    "note": "The receipt is bound to the exact candidate replayed in workflow run 36391467118, not the later moving PR base."
+  }
+}
