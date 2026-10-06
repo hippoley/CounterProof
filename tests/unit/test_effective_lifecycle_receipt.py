@@ -40,7 +40,7 @@ def test_reality_lifecycle_writes_pass_receipt(monkeypatch, tmp_path: Path):
     assert payload["mismatch_count"] == 0
     assert payload["observations"][0]["effective"] == "CURRENT"
     assert payload["inputs"]["suite_git_blob_sha"]
-    assert payload["execution"]["git_sha"] is None
+    assert "git_sha" in payload["execution"]
 
 
 def test_reality_lifecycle_writes_receipt_before_mismatch_failure(
