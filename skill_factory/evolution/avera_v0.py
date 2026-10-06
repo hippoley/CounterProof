@@ -5,8 +5,6 @@ mikheil-galoian/avera#12 envelope without claiming that the draft is stable or
 that CounterProof owns AVERA verdict semantics.
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 from typing import Any
@@ -88,7 +86,7 @@ class AveraCheckV0Envelope(_StrictModel):
         return data
 
     @pydantic.model_validator(mode="after")
-    def validate_contract(self) -> AveraCheckV0Envelope:
+    def validate_contract(self) -> "AveraCheckV0Envelope":
         if self.schema_version != AVERA_CHECK_V0:
             raise ValueError(
                 f"unsupported AVERA schema_version: {self.schema_version!r}"
