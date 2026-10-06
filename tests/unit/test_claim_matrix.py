@@ -531,3 +531,29 @@ claims:
 
     with pytest.raises(ValueError, match="non-empty string verdict"):
         load_claim_matrix(manifest_path)
+
+
+def test_claim_matrix_rejects_receipt_path_escape(tmp_path: Path):
+    outside = tmp_path / "outside.json"
+    outside.write_text(json.dumps({"verdict": "WITNESSED"}), encoding="utf-8")
+    matrix_dir = tmp_path / "matrix"
+    matrix_dir.mkdir()
+    manifest_path = matrix_dir / "claims.yml"
+    manifest_path.write_text(
+        """
+schema_version: 1
+title: Receipt path escape
+claims:
+  - id: escaped
+    claim: evidence
+    submitted_test_evidence: UNPROVEN
+    receipt_file: ../outside.json
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    with pytest.raises(ValueError, match="must stay within the claim-matrix directory"):
+        load_claim_matrix(manifest_path)
