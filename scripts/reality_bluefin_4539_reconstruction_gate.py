@@ -35,6 +35,7 @@ def build_receipt(
     candidate: str,
     source_commit: str,
     availability: dict[str, str],
+    base_rebuild_inputs: dict[str, str] | None = None,
 ) -> dict:
     versions = parse_image_versions(source_dir / "image-versions.yml")
     source_match = all(versions.get(k) == v for k, v in EXPECTED.items())
@@ -44,11 +45,18 @@ def build_receipt(
     intervention_match = dropin_exists == expected_dropin
 
     missing = sorted(k for k, status in availability.items() if status != "AVAILABLE")
+    base_rebuild_inputs = base_rebuild_inputs or {}
+    base_rebuild_missing = sorted(
+        k for k, status in base_rebuild_inputs.items() if status != "AVAILABLE"
+    )
+    source_equivalent_base_ready = bool(base_rebuild_inputs) and not base_rebuild_missing
 
     if not source_match or not intervention_match:
         verdict = "INVALID_RECONSTRUCTION_SOURCE_CONTRACT"
     elif not missing:
         verdict = "READY_FOR_SOURCE_PINNED_REBUILD"
+    elif missing == ["silverblue-main"] and source_equivalent_base_ready:
+        verdict = "READY_FOR_SOURCE_EQUIVALENT_BASE_REBUILD"
     elif missing == ["silverblue-main"]:
         verdict = "BLOCKED_MISSING_HISTORICAL_BASE"
     else:
@@ -69,6 +77,17 @@ def build_receipt(
         },
         "dependency_availability": availability,
         "missing_dependencies": missing,
+        "base_rebuild": {
+            "source_repository": "ublue-os/main",
+            "source_commit": "0273c246618919cf48a3c71a67d1c68aed209b24",
+            "historical_output_digest": "sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5",
+            "inputs": base_rebuild_inputs,
+            "missing_inputs": base_rebuild_missing,
+            "ready": source_equivalent_base_ready,
+            "claim_boundary": (
+                "source-equivalent rebuild only; not bit-for-bit original OCI"
+            ),
+        },
         "verdict": verdict,
     }
 
@@ -81,6 +100,9 @@ def main() -> int:
     parser.add_argument("--silverblue-status", required=True)
     parser.add_argument("--common-status", required=True)
     parser.add_argument("--brew-status", required=True)
+    parser.add_argument("--upstream-silverblue-status")
+    parser.add_argument("--akmods-status")
+    parser.add_argument("--akmods-nvidia-status")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -93,6 +115,20 @@ def main() -> int:
             "common": args.common_status,
             "brew": args.brew_status,
         },
+        base_rebuild_inputs={
+            "fedora-silverblue-44": args.upstream_silverblue_status,
+            "akmods-44": args.akmods_status,
+            "akmods-nvidia-open-44": args.akmods_nvidia_status,
+        }
+        if all(
+            value is not None
+            for value in (
+                args.upstream_silverblue_status,
+                args.akmods_status,
+                args.akmods_nvidia_status,
+            )
+        )
+        else None,
     )
     args.output.write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n",
