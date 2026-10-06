@@ -57,3 +57,72 @@ claims:
     assert failures[0].contract_id == "broken"
     assert "base_sha" in failures[0].message
     assert "overall_claim" in failures[1].message
+
+
+def test_reality_contract_rejects_receipt_identity_drift(tmp_path: Path):
+    matrix_dir = tmp_path / "matrix"
+    receipts_dir = matrix_dir / "receipts"
+    receipts_dir.mkdir(parents=True)
+
+    (receipts_dir / "receipt.json").write_text(
+        """
+{
+  "schema_version": 1,
+  "case": "example/repo#1",
+  "verdict": "WITNESSED_BEHAVIOR",
+  "source_run": {
+    "workflow_run": 999
+  },
+  "candidates": {
+    "BASE": {
+      "commit": "different-base"
+    }
+  }
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (matrix_dir / "claims.yml").write_text(
+        """
+schema_version: 1
+title: Receipt identity drift
+claims:
+  - id: behavior
+    claim: behavior
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_applicability: APPLICABLE
+    oracle_alignment: ALIGNED
+    oracle_probe: behavior oracle
+    receipt_file: receipts/receipt.json
+    receipt_expected_verdicts:
+      - WITNESSED_BEHAVIOR
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = matrix_dir / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: frozen-evidence
+    manifest: claims.yml
+    expectations:
+      - claim_id: behavior
+        receipt_verdict: WITNESSED_BEHAVIOR
+        receipt_expectations:
+          source_run.workflow_run: 123
+          candidates.BASE.commit: expected-base
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 2
+    assert "source_run.workflow_run" in failures[0].message
+    assert "candidates.BASE.commit" in failures[1].message
