@@ -127,6 +127,15 @@ jobs:
           attestation_status = os.environ["ATTESTATION_STATUS"]
           package_status = os.environ["PACKAGE_STATUS"]
           producer_sha = os.environ["PRODUCER_SHA"]
+          attestation_bundle_count = (
+              len(attestation.get("attestations", []))
+              if isinstance(attestation, dict)
+              else 0
+          )
+          attestation_evidence_ok = (
+              attestation_status == "AVAILABLE"
+              and attestation_bundle_count > 0
+          )
           producer_identity_ok = (
               run.get("head_sha") == producer_sha
               and run.get("conclusion") == "success"
@@ -134,7 +143,7 @@ jobs:
 
           if not producer_identity_ok:
               recovery = "INVALID_PRODUCER_PROVENANCE"
-          elif attestation_status == "AVAILABLE":
+          elif attestation_evidence_ok:
               recovery = "ATTESTATION_RECOVERED"
           elif package_status == "METADATA_FOUND":
               recovery = "PACKAGE_METADATA_RECOVERED"
@@ -149,9 +158,8 @@ jobs:
               "attestation": {
                   "status": attestation_status,
                   "http_status": os.environ["ATTESTATION_HTTP"],
-                  "bundle_count": len(attestation.get("attestations", []))
-                  if isinstance(attestation, dict)
-                  else 0,
+                  "bundle_count": attestation_bundle_count,
+                  "evidence_valid": attestation_evidence_ok,
               },
               "package_metadata": {"status": package_status},
               "producer": {
