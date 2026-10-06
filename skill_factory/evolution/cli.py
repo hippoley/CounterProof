@@ -25,6 +25,7 @@ from .discriminate import (
 )
 from .doctor import doctor_json, render_doctor, run_doctor
 from .evidence_freshness import FreshnessStatus, resolve_contract_freshness
+from .evidence_supersession import load_evidence_graph
 from .integrity import (
     inspect_proof_integrity,
     render_integrity_markdown,
@@ -101,6 +102,29 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("evidence-graph")
+@click.argument("graph_file", type=click.Path(exists=True, dir_okay=False))
+def evidence_graph(graph_file: str) -> None:
+    """Resolve supersession/conflict relationships between evidence records."""
+    try:
+        graph = load_evidence_graph(Path(graph_file))
+    except (OSError, ValueError, TypeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    for relation in graph.relations:
+        click.echo(
+            f"{relation.old_id} -> {relation.new_id}: "
+            f"{relation.relation.value}"
+        )
+        click.echo(f"  reason: {relation.reason}")
+
+    click.echo("Lifecycle suggestions:")
+    for record in graph.records:
+        click.echo(
+            f"  {record.id}: {graph.lifecycle_suggestions[record.id].value}"
+        )
 
 
 @cli.command("reality-freshness")
