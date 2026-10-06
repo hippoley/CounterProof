@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 import yaml
 
-from .evidence_lifecycle import EvidenceLifecycle
+from .evidence_lifecycle import EvidenceLifecycle, merge_lifecycle_signals
 
 _GITHUB_PR_RE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<number>\d+)$"
@@ -80,9 +80,7 @@ def _suggest_lifecycle(
 ) -> EvidenceLifecycle:
     if freshness is not FreshnessStatus.DRIFTED:
         return declared
-    if declared is EvidenceLifecycle.CURRENT:
-        return EvidenceLifecycle.STALE
-    return declared
+    return merge_lifecycle_signals(declared, EvidenceLifecycle.STALE)
 
 
 def resolve_contract_freshness(
