@@ -24,6 +24,7 @@ from .discriminate import (
     run_discrimination_manifest,
 )
 from .doctor import doctor_json, render_doctor, run_doctor
+from .evidence_freshness import FreshnessStatus, resolve_contract_freshness
 from .integrity import (
     inspect_proof_integrity,
     render_integrity_markdown,
@@ -100,6 +101,36 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("reality-freshness")
+@click.argument("suite_file", type=click.Path(exists=True, dir_okay=False))
+def reality_freshness(suite_file: str) -> None:
+    """Compare frozen Reality candidates with live GitHub PR candidates."""
+    try:
+        observations = resolve_contract_freshness(Path(suite_file))
+    except (OSError, ValueError, TypeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    mismatches = 0
+    for observation in observations:
+        click.echo(
+            f"{observation.contract_id}: "
+            f"{observation.freshness.value} "
+            f"declared={observation.declared_lifecycle.value} "
+            f"suggested={observation.suggested_lifecycle.value}"
+        )
+        if observation.reason:
+            click.echo(f"  reason: {observation.reason}")
+        if observation.freshness is FreshnessStatus.UNRESOLVED:
+            continue
+        if observation.declared_lifecycle is not observation.suggested_lifecycle:
+            mismatches += 1
+
+    if mismatches:
+        raise click.ClickException(
+            f"{mismatches} evidence lifecycle update(s) required"
+        )
 
 
 @cli.command("reality-contracts")
