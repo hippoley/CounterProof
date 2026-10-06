@@ -22,6 +22,15 @@ def _claims_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {claim["id"]: claim for claim in payload["claims"]}
 
 
+def _get_path(payload: Any, path: str) -> Any:
+    current = payload
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            raise KeyError(path)
+        current = current[part]
+    return current
+
+
 def validate_reality_contracts(path: Path) -> list[ContractFailure]:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or raw.get("schema_version") != 1:
@@ -71,7 +80,58 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
                 "oracle_applicability": "oracle_applicability",
                 "oracle_alignment": "oracle_alignment",
                 "receipt_verdict": "receipt_observed_verdict",
+                "receipt_case": "receipt_case",
             }
+            receipt_expectations = expected.get("receipt_expectations", {})
+            if receipt_expectations:
+                receipt_file = claim.get("receipt_file")
+                if not receipt_file:
+                    failures.append(
+                        ContractFailure(
+                            contract_id,
+                            f"claim {claim_id!r} has receipt expectations but no receipt_file",
+                        )
+                    )
+                    continue
+                receipt_path = (manifest_path.parent / receipt_file).resolve()
+                try:
+                    receipt_path.relative_to(manifest_path.parent.resolve())
+                    receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError, yaml.YAMLError) as exc:
+                    failures.append(
+                        ContractFailure(
+                            contract_id,
+                            f"claim {claim_id!r} receipt could not be inspected: {exc}",
+                        )
+                    )
+                    continue
+
+                for receipt_path_key, wanted in receipt_expectations.items():
+                    try:
+                        observed = _get_path(receipt, receipt_path_key)
+                    except KeyError:
+                        failures.append(
+                            ContractFailure(
+                                contract_id,
+                                (
+                                    f"claim {claim_id!r} receipt path "
+                                    f"{receipt_path_key!r} is missing"
+                                ),
+                            )
+                        )
+                        continue
+                    if observed != wanted:
+                        failures.append(
+                            ContractFailure(
+                                contract_id,
+                                (
+                                    f"claim {claim_id!r} receipt path "
+                                    f"{receipt_path_key!r} expected {wanted!r}, "
+                                    f"observed {observed!r}"
+                                ),
+                            )
+                        )
+
             for expected_key, payload_key in field_map.items():
                 if expected_key not in expected:
                     continue
