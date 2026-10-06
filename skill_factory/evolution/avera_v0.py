@@ -7,6 +7,7 @@ that CounterProof owns AVERA verdict semantics.
 
 import hashlib
 import json
+
 import pydantic
 
 
