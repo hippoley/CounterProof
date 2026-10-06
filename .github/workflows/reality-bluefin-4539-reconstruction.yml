@@ -60,12 +60,15 @@ jobs:
           probe silverblue-main "ghcr.io/ublue-os/silverblue-main@sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5"
           probe common "ghcr.io/projectbluefin/common@sha256:1e7f8c88b8efb67b3fc42ef29bf0d927e9b8366c26dcf71893169979b29a4418"
           probe brew "ghcr.io/ublue-os/brew@sha256:2369e2dc70dd8b12828604d22721d1812cd87611661d789e1a0ee2cb123cbe7e"
+          probe upstream-silverblue "quay.io/fedora-ostree-desktops/silverblue@sha256:0d83cd369b34c567bb0a30db092be0a37c9f9f557a9de472a394a548fb9205a1"
+          probe akmods "ghcr.io/ublue-os/akmods@sha256:ce3f65fb814a734db0b052c5fc2dae060c8f5b5b9a14f08b26c70a029b1e698b"
+          probe akmods-nvidia "ghcr.io/ublue-os/akmods-nvidia-open@sha256:89d6761fbed673dffde6909fd0703e58b52b6c3943c1b0b5ebf2c8f4f465293c"
 
       - name: Build reconstruction gate receipt
         shell: bash
         run: |
           mkdir -p receipts
-          python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs['silverblue-main'] }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --output "receipts/${{ matrix.candidate }}.json"
+          python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs['silverblue-main'] }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --upstream-silverblue-status "${{ steps.deps.outputs['upstream-silverblue'] }}"             --akmods-status "${{ steps.deps.outputs.akmods }}"             --akmods-nvidia-status "${{ steps.deps.outputs['akmods-nvidia'] }}"             --output "receipts/${{ matrix.candidate }}.json"
 
       - name: Publish reconstruction gate summary
         shell: bash
@@ -80,6 +83,8 @@ jobs:
           print(f"- source commit: `{r['source_commit']}`")
           print(f"- source contract: `{'MATCH' if r['source_contract']['dependencies_match'] and r['source_contract']['intervention_match'] else 'MISMATCH'}`")
           print(f"- missing dependencies: `{', '.join(r['missing_dependencies']) or 'none'}`")
+          print(f"- source-equivalent base ready: `{r['base_rebuild']['ready']}`")
+          print(f"- base-rebuild missing inputs: `{', '.join(r['base_rebuild']['missing_inputs']) or 'none'}`")
           print(f"- verdict: **{r['verdict']}**")
           PY
 
