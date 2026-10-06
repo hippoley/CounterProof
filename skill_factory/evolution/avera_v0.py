@@ -11,13 +11,13 @@ import hashlib
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
+import pydantic
 
 
 AVERA_CHECK_V0 = "avera.check/v0"
 
 
-class _StrictModel(BaseModel):
+class _StrictModel(pydantic.BaseModel):
     """Reject fields outside the experimental v0 envelope contract."""
 
     model_config = {"extra": "forbid"}
@@ -44,18 +44,18 @@ def envelope_digest(payload_without_digest: dict[str, Any]) -> str:
 
 
 class AveraTool(_StrictModel):
-    name: str = Field(min_length=1)
-    version: str = Field(min_length=1)
+    name: str = pydantic.Field(min_length=1)
+    version: str = pydantic.Field(min_length=1)
 
 
 class AveraInputs(_StrictModel):
-    baseline_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    current_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_sha256: str = pydantic.Field(pattern=r"^[0-9a-f]{64}$")
+    current_sha256: str = pydantic.Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class AveraResult(_StrictModel):
-    verdict: str = Field(min_length=1)
-    gate_status: str = Field(min_length=1)
+    verdict: str = pydantic.Field(min_length=1)
+    gate_status: str = pydantic.Field(min_length=1)
     introduced_failures: list[str]
     risk: str | None = None
     confidence: str | None = None
@@ -65,12 +65,12 @@ class AveraResult(_StrictModel):
 class AveraCheckV0Envelope(_StrictModel):
     schema_version: str
     tool: AveraTool
-    policy: str = Field(min_length=1)
+    policy: str = pydantic.Field(min_length=1)
     inputs: AveraInputs
     result: AveraResult
-    digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    digest: str = pydantic.Field(pattern=r"^[0-9a-f]{64}$")
 
-    @model_validator(mode="before")
+    @pydantic.model_validator(mode="before")
     @classmethod
     def validate_digest_on_raw_payload(cls, data: Any) -> Any:
         """Verify the digest before Pydantic can coerce or normalize values."""
@@ -108,5 +108,5 @@ def load_avera_check_v0(payload: dict[str, Any]) -> AveraCheckV0Envelope:
     """
     try:
         return AveraCheckV0Envelope.model_validate(payload)
-    except ValidationError as exc:
+    except pydantic.ValidationError as exc:
         raise ValueError(f"invalid AVERA v0 evidence envelope: {exc}") from exc
