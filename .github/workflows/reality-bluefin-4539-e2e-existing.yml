@@ -21,7 +21,7 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: a9dfabfbd0dd0a2b00c610d15ed3d7650b0ec237
+      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
     secrets: inherit
 
   e2e-bad:
@@ -34,7 +34,7 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: a9dfabfbd0dd0a2b00c610d15ed3d7650b0ec237
+      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
     secrets: inherit
 
   e2e-revert:
@@ -47,5 +47,5 @@ jobs:
       suites: common
       compose_image: true
       test_repository: hippoley/CounterProof
-      test_ref: a9dfabfbd0dd0a2b00c610d15ed3d7650b0ec237
+      test_ref: 8b206d4f461c21e85adf555145eb33ce6928edfe
     secrets: inherit
