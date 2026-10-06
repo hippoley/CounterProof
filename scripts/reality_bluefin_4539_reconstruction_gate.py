@@ -51,17 +51,33 @@ def build_receipt(
     expected_dropin = candidate == "BAD"
     intervention_match = dropin_exists == expected_dropin
 
-    missing = sorted(k for k, status in availability.items() if status != "AVAILABLE")
+    missing = sorted(k for k, status in availability.items() if status == "UNAVAILABLE")
+    unresolved = sorted(
+        k
+        for k, status in availability.items()
+        if status not in {"AVAILABLE", "UNAVAILABLE"}
+    )
     base_rebuild_inputs = base_rebuild_inputs or {}
     base_rebuild_missing = sorted(
-        k for k, status in base_rebuild_inputs.items() if status != "AVAILABLE"
+        k for k, status in base_rebuild_inputs.items() if status == "UNAVAILABLE"
     )
-    source_equivalent_base_ready = bool(base_rebuild_inputs) and not base_rebuild_missing
+    base_rebuild_unresolved = sorted(
+        k
+        for k, status in base_rebuild_inputs.items()
+        if status not in {"AVAILABLE", "UNAVAILABLE"}
+    )
+    source_equivalent_base_ready = (
+        bool(base_rebuild_inputs)
+        and not base_rebuild_missing
+        and not base_rebuild_unresolved
+    )
 
     if not source_commit_match:
         verdict = "INVALID_RECONSTRUCTION_SOURCE_IDENTITY"
     elif not source_match or not intervention_match:
         verdict = "INVALID_RECONSTRUCTION_SOURCE_CONTRACT"
+    elif unresolved or base_rebuild_unresolved:
+        verdict = "INCONCLUSIVE_DEPENDENCY_AVAILABILITY"
     elif not missing:
         verdict = "READY_FOR_SOURCE_PINNED_REBUILD"
     elif missing == ["silverblue-main"] and source_equivalent_base_ready:
@@ -99,6 +115,7 @@ def build_receipt(
         },
         "dependency_availability": availability,
         "missing_dependencies": missing,
+        "unresolved_dependencies": unresolved,
         "reconstruction_level": recovery_level,
         "recovery_ladder": {
             "original_historical_base": (
@@ -117,6 +134,7 @@ def build_receipt(
             "historical_output_digest": "sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5",
             "inputs": base_rebuild_inputs,
             "missing_inputs": base_rebuild_missing,
+            "unresolved_inputs": base_rebuild_unresolved,
             "ready": source_equivalent_base_ready,
             "claim_boundary": (
                 "source-equivalent rebuild only; not bit-for-bit original OCI"
