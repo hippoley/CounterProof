@@ -424,6 +424,10 @@ jobs:
             skill-factory validate "$skill_dir"
           done
 
+      - name: Validate cross-domain Reality Contracts
+        run: |
+          counterproof reality-contracts examples/claim_matrix/reality-contracts.yml
+
 
   frontend-smoke:
     runs-on: ubuntu-latest
