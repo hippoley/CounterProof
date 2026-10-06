@@ -344,6 +344,8 @@ def test_bluefin_example_preserves_green_but_wrong_oracle_boundary():
         "BEHAVIOR",
     ]
     assert payload["claims"][2]["oracle_applicability"] == "PRECONDITION_MISSING"
+    assert payload["claims"][1]["receipt_observed_verdict"] == "WITNESSED_CONTROLLED_CAUSAL"
+    assert payload["claims"][1]["receipt_case"] == "ublue-os/bluefin#4539"
 
 
 def test_missing_oracle_precondition_cannot_contradict_claim():
