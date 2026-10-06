@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+from pathlib import Path
 
 from behave import step
 
@@ -45,4 +48,16 @@ def capture_counterproof_keyring_causal_diagnostics(context):
 
     # Deliberately print one stable JSON record: this is diagnostic evidence,
     # not an acceptance verdict. The outer replay compares it across candidates.
-    print("COUNTERPROOF_KEYRING_DIAGNOSTIC=" + json.dumps(snapshot, sort_keys=True))
+    payload = {
+        "image": os.environ.get("IMAGE", ""),
+        "snapshot": snapshot,
+    }
+    encoded = json.dumps(payload, sort_keys=True)
+    print("COUNTERPROOF_KEYRING_DIAGNOSTIC=" + encoded)
+
+    # Persist the same diagnostic into the testsuite result volume so the
+    # parent workflow can build a machine-readable three-candidate receipt.
+    slug = re.sub(r"[^a-zA-Z0-9_.-]+", "-", payload["image"]).strip("-") or "unknown"
+    out = Path("/tmp/results") / f"counterproof-keyring-diagnostic-{slug}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(encoded + "\n", encoding="utf-8")
