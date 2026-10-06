@@ -1,0 +1,34 @@
+{
+  "candidates": {
+    "BAD": {
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:bad-37412091382",
+      "keyring_pid_nonzero": true,
+      "keyring_unit_active": true,
+      "login_alias": "(objectpath '/',)",
+      "not_in_initialization": true,
+      "portal_wants_keyring": true
+    },
+    "CONTROL": {
+      "image": "ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101",
+      "keyring_pid_nonzero": false,
+      "keyring_unit_active": false,
+      "login_alias": "(objectpath '/',)",
+      "not_in_initialization": false,
+      "portal_wants_keyring": false
+    },
+    "REVERT": {
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:revert-37412091382",
+      "keyring_pid_nonzero": false,
+      "keyring_unit_active": false,
+      "login_alias": "(objectpath '/',)",
+      "not_in_initialization": false,
+      "portal_wants_keyring": false
+    }
+  },
+  "case": "ublue-os/bluefin#4539",
+  "experiment": "CONTROL -> + historical drop-in -> BAD -> remove drop-in -> REVERT",
+  "historical_image_status": "ORIGINAL_REGISTRY_ARTIFACTS_UNAVAILABLE",
+  "oracle_revision": "1c0a23317d420b77396770ae2a8fdf71804cde4e",
+  "schema_version": 1,
+  "verdict": "WITNESSED_CONTROLLED_CAUSAL"
+}
