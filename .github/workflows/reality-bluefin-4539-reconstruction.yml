@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p receipts
-          python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs.silverblue-main }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --output "receipts/${{ matrix.candidate }}.json"
+          python3 scripts/reality_bluefin_4539_reconstruction_gate.py upstream-bluefin             --candidate "${{ matrix.candidate }}"             --source-commit "${{ matrix.source_commit }}"             --silverblue-status "${{ steps.deps.outputs['silverblue-main'] }}"             --common-status "${{ steps.deps.outputs.common }}"             --brew-status "${{ steps.deps.outputs.brew }}"             --output "receipts/${{ matrix.candidate }}.json"
 
       - name: Publish reconstruction gate summary
         shell: bash
