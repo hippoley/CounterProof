@@ -76,6 +76,23 @@ class AveraCheckV0Envelope(_StrictModel):
     result: AveraResult
     digest: str = Field(pattern=r"^[0-9a-f]{64}$")
 
+    @model_validator(mode="before")
+    @classmethod
+    def validate_digest_on_raw_payload(cls, data: Any) -> Any:
+        """Verify the digest before Pydantic can coerce or normalize values."""
+        if not isinstance(data, dict):
+            return data
+
+        expected = data.get("digest")
+        if isinstance(expected, str):
+            unsigned = {key: value for key, value in data.items() if key != "digest"}
+            actual = envelope_digest(unsigned)
+            if actual != expected:
+                raise ValueError(
+                    f"AVERA envelope digest mismatch: expected {expected}, got {actual}"
+                )
+        return data
+
     @model_validator(mode="after")
     def validate_contract(self) -> AveraCheckV0Envelope:
         if self.schema_version != AVERA_CHECK_V0:
@@ -85,13 +102,6 @@ class AveraCheckV0Envelope(_StrictModel):
         if self.tool.name != "avera":
             raise ValueError(f"unexpected tool name: {self.tool.name!r}")
 
-        payload = self.model_dump(mode="json")
-        expected = payload.pop("digest")
-        actual = envelope_digest(payload)
-        if actual != expected:
-            raise ValueError(
-                f"AVERA envelope digest mismatch: expected {expected}, got {actual}"
-            )
         return self
 
 
