@@ -143,3 +143,78 @@ historical Silverblue base           UNAVAILABLE
 source-pinned historical rebuild     BLOCKED_MISSING_HISTORICAL_BASE
 bit-for-bit original replay          INCOMPLETE
 ```
+
+
+## Provenance recovery after registry GC
+
+Further recovery work traced the deleted historical base
+`ghcr.io/ublue-os/silverblue-main@sha256:2ade0f...` to the Bluefin Renovate
+update in PR #4673. The digest was observed by Bluefin on 2026-05-23 shortly
+after a successful `ublue-os/main` latest build.
+
+High-confidence producer provenance:
+
+```text
+ublue-os/main source
+0273c246618919cf48a3c71a67d1c68aed209b24
+
+workflow run
+26322931886
+```
+
+That source state pins these upstream build inputs:
+
+```text
+Fedora Silverblue 44
+sha256:0d83cd369b34c567bb0a30db092be0a37c9f9f557a9de472a394a548fb9205a1
+
+akmods-44
+sha256:ce3f65fb814a734db0b052c5fc2dae060c8f5b5b9a14f08b26c70a029b1e698b
+
+akmods-nvidia-open-44
+sha256:89d6761fbed673dffde6909fd0703e58b52b6c3943c1b0b5ebf2c8f4f465293c
+```
+
+Current executable probes show that all three of those immutable upstream inputs
+are also unavailable. Therefore the missing historical base cannot currently be
+recreated from its original immutable dependency graph.
+
+GitHub Artifact Attestation recovery was also probed for subject
+`sha256:2ade0f...`. The repository attestation endpoint returned HTTP 404, and
+the GHCR package-version scan did not recover a matching deleted subject.
+
+The strongest remaining producer evidence is therefore:
+
+```text
+BUILD_PROVENANCE_ONLY
+```
+
+rather than `ATTESTATION_RECOVERED` or
+`SOURCE_EQUIVALENT_BASE_READY`.
+
+This does not weaken the already executed controlled causal witness. It limits
+only the stronger historical-image reconstruction claim.
+
+### Recovery ladder
+
+CounterProof now treats historical recovery as an explicit ladder:
+
+```text
+ORIGINAL_HISTORICAL_BASE_AVAILABLE
+  exact historical base OCI still retrievable
+
+SOURCE_EQUIVALENT_BASE_READY
+  original output is gone, but source revision and every immutable upstream
+  input needed to rebuild it remain retrievable
+
+PROVENANCE_ONLY
+  source identity and build provenance are known, but one or more immutable
+  build inputs are gone
+
+INVALID
+  candidate identity or source/intervention contract does not match
+```
+
+A candidate may only move upward when the stronger evidence actually becomes
+available. Source availability alone is not sufficient to claim a source-
+equivalent historical rebuild.
