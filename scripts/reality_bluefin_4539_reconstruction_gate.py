@@ -71,6 +71,15 @@ def build_receipt(
     else:
         verdict = "BLOCKED_MISSING_HISTORICAL_DEPENDENCIES"
 
+    if availability.get("silverblue-main") == "AVAILABLE":
+        recovery_level = "ORIGINAL_HISTORICAL_BASE_AVAILABLE"
+    elif source_equivalent_base_ready:
+        recovery_level = "SOURCE_EQUIVALENT_BASE_READY"
+    elif source_commit_match and source_match and intervention_match:
+        recovery_level = "PROVENANCE_ONLY"
+    else:
+        recovery_level = "INVALID"
+
     return {
         "schema_version": 1,
         "case": "ublue-os/bluefin#4539",
