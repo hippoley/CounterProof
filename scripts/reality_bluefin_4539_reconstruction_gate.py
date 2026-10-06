@@ -149,6 +149,17 @@ def build_receipt(
     }
 
 
+def exit_code_for_verdict(verdict: str) -> int:
+    if verdict in {
+        "INVALID_RECONSTRUCTION_SOURCE_IDENTITY",
+        "INVALID_RECONSTRUCTION_SOURCE_CONTRACT",
+    }:
+        return 1
+    if verdict == "INCONCLUSIVE_DEPENDENCY_AVAILABILITY":
+        return 2
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("source_dir", type=Path)
@@ -193,14 +204,7 @@ def main() -> int:
     )
     print(json.dumps(receipt, indent=2, sort_keys=True))
 
-    if receipt["verdict"] in {
-        "INVALID_RECONSTRUCTION_SOURCE_IDENTITY",
-        "INVALID_RECONSTRUCTION_SOURCE_CONTRACT",
-    }:
-        return 1
-    if receipt["verdict"] == "INCONCLUSIVE_DEPENDENCY_AVAILABILITY":
-        return 2
-    return 0
+    return exit_code_for_verdict(receipt["verdict"])
 
 
 if __name__ == "__main__":
