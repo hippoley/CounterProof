@@ -78,3 +78,32 @@ def test_reconstruction_refuses_wrong_intervention_state(tmp_path: Path):
     )
 
     assert receipt["verdict"] == "INVALID_RECONSTRUCTION_SOURCE_CONTRACT"
+
+
+def test_source_equivalent_base_can_unblock_historical_reconstruction(tmp_path: Path):
+    _write_source(tmp_path, with_dropin=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        candidate="BAD",
+        source_commit="60e72be",
+        availability={
+            "silverblue-main": "UNAVAILABLE",
+            "common": "AVAILABLE",
+            "brew": "AVAILABLE",
+        },
+        base_rebuild_inputs={
+            "fedora-silverblue-44": "AVAILABLE",
+            "akmods-44": "AVAILABLE",
+            "akmods-nvidia-open-44": "AVAILABLE",
+        },
+    )
+
+    assert receipt["base_rebuild"]["ready"] is True
+    assert (
+        receipt["verdict"]
+        == "READY_FOR_SOURCE_EQUIVALENT_BASE_REBUILD"
+    )
+    assert receipt["base_rebuild"]["claim_boundary"].startswith(
+        "source-equivalent rebuild only"
+    )
