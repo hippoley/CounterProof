@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "reality/bluefin-4539/**"
+      - "reality/bluefin-4539/candidates.yml"
       - "scripts/reality_bluefin_4539_reconstruction_gate.py"
       - "tests/unit/test_bluefin_4539_reconstruction_gate.py"
       - ".github/workflows/reality-bluefin-4539-reconstruction.yml"
