@@ -200,3 +200,78 @@ jobs:
           echo "expected_version: ${{ matrix.expected_version }}" >>"$GITHUB_STEP_SUMMARY"
           echo "version_match: ${{ steps.inspect.outputs.version_match }}" >>"$GITHUB_STEP_SUMMARY"
           if [[ -f labels.txt ]]; then cat labels.txt >>"$GITHUB_STEP_SUMMARY"; fi
+
+  official-release-tags:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: BASE_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260519
+            expected_revision: f2a60b9b6e62880b38b70595f035e7a6ac571bc5
+          - id: BAD_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260526
+            expected_revision: 60e72be24878ce01b4849cfb4b8efc18932a133e
+          - id: REVERT_RELEASE
+            ref: ghcr.io/ublue-os/bluefin:stable-20260527
+            expected_revision: 42c737ee6d232f7351dc3af08a9bd1dbea57dd47
+    steps:
+      - name: Inspect official historical release tag
+        id: inspect
+        shell: bash
+        run: |
+          set +e
+          docker buildx imagetools inspect "${{ matrix.ref }}" >inspect.txt 2>&1
+          rc=$?
+          if [[ $rc -ne 0 ]]; then
+            echo "status=UNAVAILABLE" >>"$GITHUB_OUTPUT"
+            cat inspect.txt
+            exit 0
+          fi
+
+          echo "status=AVAILABLE" >>"$GITHUB_OUTPUT"
+          digest=$(awk '/^Digest:/ {print $2; exit}' inspect.txt)
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+          cat inspect.txt
+
+          set -e
+          docker pull --platform linux/amd64 "${{ matrix.ref }}"
+          revision=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+          version=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')
+          source=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')
+          created=$(docker image inspect "${{ matrix.ref }}" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')
+
+          {
+            echo "revision=$revision"
+            echo "version=$version"
+            echo "source=$source"
+            echo "created=$created"
+          } | tee labels.txt
+
+          if [[ "$revision" == "${{ matrix.expected_revision }}" ]]; then
+            echo "revision_match=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "revision_match=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish official release provenance
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.id }}"
+            echo
+            echo "- ref: ${{ matrix.ref }}"
+            echo "- registry: **${{ steps.inspect.outputs.status }}**"
+            echo "- digest: \`${{ steps.inspect.outputs.digest }}\`"
+            echo "- expected revision: \`${{ matrix.expected_revision }}\`"
+            echo "- revision label matches: \`${{ steps.inspect.outputs.revision_match }}\`"
+            if [[ -f labels.txt ]]; then
+              echo
+              echo 'OCI labels:'
+              echo '~~~text'
+              cat labels.txt
+              echo '~~~'
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"
