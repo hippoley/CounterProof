@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from .claim_matrix import EvidenceScope, OverallClaim, load_claim_matrix
-from .evidence_lifecycle import EvidenceLifecycle
+from .evidence_lifecycle import EvidenceLifecycle, merge_lifecycle_signals
 
 
 class EvidencePolarity(str, Enum):
@@ -193,12 +193,19 @@ def build_evidence_graph(records: list[EvidenceRecord]) -> EvidenceGraph:
                 result = resolve_evidence_relation(old, new)
                 relations.append(result)
                 if result.relation is EvidenceRelation.SUPERSEDES:
-                    lifecycle[old.id] = EvidenceLifecycle.SUPERSEDED
+                    lifecycle[old.id] = merge_lifecycle_signals(
+                        lifecycle[old.id],
+                        EvidenceLifecycle.SUPERSEDED,
+                    )
                 elif result.relation is EvidenceRelation.CONFLICTS:
-                    if lifecycle[old.id] is not EvidenceLifecycle.SUPERSEDED:
-                        lifecycle[old.id] = EvidenceLifecycle.CONFLICTING
-                    if lifecycle[new.id] is not EvidenceLifecycle.SUPERSEDED:
-                        lifecycle[new.id] = EvidenceLifecycle.CONFLICTING
+                    lifecycle[old.id] = merge_lifecycle_signals(
+                        lifecycle[old.id],
+                        EvidenceLifecycle.CONFLICTING,
+                    )
+                    lifecycle[new.id] = merge_lifecycle_signals(
+                        lifecycle[new.id],
+                        EvidenceLifecycle.CONFLICTING,
+                    )
 
     return EvidenceGraph(
         records=tuple(records),
