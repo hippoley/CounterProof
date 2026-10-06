@@ -3,8 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 from .claim_matrix import EvidenceScope, OverallClaim
+from .evidence_lifecycle import EvidenceLifecycle
 
 
 class EvidencePolarity(str, Enum):
@@ -103,3 +108,70 @@ def resolve_evidence_relation(
             "newer evidence has the same polarity but weaker evidence scope"
         ),
     )
+
+
+@dataclass(frozen=True)
+class EvidenceGraph:
+    records: tuple[EvidenceRecord, ...]
+    relations: tuple[EvidenceRelationResult, ...]
+    lifecycle_suggestions: dict[str, EvidenceLifecycle]
+
+
+def evidence_record_from_mapping(raw: dict[str, Any]) -> EvidenceRecord:
+    try:
+        observed_at = datetime.fromisoformat(str(raw["observed_at"]).replace("Z", "+00:00"))
+        if observed_at.tzinfo is None:
+            raise ValueError("observed_at must include a timezone")
+        return EvidenceRecord(
+            id=str(raw["id"]),
+            claim_key=str(raw["claim_key"]),
+            observed_at=observed_at,
+            scope=EvidenceScope(raw["scope"]),
+            overall_claim=OverallClaim(raw["overall_claim"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"invalid evidence record: {exc}") from exc
+
+
+def build_evidence_graph(records: list[EvidenceRecord]) -> EvidenceGraph:
+    ids = [record.id for record in records]
+    if len(ids) != len(set(ids)):
+        raise ValueError("evidence record ids must be unique")
+
+    relations: list[EvidenceRelationResult] = []
+    lifecycle = {record.id: EvidenceLifecycle.CURRENT for record in records}
+
+    by_claim: dict[str, list[EvidenceRecord]] = {}
+    for record in records:
+        by_claim.setdefault(record.claim_key, []).append(record)
+
+    for claim_records in by_claim.values():
+        ordered = sorted(claim_records, key=lambda record: record.observed_at)
+        for old_index, old in enumerate(ordered):
+            for new in ordered[old_index + 1 :]:
+                result = resolve_evidence_relation(old, new)
+                relations.append(result)
+                if result.relation is EvidenceRelation.SUPERSEDES:
+                    lifecycle[old.id] = EvidenceLifecycle.SUPERSEDED
+                elif result.relation is EvidenceRelation.CONFLICTS:
+                    if lifecycle[old.id] is not EvidenceLifecycle.SUPERSEDED:
+                        lifecycle[old.id] = EvidenceLifecycle.CONFLICTING
+                    if lifecycle[new.id] is not EvidenceLifecycle.SUPERSEDED:
+                        lifecycle[new.id] = EvidenceLifecycle.CONFLICTING
+
+    return EvidenceGraph(
+        records=tuple(records),
+        relations=tuple(relations),
+        lifecycle_suggestions=lifecycle,
+    )
+
+
+def load_evidence_graph(path: Path) -> EvidenceGraph:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
+        raise ValueError("invalid evidence graph manifest")
+    evidence = raw.get("evidence")
+    if not isinstance(evidence, list):
+        raise TypeError("evidence graph requires an evidence list")
+    records = [evidence_record_from_mapping(item) for item in evidence]
+    return build_evidence_graph(records)
