@@ -1,0 +1,25 @@
+schema_version: 1
+title: "Behavior Receipt Matrix — aboutcode-org/scancode.io #2207"
+source_pr: "https://github.com/aboutcode-org/scancode.io/pull/2207"
+base_sha: "41868632dcaba1ad9b6402d114b169564c08d121"
+head_sha: "f71185995aee043e2e9acfd31028501f23992aea"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/36373412716"
+claims:
+  - id: run-command-input-location-optional
+    claim: "The ScanPipe run management command can be invoked without input_location"
+    source_url: "https://github.com/aboutcode-org/scancode.io/pull/2207"
+    tests:
+      - "scanpipe.tests.test_commands.ScanPipeManagementCommandTest.test_scanpipe_management_command_run_without_input_location"
+    base_result: "FAIL: CommandError requires input_location"
+    head_result: "PASS"
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_applicability: APPLICABLE
+    oracle_alignment: ALIGNED
+    oracle_probe: "Run the exact submitted Django management-command test in ScanCode.io's PostgreSQL test environment."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36373412716"
+    receipt_file: "receipts/scancode-2207-behavior.json"
+    receipt_expected_verdicts:
+      - WITNESSED_BEHAVIOR_DELTA
+    note: "BASE fails at the CLI parser because input_location is still required; HEAD passes the exact same submitted behavior test."
