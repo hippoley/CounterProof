@@ -69,7 +69,10 @@ def build_receipt(
 
     missing = {role: image for role, image in roles.items() if image not in by_image}
     if missing:
-        raise ValueError(f"Missing diagnostics: {missing}")
+        raise ValueError(
+            "EVIDENCE_NOT_PUBLISHED: diagnostic computation may have run, "
+            f"but no published artifact was found for {missing}"
+        )
 
     candidates = {
         role: summarize(by_image[image], image)
