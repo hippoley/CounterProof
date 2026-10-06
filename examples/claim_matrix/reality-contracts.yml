@@ -1,0 +1,35 @@
+schema_version: 1
+contracts:
+  - id: bluefin-4539-oracle-applicability
+    manifest: bluefin-4539.yml
+    expectations:
+      - claim_id: keyring-login-safety
+        overall_claim: "WITNESSED (scope insufficient)"
+        receipt_verdict: WITNESSED_CONTROLLED_CAUSAL
+      - claim_id: login-keyring-unlocked-fixture
+        oracle_applicability: PRECONDITION_MISSING
+        overall_claim: "WITNESSED (oracle precondition missing)"
+
+  - id: clash-8017-candidate-bound-behavior
+    manifest: clash-8017.yml
+    expected_base_sha: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
+    expected_head_sha: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
+    expectations:
+      - claim_id: unchanged-config-not-rewritten-on-exit
+        evidence_scope: BEHAVIOR
+        oracle_applicability: APPLICABLE
+        oracle_alignment: ALIGNED
+        receipt_verdict: WITNESSED_BEHAVIOR
+        overall_claim: PROVEN
+
+  - id: scancode-2207-db-backed-behavior
+    manifest: scancode-2207.yml
+    expected_base_sha: 41868632dcaba1ad9b6402d114b169564c08d121
+    expected_head_sha: f71185995aee043e2e9acfd31028501f23992aea
+    expectations:
+      - claim_id: run-command-input-location-optional
+        evidence_scope: BEHAVIOR
+        oracle_applicability: APPLICABLE
+        oracle_alignment: ALIGNED
+        receipt_verdict: WITNESSED_BEHAVIOR_DELTA
+        overall_claim: PROVEN

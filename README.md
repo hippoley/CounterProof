@@ -378,7 +378,22 @@ Acceptance fixtures come directly from public reviewer / maintainer reality:
 
 - `examples/claim_matrix/codex-plugin-cc-731.yml` — one witnessed submitted regression, later review concerns still unproven;
 - `examples/claim_matrix/claude-code-89404.yml` — product-oracle contradiction stays stronger than an internally green submitted judge;
-- `examples/claim_matrix/bluefin-4539.yml` — distinguishes shallow implementation evidence from behavior/safety claims and records an oracle precondition that is missing in the CI fixture.
+- `examples/claim_matrix/bluefin-4539.yml` — distinguishes shallow implementation evidence from behavior/safety claims and records an oracle precondition that is missing in the CI fixture;
+- `examples/claim_matrix/clash-8017.yml` — binds behavior evidence to the exact historical replay candidate even after the live PR base moves;
+- `examples/claim_matrix/scancode-2207.yml` — validates a claim-relevant behavior delta in a PostgreSQL/Django integration environment.
+
+Those reality cases are also enforced together as a declarative contract suite:
+
+```bash
+counterproof reality-contracts examples/claim_matrix/reality-contracts.yml
+```
+
+The suite is intentionally cross-domain. A semantic change is rejected if it would, for example:
+
+- turn Bluefin's missing fixture prerequisite into a contradiction;
+- detach Clash evidence from the exact BASE that was actually replayed;
+- weaken ScanCode's DB-backed behavior witness into an environment/setup failure;
+- change a frozen receipt verdict without updating the explicit contract.
 
 ---
 
