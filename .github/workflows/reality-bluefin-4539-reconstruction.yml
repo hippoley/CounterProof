@@ -9,6 +9,10 @@ on:
       - "tests/unit/test_bluefin_4539_reconstruction_gate.py"
       - ".github/workflows/reality-bluefin-4539-reconstruction.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
