@@ -11,10 +11,16 @@ import hashlib
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 
 AVERA_CHECK_V0 = "avera.check/v0"
+
+
+class _StrictModel(BaseModel):
+    """Reject fields outside the experimental v0 envelope contract."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
@@ -37,17 +43,17 @@ def envelope_digest(payload_without_digest: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(payload_without_digest)).hexdigest()
 
 
-class AveraTool(BaseModel):
+class AveraTool(_StrictModel):
     name: str = Field(min_length=1)
     version: str = Field(min_length=1)
 
 
-class AveraInputs(BaseModel):
+class AveraInputs(_StrictModel):
     baseline_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     current_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
-class AveraResult(BaseModel):
+class AveraResult(_StrictModel):
     verdict: str = Field(min_length=1)
     gate_status: str = Field(min_length=1)
     introduced_failures: list[str]
@@ -56,7 +62,7 @@ class AveraResult(BaseModel):
     confidence_score: float | None = None
 
 
-class AveraCheckV0Envelope(BaseModel):
+class AveraCheckV0Envelope(_StrictModel):
     schema_version: str
     tool: AveraTool
     policy: str = Field(min_length=1)
