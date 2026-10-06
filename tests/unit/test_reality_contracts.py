@@ -19,6 +19,10 @@ def test_reality_contract_cli_passes():
 
     assert result.exit_code == 0, result.output
     assert "Reality contracts: 3 passed" in result.output
+    assert (
+        "Lifecycle: CURRENT=3 STALE=0 SUPERSEDED=0 CONFLICTING=0"
+        in result.output
+    )
 
 
 def test_reality_contract_reports_semantic_regression(tmp_path: Path):
