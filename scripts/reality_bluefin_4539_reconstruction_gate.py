@@ -11,6 +11,11 @@ EXPECTED = {
     "brew": "sha256:2369e2dc70dd8b12828604d22721d1812cd87611661d789e1a0ee2cb123cbe7e",
 }
 
+EXPECTED_SOURCE_COMMITS = {
+    "BAD": "60e72be24878ce01b4849cfb4b8efc18932a133e",
+    "REVERT": "bd12c2e29f6ecb2cabd5bfb53bc00281a7d9118f",
+}
+
 DROPIN = Path(
     "system_files/shared/usr/lib/systemd/user/"
     "xdg-desktop-portal.service.d/30-after-keyring.conf"
@@ -39,6 +44,8 @@ def build_receipt(
 ) -> dict:
     versions = parse_image_versions(source_dir / "image-versions.yml")
     source_match = all(versions.get(k) == v for k, v in EXPECTED.items())
+    expected_source_commit = EXPECTED_SOURCE_COMMITS[candidate]
+    source_commit_match = source_commit == expected_source_commit
 
     dropin_exists = (source_dir / DROPIN).exists()
     expected_dropin = candidate == "BAD"
@@ -51,7 +58,9 @@ def build_receipt(
     )
     source_equivalent_base_ready = bool(base_rebuild_inputs) and not base_rebuild_missing
 
-    if not source_match or not intervention_match:
+    if not source_commit_match:
+        verdict = "INVALID_RECONSTRUCTION_SOURCE_IDENTITY"
+    elif not source_match or not intervention_match:
         verdict = "INVALID_RECONSTRUCTION_SOURCE_CONTRACT"
     elif not missing:
         verdict = "READY_FOR_SOURCE_PINNED_REBUILD"
@@ -67,6 +76,10 @@ def build_receipt(
         "case": "ublue-os/bluefin#4539",
         "candidate": candidate,
         "source_commit": source_commit,
+        "source_identity": {
+            "expected_source_commit": expected_source_commit,
+            "source_commit_match": source_commit_match,
+        },
         "source_contract": {
             "expected_dependencies": EXPECTED,
             "observed_dependencies": versions,
@@ -146,7 +159,15 @@ def main() -> int:
     )
     print(json.dumps(receipt, indent=2, sort_keys=True))
 
-    return 1 if receipt["verdict"] == "INVALID_RECONSTRUCTION_SOURCE_CONTRACT" else 0
+    return (
+        1
+        if receipt["verdict"]
+        in {
+            "INVALID_RECONSTRUCTION_SOURCE_IDENTITY",
+            "INVALID_RECONSTRUCTION_SOURCE_CONTRACT",
+        }
+        else 0
+    )
 
 
 if __name__ == "__main__":
