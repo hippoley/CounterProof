@@ -1,11 +1,10 @@
 name: Reality — Bluefin 4539 candidate availability
 
 on:
+  # Reality evidence is intentionally refreshed explicitly. GitHub PR path
+  # filters match the whole PR diff and would otherwise rerun this probe on
+  # unrelated synchronization commits.
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "reality/bluefin-4539/**"
-      - ".github/workflows/reality-bluefin-4539-candidates.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
