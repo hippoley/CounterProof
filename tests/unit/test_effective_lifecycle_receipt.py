@@ -35,10 +35,12 @@ def test_reality_lifecycle_writes_pass_receipt(monkeypatch, tmp_path: Path):
 
     assert result.exit_code == 0, result.output
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["status"] == "PASS"
     assert payload["mismatch_count"] == 0
     assert payload["observations"][0]["effective"] == "CURRENT"
+    assert payload["inputs"]["suite_git_blob_sha"]
+    assert payload["execution"]["git_sha"] is None
 
 
 def test_reality_lifecycle_writes_receipt_before_mismatch_failure(
@@ -78,3 +80,6 @@ def test_reality_lifecycle_writes_receipt_before_mismatch_failure(
     assert payload["observations"][0]["freshness_signal"] == "STALE"
     assert payload["observations"][0]["graph_signal"] == "SUPERSEDED"
     assert payload["observations"][0]["effective"] == "SUPERSEDED"
+    assert payload["observations"][0]["freshness"]["reason"] == (
+        "live PR base candidate drift"
+    )
