@@ -148,6 +148,8 @@ jobs:
       contents: read
       actions: read
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download E2E result artifacts
         uses: actions/download-artifact@v4
         with:
@@ -161,120 +163,22 @@ jobs:
           CONTROL_IMAGE: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
           BAD_IMAGE: ${{ needs.build-candidates.outputs.bad_image }}
           REVERT_IMAGE: ${{ needs.build-candidates.outputs.revert_image }}
+          ORACLE_REVISION: 8b206d4f461c21e85adf555145eb33ce6928edfe
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path("replay-results")
-          files = sorted(root.rglob("counterproof-keyring-diagnostic-*.json"))
-          if not files:
-              raise SystemExit("No CounterProof keyring diagnostic artifacts found")
-
-          by_image = {}
-          for path in files:
-              data = json.loads(path.read_text(encoding="utf-8"))
-              by_image[data["image"]] = data["snapshot"]
-
-          roles = {
-              "CONTROL": os.environ["CONTROL_IMAGE"],
-              "BAD": os.environ["BAD_IMAGE"],
-              "REVERT": os.environ["REVERT_IMAGE"],
-          }
-
-          def get(role):
-              image = roles[role]
-              if image not in by_image:
-                  raise SystemExit(f"Missing diagnostic for {role}: {image}")
-              return by_image[image]
-
-          def unit_state(s):
-              text = s["keyring_unit"]["stdout"]
-              return {
-                  "active": "ActiveState=active" in text,
-                  "pid_nonzero": "MainPID=0" not in text,
-              }
-
-          def has_dep(s):
-              return "gnome-keyring-daemon.service" in s["portal_dependencies"]["stdout"]
-
-          def has_late_error(s):
-              return "NotInInitialization" in s["keyring_journal"]["stdout"]
-
-          def row(role):
-              s = get(role)
-              u = unit_state(s)
-              return {
-                  "image": roles[role],
-                  "keyring_unit_active": u["active"],
-                  "keyring_pid_nonzero": u["pid_nonzero"],
-                  "portal_wants_keyring": has_dep(s),
-                  "not_in_initialization": has_late_error(s),
-                  "login_alias": s["secret_login_alias"]["stdout"],
-              }
-
-          receipt = {role: row(role) for role in roles}
-          expected = {
-              "CONTROL": (False, False, False),
-              "BAD": (True, True, True),
-              "REVERT": (False, False, False),
-          }
-
-          def signature(row):
-              return (
-                  row["keyring_unit_active"],
-                  row["portal_wants_keyring"],
-                  row["not_in_initialization"],
-              )
-
-          observed = {role: signature(receipt[role]) for role in roles}
-          controlled_causal_witness = all(observed[r] == expected[r] for r in roles)
-
-          verdict = (
-              "WITNESSED_CONTROLLED_CAUSAL"
-              if controlled_causal_witness
-              else "INCONCLUSIVE_CONTROLLED_CAUSAL"
-          )
-
-          out = {
-              "schema_version": 1,
-              "case": "ublue-os/bluefin#4539",
-              "experiment": "CONTROL -> + historical drop-in -> BAD -> remove drop-in -> REVERT",
-              "oracle_revision": "8b206d4f461c21e85adf555145eb33ce6928edfe",
-              "historical_image_status": "ORIGINAL_REGISTRY_ARTIFACTS_UNAVAILABLE",
-              "verdict": verdict,
-              "candidates": receipt,
-          }
-
-          Path("bluefin-4539-controlled-receipt.json").write_text(
-              json.dumps(out, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-
-          print(json.dumps(out, indent=2, sort_keys=True))
-
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
-              fh.write("## Bluefin #4539 controlled causal receipt\n\n")
-              fh.write(f"**Verdict: {verdict}**\n\n")
-              fh.write("| candidate | keyring unit active | portal→keyring dependency | NotInInitialization |\n")
-              fh.write("|---|---:|---:|---:|\n")
-              for role in ("CONTROL", "BAD", "REVERT"):
-                  r = receipt[role]
-                  fh.write(
-                      f"| {role} | {r['keyring_unit_active']} | "
-                      f"{r['portal_wants_keyring']} | {r['not_in_initialization']} |\n"
-                  )
-              fh.write("\n")
-              fh.write("Historical GHCR artifacts are unavailable; this verdict is explicitly controlled-causal, not an original historical-image replay.\n")
-
-          if not controlled_causal_witness:
-              raise SystemExit("Controlled causal signature did not match expected Y -> Y' -> Y shape")
-          PY
+          python3 scripts/reality_bluefin_4539_receipt.py replay-results \
+            --control-image "$CONTROL_IMAGE" \
+            --bad-image "$BAD_IMAGE" \
+            --revert-image "$REVERT_IMAGE" \
+            --oracle-revision "$ORACLE_REVISION" \
+            --output bluefin-4539-controlled-receipt.json \
+            --summary bluefin-4539-controlled-summary.md
+          cat bluefin-4539-controlled-summary.md >>"$GITHUB_STEP_SUMMARY"
 
       - name: Upload CounterProof receipt
         uses: actions/upload-artifact@v4
         with:
           name: bluefin-4539-controlled-causal-receipt
-          path: bluefin-4539-controlled-receipt.json
+          path: |
+            bluefin-4539-controlled-receipt.json
+            bluefin-4539-controlled-summary.md
           if-no-files-found: error
