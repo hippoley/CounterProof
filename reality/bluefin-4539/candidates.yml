@@ -112,3 +112,29 @@ experiment_design:
     priority: already-witnessed
     design: CONTROL -> add exact #4539 drop-in -> BAD -> remove drop-in -> REVERT
     verdict_scope: controlled-causal, not original historical-image replay
+
+silverblue_base_origin:
+  historical_digest: sha256:2ade0f897499dd488a4f59c4bbe50002228e3b683938333ce119be4e748fe1f5
+  discovered_by:
+    bluefin_renovate_pr: https://github.com/ublue-os/bluefin/pull/4673
+    bluefin_merge_commit: baba991bb993a0601e6824ed73c702b4df4a759e
+    observed_at: "2026-05-23T05:22:51Z"
+  probable_producer:
+    repository: ublue-os/main
+    source_commit: 0273c246618919cf48a3c71a67d1c68aed209b24
+    workflow_run: https://github.com/ublue-os/main/actions/runs/26322931886
+    workflow_started_at: "2026-05-23T04:01:21Z"
+    reasoning: >
+      This successful official ublue latest build completed before Renovate
+      detected 2ade0f8 in Bluefin. Its source commit pins the exact Fedora and
+      akmods inputs below. The original job log is expired, so producer
+      identity is high-confidence provenance rather than a recovered push log.
+  source_equivalent_inputs:
+    fedora_silverblue_44: quay.io/fedora-ostree-desktops/silverblue@sha256:0d83cd369b34c567bb0a30db092be0a37c9f9f557a9de472a394a548fb9205a1
+    akmods_44: ghcr.io/ublue-os/akmods@sha256:ce3f65fb814a734db0b052c5fc2dae060c8f5b5b9a14f08b26c70a029b1e698b
+    akmods_nvidia_open_44: ghcr.io/ublue-os/akmods-nvidia-open@sha256:89d6761fbed673dffde6909fd0703e58b52b6c3943c1b0b5ebf2c8f4f465293c
+  claim_boundary: >
+    Rebuilding from these inputs can establish a source-equivalent historical
+    base if all inputs remain retrievable. It cannot establish byte identity
+    with the deleted 2ade0f8 manifest unless the original OCI digest is
+    recovered or the rebuilt output independently matches it.
