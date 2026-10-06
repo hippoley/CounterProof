@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha1
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,21 @@ class ContractFailure:
 
 def _claims_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {claim["id"]: claim for claim in payload["claims"]}
+
+
+def _git_blob_sha(path: Path) -> str:
+    content = path.read_bytes()
+    header = f"blob {len(content)}\0".encode()
+    return sha1(header + content, usedforsecurity=False).hexdigest()
+
+
+def _get_path(payload: Any, path: str) -> Any:
+    current = payload
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            raise KeyError(path)
+        current = current[part]
+    return current
 
 
 def validate_reality_contracts(path: Path) -> list[ContractFailure]:
@@ -71,7 +87,74 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
                 "oracle_applicability": "oracle_applicability",
                 "oracle_alignment": "oracle_alignment",
                 "receipt_verdict": "receipt_observed_verdict",
+                "receipt_case": "receipt_case",
             }
+            receipt_expectations = expected.get("receipt_expectations", {})
+            expected_blob_sha = expected.get("receipt_git_blob_sha")
+            needs_receipt_inspection = bool(receipt_expectations) or expected_blob_sha is not None
+            if needs_receipt_inspection:
+                receipt_file = claim.get("receipt_file")
+                if not receipt_file:
+                    failures.append(
+                        ContractFailure(
+                            contract_id,
+                            f"claim {claim_id!r} has receipt expectations but no receipt_file",
+                        )
+                    )
+                    continue
+                receipt_path = (manifest_path.parent / receipt_file).resolve()
+                try:
+                    receipt_path.relative_to(manifest_path.parent.resolve())
+                    receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError, yaml.YAMLError) as exc:
+                    failures.append(
+                        ContractFailure(
+                            contract_id,
+                            f"claim {claim_id!r} receipt could not be inspected: {exc}",
+                        )
+                    )
+                    continue
+
+                if expected_blob_sha is not None:
+                    observed_blob_sha = _git_blob_sha(receipt_path)
+                    if observed_blob_sha != expected_blob_sha:
+                        failures.append(
+                            ContractFailure(
+                                contract_id,
+                                (
+                                    f"claim {claim_id!r} receipt git blob sha "
+                                    f"expected {expected_blob_sha!r}, "
+                                    f"observed {observed_blob_sha!r}"
+                                ),
+                            )
+                        )
+
+                for receipt_path_key, wanted in receipt_expectations.items():
+                    try:
+                        observed = _get_path(receipt, receipt_path_key)
+                    except KeyError:
+                        failures.append(
+                            ContractFailure(
+                                contract_id,
+                                (
+                                    f"claim {claim_id!r} receipt path "
+                                    f"{receipt_path_key!r} is missing"
+                                ),
+                            )
+                        )
+                        continue
+                    if observed != wanted:
+                        failures.append(
+                            ContractFailure(
+                                contract_id,
+                                (
+                                    f"claim {claim_id!r} receipt path "
+                                    f"{receipt_path_key!r} expected {wanted!r}, "
+                                    f"observed {observed!r}"
+                                ),
+                            )
+                        )
+
             for expected_key, payload_key in field_map.items():
                 if expected_key not in expected:
                     continue

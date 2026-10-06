@@ -6,6 +6,14 @@ contracts:
       - claim_id: keyring-login-safety
         overall_claim: "WITNESSED (scope insufficient)"
         receipt_verdict: WITNESSED_CONTROLLED_CAUSAL
+        receipt_case: ublue-os/bluefin#4539
+        receipt_git_blob_sha: de187c11f3c4935286687ffc67e5afd3c90fd473
+        receipt_expectations:
+          schema_version: 1
+          oracle_revision: 1c0a23317d420b77396770ae2a8fdf71804cde4e
+          candidates.CONTROL.image: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+          candidates.BAD.keyring_unit_active: true
+          candidates.REVERT.keyring_unit_active: false
       - claim_id: login-keyring-unlocked-fixture
         oracle_applicability: PRECONDITION_MISSING
         overall_claim: "WITNESSED (oracle precondition missing)"
@@ -20,7 +28,15 @@ contracts:
         oracle_applicability: APPLICABLE
         oracle_alignment: ALIGNED
         receipt_verdict: WITNESSED_BEHAVIOR
+        receipt_case: clash-verge-rev/clash-verge-rev#8017
+        receipt_git_blob_sha: 48493ed99a51bf97d3e97b08bae6575d2ee92ff2
         overall_claim: PROVEN
+        receipt_expectations:
+          schema_version: 1
+          source_run.workflow_run: 36391467118
+          source_run.workflow_head_sha: 9c722e40d6cd3e28f1657fdc31ac398fecfb2b1d
+          candidates.BASE.commit: b057bd964ccd156f68bc43a3a8ed66cf3cb1cd7b
+          candidates.HEAD.commit: 2cb071998e2f14d76a5fbc3f4add5973e79cf138
 
   - id: scancode-2207-db-backed-behavior
     manifest: scancode-2207.yml
@@ -32,4 +48,12 @@ contracts:
         oracle_applicability: APPLICABLE
         oracle_alignment: ALIGNED
         receipt_verdict: WITNESSED_BEHAVIOR_DELTA
+        receipt_case: aboutcode-org/scancode.io#2207
+        receipt_git_blob_sha: 7b6dbe7f683b8cf0131496903637ebadb439ce40
         overall_claim: PROVEN
+        receipt_expectations:
+          schema_version: 1
+          source_run.workflow_run: 36373412716
+          source_run.workflow_job: 108774251504
+          candidates.BASE.commit: 41868632dcaba1ad9b6402d114b169564c08d121
+          candidates.HEAD.commit: f71185995aee043e2e9acfd31028501f23992aea
