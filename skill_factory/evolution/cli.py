@@ -9,6 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import click
+import yaml
 
 from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
@@ -40,6 +41,7 @@ from .models import (
 from .onboarding import init_github
 from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_plan
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
+from .reality_contracts import validate_reality_contracts
 from .replay import run_replay_manifest, serialize_replays
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
@@ -98,6 +100,29 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("reality-contracts")
+@click.argument("suite_file", type=click.Path(exists=True, dir_okay=False))
+def reality_contracts(suite_file: str) -> None:
+    """Validate cross-domain Reality invariants against frozen receipts."""
+    try:
+        failures = validate_reality_contracts(Path(suite_file))
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if failures:
+        for failure in failures:
+            click.echo(
+                f"FAIL {failure.contract_id}: {failure.message}",
+                err=True,
+            )
+        raise click.ClickException(
+            f"{len(failures)} Reality contract violation(s)"
+        )
+
+    raw = yaml.safe_load(Path(suite_file).read_text(encoding="utf-8"))
+    click.echo(f"Reality contracts: {len(raw['contracts'])} passed")
 
 
 @cli.command("claim-matrix")
