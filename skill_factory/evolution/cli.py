@@ -122,7 +122,25 @@ def reality_contracts(suite_file: str) -> None:
         )
 
     raw = yaml.safe_load(Path(suite_file).read_text(encoding="utf-8"))
-    click.echo(f"Reality contracts: {len(raw['contracts'])} passed")
+    contracts = raw["contracts"]
+    click.echo(f"Reality contracts: {len(contracts)} passed")
+    lifecycle_counts = {
+        "CURRENT": 0,
+        "STALE": 0,
+        "SUPERSEDED": 0,
+        "CONFLICTING": 0,
+    }
+    for contract in contracts:
+        lifecycle = contract.get("lifecycle", "CURRENT")
+        if lifecycle in lifecycle_counts:
+            lifecycle_counts[lifecycle] += 1
+    click.echo(
+        "Lifecycle: "
+        + " ".join(
+            f"{name}={count}"
+            for name, count in lifecycle_counts.items()
+        )
+    )
 
 
 @cli.command("claim-matrix")
