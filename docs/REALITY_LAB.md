@@ -182,3 +182,6 @@ If an AI-assisted PR looks plausible but its evidence does not quite earn your t
 **[Bring me an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)**
 
 No CounterProof installation is required.
+
+
+> An oracle can execute and still be uninterpretable. If a declared fixture or environment prerequisite is missing, record `PRECONDITION_MISSING`; do not promote that run to `ALIGNED` or `CONTRADICTED`.
