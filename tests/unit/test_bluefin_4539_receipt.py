@@ -1,0 +1,74 @@
+import json
+from pathlib import Path
+
+from scripts.reality_bluefin_4539_receipt import build_receipt
+
+
+def _write_diag(root: Path, image: str, *, active: bool, dep: bool, late: bool) -> None:
+    snapshot = {
+        "keyring_unit": {
+            "stdout": (
+                f"ActiveState={'active' if active else 'inactive'}\n"
+                f"MainPID={2740 if active else 0}"
+            )
+        },
+        "portal_dependencies": {
+            "stdout": (
+                "xdg-desktop-portal.service\n  gnome-keyring-daemon.service"
+                if dep
+                else "xdg-desktop-portal.service\n  dbus.socket"
+            )
+        },
+        "keyring_journal": {
+            "stdout": (
+                "gnome-keyring-daemon: NotInInitialization"
+                if late
+                else "portal started cleanly"
+            )
+        },
+        "secret_login_alias": {"stdout": "(objectpath '/',)"},
+    }
+    payload = {"image": image, "snapshot": snapshot}
+    path = root / f"counterproof-keyring-diagnostic-{len(list(root.iterdir()))}.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_bluefin_controlled_receipt_witnesses_y_yprime_y(tmp_path: Path):
+    control = "control"
+    bad = "bad"
+    revert = "revert"
+
+    _write_diag(tmp_path, control, active=False, dep=False, late=False)
+    _write_diag(tmp_path, bad, active=True, dep=True, late=True)
+    _write_diag(tmp_path, revert, active=False, dep=False, late=False)
+
+    receipt = build_receipt(
+        tmp_path,
+        control_image=control,
+        bad_image=bad,
+        revert_image=revert,
+        oracle_revision="oracle-sha",
+    )
+
+    assert receipt["verdict"] == "WITNESSED_CONTROLLED_CAUSAL"
+    assert receipt["candidates"]["CONTROL"]["keyring_unit_active"] is False
+    assert receipt["candidates"]["BAD"]["keyring_unit_active"] is True
+    assert receipt["candidates"]["BAD"]["portal_wants_keyring"] is True
+    assert receipt["candidates"]["BAD"]["not_in_initialization"] is True
+    assert receipt["candidates"]["REVERT"]["keyring_unit_active"] is False
+
+
+def test_bluefin_controlled_receipt_stays_inconclusive_without_revert_recovery(tmp_path: Path):
+    _write_diag(tmp_path, "control", active=False, dep=False, late=False)
+    _write_diag(tmp_path, "bad", active=True, dep=True, late=True)
+    _write_diag(tmp_path, "revert", active=True, dep=True, late=True)
+
+    receipt = build_receipt(
+        tmp_path,
+        control_image="control",
+        bad_image="bad",
+        revert_image="revert",
+        oracle_revision="oracle-sha",
+    )
+
+    assert receipt["verdict"] == "INCONCLUSIVE_CONTROLLED_CAUSAL"
