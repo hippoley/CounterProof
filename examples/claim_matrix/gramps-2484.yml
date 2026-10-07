@@ -17,6 +17,7 @@ claims:
     required_scope: BEHAVIOR
     oracle_alignment: ALIGNED
     oracle_probe: "Run the same lxml.etree.RelaxNG.validate path against BASE and HEAD schema candidates while holding the submitted fixture constant."
+    oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36224298359"
     receipt_file: "receipts/gramps-2484-triad.json"
     receipt_expected_verdicts:
       - WITNESSED_CHALLENGE_REPAIR

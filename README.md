@@ -98,9 +98,9 @@ Current field cases include a genuine regression witness, a compiler-failure fal
 
 | Reality signal | What changed because of it |
 |---|---|
-| **12 public PR cases** | CounterProof gained runner, test-discovery, integrity, and claim-boundary fixes from failures against real repositories. |
+| **17 public PR cases** | CounterProof gained runner, test-discovery, integrity, and claim-boundary fixes from failures against real repositories. |
 | **External reviewer acceptance** | A reviewer asked for the compact claim/evidence matrix, then confirmed the automated artifact preserved the intended review semantics and was usable in review. [Read the exchange →](https://github.com/hippoley/CounterProof/issues/13#issuecomment-5812942595) |
-| **First external code contribution** | Oracle provenance and witness-consistency hardening arrived as an external PR and is being reviewed against the product boundary rather than merged on CI alone. [PR #50 →](https://github.com/hippoley/CounterProof/pull/50) |
+| **External trust-boundary feedback** | Reviewer feedback and an external patch exposed that asserted oracle states need inspectable provenance. PR #50 closed unmerged, so CounterProof does not count that contribution as adopted evidence; the compatible provenance guard is being carried forward against current main. [Review thread →](https://github.com/hippoley/CounterProof/issues/16) |
 | **Downstream consumer probe** | A PROVE maintainer preferred attaching CounterProof as ordinary requirement evidence instead of creating a new packet or approval layer. [See the handoff →](examples/handoff/codex-prove.md) |
 
 These are evidence links, not endorsements. CounterProof still treats every new claim as unproven until its evidence earns a stronger status.
@@ -486,6 +486,13 @@ collection, but that fixture prerequisite was absent.
 That means a red→green regression can stay useful without silently becoming a
 product-correctness claim, and an invalid fixture cannot manufacture a false red
 product verdict.
+
+Rows declaring `ALIGNED` or `CONTRADICTED` must cite both a nonblank
+`oracle_probe` and an absolute HTTP(S) `oracle_source_url` that a reviewer can
+inspect. CounterProof validates that provenance reference syntactically; it does
+not fetch the URL, authenticate its owner, or decide that the cited source is
+authoritative. The reference makes the assertion auditable rather than turning
+free text into product truth.
 
 Acceptance fixtures come directly from public reviewer / maintainer reality:
 
