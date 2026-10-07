@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from scripts.reality_bluefin_4539_reconstruction_gate import build_receipt
+from scripts.reality_bluefin_4539_reconstruction_gate import (
+    build_receipt,
+    exit_code_for_verdict,
+)
 
 
 def _write_source(root: Path, *, with_dropin: bool) -> None:
@@ -192,3 +195,12 @@ def test_source_equivalent_input_probe_failure_is_inconclusive(tmp_path: Path):
     assert receipt["base_rebuild"]["unresolved_inputs"] == ["fedora-silverblue-44"]
     assert receipt["base_rebuild"]["ready"] is False
     assert receipt["verdict"] == "INCONCLUSIVE_DEPENDENCY_AVAILABILITY"
+
+
+
+def test_reconstruction_exit_codes_preserve_inconclusive_state():
+    assert exit_code_for_verdict("READY_FOR_SOURCE_PINNED_REBUILD") == 0
+    assert exit_code_for_verdict("BLOCKED_MISSING_HISTORICAL_BASE") == 0
+    assert exit_code_for_verdict("INVALID_RECONSTRUCTION_SOURCE_IDENTITY") == 1
+    assert exit_code_for_verdict("INVALID_RECONSTRUCTION_SOURCE_CONTRACT") == 1
+    assert exit_code_for_verdict("INCONCLUSIVE_DEPENDENCY_AVAILABILITY") == 2
