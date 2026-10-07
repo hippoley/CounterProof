@@ -27,3 +27,12 @@ def test_readme_install_cta_targets_current_onboarding_section():
     text = Path("README.md").read_text(encoding="utf-8")
     assert "(#30-second-onboarding)" in text
     assert "(#drop-it-into-a-pr)" not in text
+
+
+def test_readme_hero_reflects_current_candidate_and_oracle_model():
+    text = Path("README.md").read_text(encoding="utf-8")
+    hero = text.split("</div>", 1)[0]
+    assert "Replay the evidence. Test the oracle." in hero
+    assert "exact candidates" in hero
+    assert "explicit oracle" in hero
+    assert "two commits" not in hero

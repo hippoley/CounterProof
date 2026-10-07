@@ -4,7 +4,7 @@
 
 ## **Your coding agent says it fixed the bug. Prove the exact claim.**
 
-**Replay the same evidence on BASE and HEAD. Keep unproven claims unproven.**
+**Replay the evidence. Test the oracle. Keep unproven claims unproven.**
 
 [![CI](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml/badge.svg)](https://github.com/hippoley/CounterProof/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/)
@@ -16,7 +16,7 @@
 
 [![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
 
-**One PR · one claim · one evidence set · two commits · one auditable receipt.**
+**One claim · exact candidates · explicit oracle · one auditable receipt.**
 
 <sub>Not a merge bot. Not another AI reviewer. CounterProof tells you what the submitted evidence establishes — and what it still does not.</sub>
 
