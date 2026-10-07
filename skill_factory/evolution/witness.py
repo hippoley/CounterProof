@@ -631,6 +631,37 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     return payload
 
 
+def witness_payload_digest(payload: dict[str, Any]) -> str:
+    """Recompute the canonical digest for a stored witness payload."""
+    canonical_payload = {
+        key: value
+        for key, value in payload.items()
+        if key != "evidence_digest_sha256"
+    }
+    canonical = json.dumps(
+        canonical_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def verify_witness_payload_digest(payload: dict[str, Any]) -> tuple[str, ...]:
+    """Reject missing or tampered witness payload digests."""
+    expected = payload.get("evidence_digest_sha256")
+    if not isinstance(expected, str) or len(expected) != 64:
+        return ("witness evidence digest is missing or malformed",)
+
+    observed = witness_payload_digest(payload)
+    if observed != expected.lower():
+        return (
+            "witness evidence digest mismatch: "
+            f"expected {expected!r}, observed {observed!r}",
+        )
+    return ()
+
+
 def _command_behavior_label(command: WitnessCommand) -> str:
     if command.semantic_error:
         return "INCONCLUSIVE"
