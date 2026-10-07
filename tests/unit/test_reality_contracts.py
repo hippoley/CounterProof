@@ -106,6 +106,7 @@ claims:
     oracle_probe: behavior oracle
     oracle_source_url: https://oracle-source.example.test/reality-contract
     receipt_file: receipts/receipt.json
+    receipt_expected_case: example/repo#1
     receipt_expected_verdicts:
       - WITNESSED_BEHAVIOR
 """.strip()
@@ -173,6 +174,7 @@ claims:
     oracle_probe: behavior oracle
     oracle_source_url: https://oracle-source.example.test/reality-contract
     receipt_file: receipts/receipt.json
+    receipt_expected_case: example/repo#1
     receipt_expected_verdicts:
       - WITNESSED_BEHAVIOR
 """.strip()

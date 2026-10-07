@@ -91,6 +91,7 @@ class ClaimEvidence(BaseModel):
     oracle_source_url: str | None = None
     receipt_file: str | None = None
     receipt_expected_verdicts: list[str] = Field(default_factory=list)
+    receipt_expected_case: str | None = None
     receipt_observed_verdict: str | None = None
     receipt_case: str | None = None
     assertion_excerpt: str | None = None
@@ -123,6 +124,16 @@ class ClaimEvidence(BaseModel):
                 raise ValueError(
                     "ALIGNED / CONTRADICTED oracle status requires oracle_source_url "
                     "as an absolute http(s) URL with a host"
+                )
+
+        if self.receipt_file:
+            if not self.receipt_expected_verdicts:
+                raise ValueError(
+                    "receipt_file requires at least one receipt_expected_verdict"
+                )
+            if not self.receipt_expected_case or not self.receipt_expected_case.strip():
+                raise ValueError(
+                    "receipt_file requires a non-empty receipt_expected_case"
                 )
 
         if self.oracle_applicability is OracleApplicability.PRECONDITION_MISSING:
@@ -219,6 +230,16 @@ def _bind_receipt(path: Path, claim: ClaimEvidence) -> None:
     claim.receipt_observed_verdict = verdict
     case = receipt.get("case")
     claim.receipt_case = case if isinstance(case, str) and case else None
+
+    if not isinstance(case, str) or not case:
+        raise ValueError(
+            f"claim {claim.id!r} receipt must contain a non-empty string case"
+        )
+    if case != claim.receipt_expected_case:
+        raise ValueError(
+            f"claim {claim.id!r} receipt case {case!r} does not match "
+            f"expected case {claim.receipt_expected_case!r}"
+        )
 
     if (
         claim.receipt_expected_verdicts
@@ -361,11 +382,22 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             if claim.receipt_file:
                 lines.append(f"- Receipt file: `{claim.receipt_file}`")
                 lines.append(
-                    f"- Receipt verdict: "
+                    "- Receipt expected verdict(s): "
+                    + ", ".join(
+                        f"`{item}`" for item in claim.receipt_expected_verdicts
+                    )
+                )
+                lines.append(
+                    f"- Receipt observed verdict: "
                     f"`{claim.receipt_observed_verdict or 'UNBOUND'}`"
                 )
+                lines.append(
+                    f"- Receipt expected case: {_cell(claim.receipt_expected_case)}"
+                )
                 if claim.receipt_case:
-                    lines.append(f"- Receipt case: {_cell(claim.receipt_case)}")
+                    lines.append(
+                        f"- Receipt observed case: {_cell(claim.receipt_case)}"
+                    )
             if claim.note:
                 lines.append(f"- Note: {_cell(claim.note)}")
             if claim.assertion_excerpt:

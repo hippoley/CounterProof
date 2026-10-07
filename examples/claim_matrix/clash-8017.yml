@@ -20,6 +20,7 @@ claims:
     oracle_probe: "Call the production exit-save path with no staged draft and observe file inode, mtime, and bytes."
     oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36391467118"
     receipt_file: "receipts/clash-8017-behavior.json"
+    receipt_expected_case: "clash-verge-rev/clash-verge-rev#8017"
     receipt_expected_verdicts:
       - WITNESSED_BEHAVIOR
     note: "The receipt is bound to the exact BASE replayed in run 36391467118. The live PR base later moved and must not replace the historical candidate identity."
