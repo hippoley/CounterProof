@@ -36,3 +36,25 @@ def test_readme_hero_reflects_current_candidate_and_oracle_model():
     assert "exact candidates" in hero
     assert "explicit oracle" in hero
     assert "two commits" not in hero
+
+
+def test_proof_lab_reality_data_surfaces_current_machine_backed_artifacts():
+    reality = Path("site/data/reality_cases.json").read_text(encoding="utf-8")
+    standalone = Path("site/standalone.html").read_text(encoding="utf-8")
+
+    for case_id in ("bluefin-4539", "claude-code-89404", "gramps-2484"):
+        assert f'"id": "{case_id}"' in reality
+        assert f'"id": "{case_id}"' in standalone
+
+    assert '"result": "OPEN PROBE"' not in reality
+    assert '"result": "OPEN PROBE"' not in standalone
+    assert "FLAGSHIP PROOF" in reality
+    assert "ORACLE ARTIFACT" in reality
+    assert "TRIAD PROOF" in reality
+
+
+def test_proof_lab_public_copy_reflects_candidate_and_oracle_model():
+    for path in (Path("site/index.html"), Path("site/standalone.html")):
+        text = path.read_text(encoding="utf-8")
+        assert "candidate-bound evidence" in text
+        assert "declared oracle" in text
