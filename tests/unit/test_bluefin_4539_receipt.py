@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from scripts.reality_bluefin_4539_receipt import build_receipt
+from scripts.reality_bluefin_4539_receipt import build_receipt, prepare_generic_replay
+from skill_factory.evolution.causal_replay import build_causal_replay_receipt
 
 
 def _write_diag(root: Path, image: str, *, active: bool, dep: bool, late: bool) -> None:
@@ -104,3 +105,35 @@ def test_bluefin_controlled_receipt_requires_distinct_candidate_images(tmp_path:
             revert_image="shared",
             oracle_revision="oracle-sha",
         )
+
+
+def test_bluefin_diagnostics_can_feed_generic_causal_replay(tmp_path: Path):
+    diagnostics = tmp_path / "diagnostics"
+    diagnostics.mkdir()
+    _write_diag(diagnostics, "control", active=False, dep=False, late=False)
+    _write_diag(diagnostics, "bad", active=True, dep=True, late=True)
+    _write_diag(diagnostics, "revert", active=False, dep=False, late=False)
+
+    manifest = prepare_generic_replay(
+        diagnostics,
+        output_dir=tmp_path / "generic",
+        control_image="control",
+        bad_image="bad",
+        revert_image="revert",
+        oracle_revision="oracle-sha",
+        adapter_revision="counterproof-sha",
+    )
+    receipt = build_causal_replay_receipt(manifest)
+
+    assert receipt["verdict"] == "WITNESSED_CAUSAL_REPLAY"
+    assert receipt["oracle"]["revision"] == "oracle-sha"
+    assert receipt["oracle"]["adapter_revision"] == "counterproof-sha"
+    assert receipt["oracle"]["scope"] == (
+        "keyring service lifecycle / portal dependency, not keyring unlock"
+    )
+    assert receipt["causal_expectation_count"] == 4
+    login_alias = next(
+        item for item in receipt["expectations"] if item["path"] == "login_alias"
+    )
+    assert login_alias["causal_pattern"] is False
+    assert login_alias["match"] is True
