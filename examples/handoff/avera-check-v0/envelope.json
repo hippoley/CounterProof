@@ -1,0 +1,23 @@
+{
+  "schema_version": "avera.check/v0",
+  "tool": {
+    "name": "avera",
+    "version": "0.1.1"
+  },
+  "policy": "general.v1",
+  "inputs": {
+    "baseline_sha256": "8b5d3e64a68b29d9dffaaf6c7ab5466b127849087228759de9152be1aa9eba0c",
+    "current_sha256": "9436c5784dcecf69b449a73abda08829f0b06d4005b2e9efdd25f8dd1aae3e51"
+  },
+  "result": {
+    "verdict": "confirmed_regression",
+    "gate_status": "block",
+    "introduced_failures": [
+      "tests.test_pricing.test_discount_applies_at_threshold"
+    ],
+    "risk": "medium",
+    "confidence": "medium",
+    "confidence_score": 0.66
+  },
+  "digest": "aa7589a8ec13532feeeb2d9f0cade945cf790bb753c1511b22ca3e89f0f79e6f"
+}
