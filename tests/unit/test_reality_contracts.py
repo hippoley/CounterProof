@@ -296,3 +296,63 @@ contracts:
 
     assert len(failures) == 1
     assert failures[0].message == "CONFLICTING evidence requires non-empty conflicts_with"
+
+
+def test_reality_contract_rejects_manifest_escape_from_suite_directory(
+    tmp_path: Path,
+):
+    suite_dir = tmp_path / "suite"
+    suite_dir.mkdir()
+    outside = tmp_path / "outside-claims.yml"
+    outside.write_text(
+        """
+schema_version: 1
+title: Outside suite
+claims:
+  - id: example
+    claim: example
+    submitted_test_evidence: UNPROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = suite_dir / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: escaped-manifest
+    manifest: ../outside-claims.yml
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert failures[0].contract_id == "escaped-manifest"
+    assert "must stay within the Reality Contract suite directory" in failures[0].message
+
+
+def test_reality_contract_normalizes_missing_manifest_to_validation_failure(
+    tmp_path: Path,
+):
+    suite = tmp_path / "contracts.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: missing-manifest
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    failures = validate_reality_contracts(suite)
+
+    assert len(failures) == 1
+    assert failures[0].contract_id == "missing-manifest"
+    assert failures[0].message == "reality contract requires a non-empty manifest"

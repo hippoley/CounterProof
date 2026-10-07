@@ -39,6 +39,24 @@ def _get_path(payload: Any, path: str) -> Any:
     return current
 
 
+def _suite_dependency(
+    suite_root: Path,
+    candidate: Path,
+    *,
+    contract_id: str,
+    kind: str,
+) -> Path:
+    root = suite_root.resolve()
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"{kind} must stay within the Reality Contract suite directory"
+        ) from exc
+    return resolved
+
+
 def validate_reality_contracts(path: Path) -> list[ContractFailure]:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or raw.get("schema_version") != 1:
@@ -48,10 +66,59 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
         raise TypeError("reality contract suite requires contracts")
 
     failures: list[ContractFailure] = []
-    for contract in contracts:
-        contract_id = contract["id"]
-        manifest_path = (path.parent / contract["manifest"]).resolve()
-        manifest = load_claim_matrix(manifest_path)
+    suite_root = path.parent.resolve()
+    for index, contract in enumerate(contracts):
+        if not isinstance(contract, dict):
+            failures.append(
+                ContractFailure(
+                    f"<contract:{index}>",
+                    "reality contract must be an object",
+                )
+            )
+            continue
+
+        raw_contract_id = contract.get("id")
+        contract_id = (
+            raw_contract_id
+            if isinstance(raw_contract_id, str) and raw_contract_id
+            else f"<contract:{index}>"
+        )
+        if contract_id.startswith("<contract:"):
+            failures.append(
+                ContractFailure(
+                    contract_id,
+                    "reality contract requires a non-empty id",
+                )
+            )
+            continue
+
+        manifest_name = contract.get("manifest")
+        if not isinstance(manifest_name, str) or not manifest_name:
+            failures.append(
+                ContractFailure(
+                    contract_id,
+                    "reality contract requires a non-empty manifest",
+                )
+            )
+            continue
+
+        try:
+            manifest_path = _suite_dependency(
+                suite_root,
+                suite_root / manifest_name,
+                contract_id=contract_id,
+                kind="claim matrix manifest",
+            )
+            manifest = load_claim_matrix(manifest_path)
+        except (OSError, ValueError, TypeError) as exc:
+            failures.append(
+                ContractFailure(
+                    contract_id,
+                    f"claim matrix manifest could not be loaded: {exc}",
+                )
+            )
+            continue
+
         payload = claim_matrix_to_dict(manifest)
 
         lifecycle_raw = contract.get("lifecycle", EvidenceLifecycle.CURRENT.value)
@@ -122,7 +189,9 @@ def validate_reality_contracts(path: Path) -> list[ContractFailure]:
             }
             receipt_expectations = expected.get("receipt_expectations", {})
             expected_blob_sha = expected.get("receipt_git_blob_sha")
-            needs_receipt_inspection = bool(receipt_expectations) or expected_blob_sha is not None
+            needs_receipt_inspection = (
+                bool(receipt_expectations) or expected_blob_sha is not None
+            )
             if needs_receipt_inspection:
                 receipt_file = claim.get("receipt_file")
                 if not receipt_file:
