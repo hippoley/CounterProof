@@ -25,7 +25,9 @@ def _resolve_dependency(root: Path, candidate: Path, *, label: str) -> Path:
     try:
         resolved.relative_to(resolved_root)
     except ValueError as exc:
-        raise ValueError(f"{label} must stay within the Reality Contract suite directory") from exc
+        raise ValueError(
+            f"{label} must stay within the Reality Contract suite directory"
+        ) from exc
     return resolved
 
 
@@ -101,6 +103,130 @@ def build_recursive_provenance_manifest(suite_file: Path) -> dict[str, Any]:
         "schema_version": 1,
         "contracts": entries,
     }
+
+
+def _provenance_diff(
+    expected: dict[str, Any],
+    observed: dict[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    if expected.get("schema_version") != observed.get("schema_version"):
+        failures.append(
+            "recursive provenance schema_version "
+            f"expected {expected.get('schema_version')!r}, "
+            f"observed {observed.get('schema_version')!r}"
+        )
+
+    expected_contracts = expected.get("contracts")
+    observed_contracts = observed.get("contracts")
+    if not isinstance(expected_contracts, list) or not isinstance(
+        observed_contracts, list
+    ):
+        return failures + ["recursive provenance contracts must be lists"]
+
+    def by_contract(items: list[Any]) -> dict[str, dict[str, Any]]:
+        indexed: dict[str, dict[str, Any]] = {}
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            contract_id = item.get("contract_id")
+            if isinstance(contract_id, str):
+                indexed[contract_id] = item
+        return indexed
+
+    expected_by_id = by_contract(expected_contracts)
+    observed_by_id = by_contract(observed_contracts)
+    for contract_id in sorted(set(expected_by_id) | set(observed_by_id)):
+        expected_contract = expected_by_id.get(contract_id)
+        observed_contract = observed_by_id.get(contract_id)
+        if expected_contract is None:
+            failures.append(
+                f"recursive provenance added contract {contract_id!r}"
+            )
+            continue
+        if observed_contract is None:
+            failures.append(
+                f"recursive provenance missing contract {contract_id!r}"
+            )
+            continue
+
+        expected_matrix = expected_contract.get("claim_matrix")
+        observed_matrix = observed_contract.get("claim_matrix")
+        if not isinstance(expected_matrix, dict) or not isinstance(
+            observed_matrix, dict
+        ):
+            failures.append(
+                f"contract {contract_id!r} claim matrix provenance must be an object"
+            )
+        else:
+            matrix_file = observed_matrix.get("file") or expected_matrix.get("file")
+            for field in (
+                "file",
+                "git_blob_sha",
+                "base_sha",
+                "head_sha",
+                "evidence_digest",
+            ):
+                if expected_matrix.get(field) != observed_matrix.get(field):
+                    failures.append(
+                        f"contract {contract_id!r} claim matrix {matrix_file!r} "
+                        f"{field} expected {expected_matrix.get(field)!r}, "
+                        f"observed {observed_matrix.get(field)!r}"
+                    )
+
+        expected_receipts = expected_contract.get("machine_receipts")
+        observed_receipts = observed_contract.get("machine_receipts")
+        if not isinstance(expected_receipts, list) or not isinstance(
+            observed_receipts, list
+        ):
+            failures.append(
+                f"contract {contract_id!r} machine receipt provenance must be a list"
+            )
+            continue
+
+        def by_receipt(items: list[Any]) -> dict[tuple[str, str], dict[str, Any]]:
+            indexed: dict[tuple[str, str], dict[str, Any]] = {}
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                claim_id = item.get("claim_id")
+                file_name = item.get("file")
+                if isinstance(claim_id, str) and isinstance(file_name, str):
+                    indexed[(claim_id, file_name)] = item
+            return indexed
+
+        expected_receipts_by_id = by_receipt(expected_receipts)
+        observed_receipts_by_id = by_receipt(observed_receipts)
+        keys = set(expected_receipts_by_id) | set(observed_receipts_by_id)
+        for claim_id, file_name in sorted(keys):
+            expected_receipt = expected_receipts_by_id.get((claim_id, file_name))
+            observed_receipt = observed_receipts_by_id.get((claim_id, file_name))
+            if expected_receipt is None:
+                failures.append(
+                    f"contract {contract_id!r} added machine receipt "
+                    f"{file_name!r} for claim {claim_id!r}"
+                )
+                continue
+            if observed_receipt is None:
+                failures.append(
+                    f"contract {contract_id!r} missing machine receipt "
+                    f"{file_name!r} for claim {claim_id!r}"
+                )
+                continue
+            for field in ("git_blob_sha", "verdict", "case"):
+                if expected_receipt.get(field) != observed_receipt.get(field):
+                    failures.append(
+                        f"contract {contract_id!r} machine receipt {file_name!r} "
+                        f"for claim {claim_id!r} {field} "
+                        f"expected {expected_receipt.get(field)!r}, "
+                        f"observed {observed_receipt.get(field)!r}"
+                    )
+
+    if not failures and expected != observed:
+        failures.append(
+            "recursive provenance manifest differs in an unrecognized field"
+        )
+    return failures
 
 
 def build_lifecycle_receipt(
@@ -210,11 +336,7 @@ def verify_lifecycle_receipt(
         except (OSError, ValueError, TypeError, KeyError) as exc:
             failures.append(f"recursive provenance closure could not be rebuilt: {exc}")
         else:
-            if expected_provenance != observed_provenance:
-                failures.append(
-                    "recursive provenance manifest does not match current "
-                    "claim-matrix / machine-receipt closure"
-                )
+            failures.extend(_provenance_diff(expected_provenance, observed_provenance))
 
     expected_graph = inputs.get("graph_git_blob_sha")
     if graph_file is None:
