@@ -656,8 +656,10 @@ def verify_witness_payload_digest(payload: dict[str, Any]) -> tuple[str, ...]:
     observed = witness_payload_digest(payload)
     if observed != expected.lower():
         return (
-            "witness evidence digest mismatch: "
-            f"expected {expected!r}, observed {observed!r}",
+            (
+                "witness evidence digest mismatch: "
+                f"expected {expected!r}, observed {observed!r}"
+            ),
         )
     return ()
 
