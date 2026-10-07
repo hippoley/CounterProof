@@ -37,6 +37,7 @@ claims:
     surface: docs/REALITY_LAB.md
     contains: "bidirectional interoperability maintenance is active"
     must_also_contain: "still not CounterProof adoption or a merge endorsement"
+    external_state_ref: avera-check-v0-upstream
     provenance:
       handoff_file: examples/handoff/avera-check-v0/README.md
       handoff_contains:
