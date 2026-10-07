@@ -33,7 +33,7 @@ def _load_mapping(path: Path) -> dict[str, Any]:
     except (json.JSONDecodeError, yaml.YAMLError) as exc:
         raise ValueError(f"could not parse {path}: {exc}") from exc
     if not isinstance(payload, dict):
-        raise ValueError(f"{path} must contain an object")
+        raise TypeError(f"{path} must contain an object")
     return payload
 
 
@@ -80,11 +80,15 @@ def build_causal_replay_receipt(manifest_file: Path) -> dict[str, Any]:
         raise ValueError("causal replay manifest requires a non-empty case")
     if not isinstance(experiment, str) or not experiment:
         raise ValueError("causal replay manifest requires a non-empty experiment")
-    if not isinstance(oracle, dict) or not isinstance(oracle.get("id"), str):
+    if not isinstance(oracle, dict):
+        raise TypeError("causal replay manifest oracle must be an object")
+    if not isinstance(oracle.get("id"), str) or not oracle.get("id"):
         raise ValueError("causal replay manifest requires oracle.id")
     if not isinstance(candidates, dict):
-        raise ValueError("causal replay manifest requires candidates")
-    if not isinstance(expectations, list) or not expectations:
+        raise TypeError("causal replay manifest candidates must be an object")
+    if not isinstance(expectations, list):
+        raise TypeError("causal replay manifest expectations must be a list")
+    if not expectations:
         raise ValueError("causal replay manifest requires non-empty expectations")
     if observation_root is not None and not isinstance(observation_root, str):
         raise ValueError("observation_root must be a dotted path string")
@@ -99,7 +103,7 @@ def build_causal_replay_receipt(manifest_file: Path) -> dict[str, Any]:
     for role in ROLES:
         spec = candidates.get(role)
         if not isinstance(spec, dict):
-            raise ValueError(f"causal replay requires candidate {role}")
+            raise TypeError(f"candidate {role} must be an object")
         identity = spec.get("identity")
         evidence_name = spec.get("evidence")
         if not isinstance(identity, str) or not identity:
@@ -158,7 +162,7 @@ def build_causal_replay_receipt(manifest_file: Path) -> dict[str, Any]:
     all_match = True
     for index, raw in enumerate(expectations):
         if not isinstance(raw, dict):
-            raise ValueError(f"expectation {index} must be an object")
+            raise TypeError(f"expectation {index} must be an object")
         path = raw.get("path")
         if not isinstance(path, str) or not path:
             raise ValueError(f"expectation {index} requires a dotted path")
