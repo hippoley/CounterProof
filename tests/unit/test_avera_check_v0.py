@@ -4,6 +4,8 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
+
 from skill_factory.evolution.avera_check_v0 import (
     AVERA_CHECK_V0_SCHEMA,
     avera_check_v0_digest,
@@ -68,6 +70,48 @@ def test_avera_v0_verifier_rejects_schema_or_producer_drift():
     assert "schema_version must be 'avera.check/v0'" in failures
     assert "tool.name must be 'avera'" in failures
     assert any("digest mismatch" in failure for failure in failures)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_failure"),
+    [
+        ("gate_status", None, "result.gate_status must be a non-empty string"),
+        (
+            "introduced_failures",
+            ["", 1],
+            "result.introduced_failures must be a list of non-empty strings",
+        ),
+        ("risk", "", "result.risk must be a non-empty string"),
+        ("confidence", "", "result.confidence must be a non-empty string"),
+        ("confidence_score", True, "result.confidence_score must be a JSON number"),
+    ],
+)
+def test_avera_v0_verifier_rejects_invalid_required_result_shape(
+    field: str,
+    value: object,
+    expected_failure: str,
+):
+    envelope, _, _ = _fixture()
+    drifted = copy.deepcopy(envelope)
+    drifted["result"][field] = value
+    drifted["digest"] = avera_check_v0_digest(drifted)
+
+    failures = verify_avera_check_v0(drifted)
+
+    assert expected_failure in failures
+    assert not any("digest mismatch" in failure for failure in failures)
+
+
+def test_avera_v0_verifier_rejects_missing_required_result_field():
+    envelope, _, _ = _fixture()
+    drifted = copy.deepcopy(envelope)
+    drifted["result"].pop("gate_status")
+    drifted["digest"] = avera_check_v0_digest(drifted)
+
+    failures = verify_avera_check_v0(drifted)
+
+    assert "result.gate_status must be a non-empty string" in failures
+    assert not any("digest mismatch" in failure for failure in failures)
 
 
 def test_avera_v0_fixture_does_not_claim_source_candidate_identity():
