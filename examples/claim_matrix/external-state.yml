@@ -7,6 +7,7 @@ observations:
       - url: https://github.com/mikheil-galoian/avera/issues/12
         kind: issue
         state: closed
+        updated_at: "2026-10-07T06:38:58Z"
       - url: https://github.com/mikheil-galoian/avera/pull/14
         kind: pull_request
         state: closed
