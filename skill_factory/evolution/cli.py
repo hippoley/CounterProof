@@ -59,6 +59,7 @@ from .witness import (
     render_witness_review_note,
     run_regression_witness,
     verify_witness_payload_digest,
+    verify_witness_payload_semantics,
     write_witness_json,
 )
 
@@ -1291,6 +1292,10 @@ def share_witness(
     digest_failures = verify_witness_payload_digest(payload)
     if digest_failures:
         raise click.ClickException("; ".join(digest_failures))
+
+    semantic_failures = verify_witness_payload_semantics(payload)
+    if semantic_failures:
+        raise click.ClickException("; ".join(semantic_failures))
 
     if expected_head is not None:
         receipt_head = payload.get("head_sha")
