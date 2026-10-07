@@ -20,6 +20,7 @@ observations:
         kind: issue
         state: open
         updated_at: "2026-10-01T00:00:00Z"
+        comments: 2
       - url: https://github.com/acme/corpus
         kind: repository_file
         path: MANIFEST.json
@@ -32,7 +33,11 @@ observations:
         if "/pulls/7" in url:
             return {"state": "open", "merged_at": None, "head": {"sha": "new"}}
         if "/issues/9" in url:
-            return {"state": "open", "updated_at": "2026-10-02T00:00:00Z"}
+            return {
+                "state": "open",
+                "updated_at": "2026-10-02T00:00:00Z",
+                "comments": 3,
+            }
         return {"sha": "blob-new"}
 
     drifts = resolve_external_state_drift(state, fetcher=fetcher)
@@ -40,6 +45,7 @@ observations:
     assert [(item.field, item.expected, item.observed) for item in drifts] == [
         ("head_sha", "old", "new"),
         ("updated_at", "2026-10-01T00:00:00Z", "2026-10-02T00:00:00Z"),
+        ("comments", 2, 3),
         ("blob_sha", "blob-old", "blob-new"),
     ]
 
