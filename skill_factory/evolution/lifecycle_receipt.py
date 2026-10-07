@@ -342,11 +342,9 @@ def _verify_observation_semantics(
         freshness_signal: EvidenceLifecycle | None = None
 
         if status is None:
-            if item.get("freshness_signal") is not None:
-                failures.append(
-                    f"observation {contract_id!r} has freshness_signal without "
-                    "a recorded freshness status"
-                )
+            failures.append(
+                f"observation {contract_id!r} requires a recorded freshness status"
+            )
         elif status in {"FRESH", "DRIFTED", "UNRESOLVED"}:
             for field in ("source_pr", "frozen_base_sha", "frozen_head_sha"):
                 if freshness.get(field) != contract[field]:
@@ -599,7 +597,7 @@ def verify_lifecycle_receipt(
                 f"observation {item.get('contract_id')!r} freshness must be an object"
             )
             continue
-        if freshness.get("status") not in {"FRESH", "DRIFTED", "UNRESOLVED", None}:
+        if freshness.get("status") not in {"FRESH", "DRIFTED", "UNRESOLVED"}:
             failures.append(
                 f"observation {item.get('contract_id')!r} has invalid freshness status"
             )
