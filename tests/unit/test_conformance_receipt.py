@@ -6,6 +6,7 @@ import pytest
 
 from skill_factory.evolution.conformance_receipt import (
     build_conformance_receipt,
+    validate_external_harness_report,
     verify_conformance_receipt,
 )
 
@@ -161,4 +162,67 @@ def test_frozen_in_toto_statements_match_pinned_git_blob_identities():
         statement_path = FIXTURE / manifest_ids[vector_id]
         assert statement_path.is_file(), vector_id
         assert _git_blob_sha(statement_path) == expected_blob
+
+def _external_harness_report(
+    *,
+    vectors: int = 4,
+    executed: int = 4,
+    conform: int = 4,
+    fail: int = 0,
+) -> dict:
+    return {
+        "rail": "external",
+        "railNote": "synthetic external verifier",
+        "verifier": {
+            "command": "./independent-verifier --json",
+            "vectorsExecuted": executed,
+        },
+        "totals": {
+            "vectors": vectors,
+            "conform": conform,
+            "fail": fail,
+            "suiteRefusals": 0,
+        },
+        "vectors": [
+            {"id": f"v{i}", "verifierRan": i < executed}
+            for i in range(vectors)
+        ],
+    }
+
+
+def test_external_harness_gate_accepts_complete_execution_even_when_verifier_fails():
+    report = _external_harness_report(conform=1, fail=3)
+
+    failures = validate_external_harness_report(report)
+
+    assert failures == ()
+
+
+def test_external_harness_gate_rejects_reference_rail_substitution():
+    report = _external_harness_report()
+    report["rail"] = "reference"
+    report["verifier"] = None
+
+    failures = validate_external_harness_report(report)
+
+    assert "external verifier execution not proven" in failures[0]
+    assert "report verifier identity is missing" in failures
+
+
+def test_external_harness_gate_rejects_short_execution():
+    report = _external_harness_report(executed=3)
+
+    failures = validate_external_harness_report(report)
+
+    assert "external verifier ran on 3 of 4 vectors" in failures
+    assert any("verifier did not run: v3" in item for item in failures)
+
+
+def test_external_harness_gate_rejects_suite_refusal_without_relabeling_verifier():
+    report = _external_harness_report()
+    report["totals"]["suiteRefusals"] = 1
+
+    failures = validate_external_harness_report(report)
+
+    assert failures == ("corpus harness reported 1 suite refusal(s)",)
 
