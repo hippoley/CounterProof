@@ -84,3 +84,50 @@ def test_normative_divergence_is_not_hidden_by_matching_measured_code(tmp_path: 
     assert receipt["verdict"] == "DIVERGED"
     assert receipt["divergence_count"] == 1
     assert receipt["vectors"][0]["normative_mismatches"] == ["verdict"]
+
+def test_independent_checker_preserves_normative_and_reason_parity_split():
+    receipt = build_conformance_receipt(
+        FIXTURE / "manifest.json",
+        FIXTURE / "observations-rul1an-rev27.json",
+    )
+
+    assert receipt["verdict"] == "CONFORMING"
+    assert receipt["divergence_count"] == 0
+    assert receipt["vector_count"] == 4
+    assert receipt["verifier"]["name"] == "Rul1an/aee-checker"
+    assert receipt["verifier"]["suite_revision"] == 27
+    assert receipt["verifier"]["checker_source_digest"] == (
+        "sha256:5fbe879e9d6a7355d5af8c4ea6f7c055f9289753c69b9336b5ce0a213371b596"
+    )
+
+    rejects = [item for item in receipt["vectors"] if item["kind"] == "reject"]
+    assert len(rejects) == 2
+    assert all(item["normative_mismatches"] == [] for item in rejects)
+    assert sum(
+        item["measured_expected"] == item["measured_observed"]
+        for item in rejects
+    ) == 0
+
+
+def test_independent_checker_observation_provenance_is_receipt_bound(tmp_path: Path):
+    receipt = build_conformance_receipt(
+        FIXTURE / "manifest.json",
+        FIXTURE / "observations-rul1an-rev27.json",
+    )
+
+    changed = json.loads(
+        (FIXTURE / "observations-rul1an-rev27.json").read_text(encoding="utf-8")
+    )
+    changed["verifier"]["checker_source_digest"] = "sha256:" + ("0" * 64)
+    changed_path = tmp_path / "substituted-observations.json"
+    changed_path.write_text(json.dumps(changed, indent=2) + "\n", encoding="utf-8")
+
+    failures = verify_conformance_receipt(
+        receipt,
+        manifest_path=FIXTURE / "manifest.json",
+        observations_path=changed_path,
+    )
+
+    assert len(failures) == 1
+    assert failures[0].startswith("observations identity mismatch:")
+

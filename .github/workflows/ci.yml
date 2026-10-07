@@ -258,6 +258,18 @@ jobs:
           grep -q '"vector_count": 4' /tmp/CONFORMANCE_RECEIPT.json
           /tmp/counterproof-clean/bin/counterproof verify-conformance-receipt             /tmp/CONFORMANCE_RECEIPT.json             --manifest "$GITHUB_WORKSPACE/examples/interop/in-toto-597/manifest.json"             --observations "$GITHUB_WORKSPACE/examples/interop/in-toto-597/observations.json"
 
+          /tmp/counterproof-clean/bin/counterproof conformance-receipt \
+            "$GITHUB_WORKSPACE/examples/interop/in-toto-597/manifest.json" \
+            "$GITHUB_WORKSPACE/examples/interop/in-toto-597/observations-rul1an-rev27.json" \
+            --output /tmp/INDEPENDENT_CONFORMANCE_RECEIPT.json
+          grep -q '"verdict": "CONFORMING"' /tmp/INDEPENDENT_CONFORMANCE_RECEIPT.json
+          grep -q '"name": "Rul1an/aee-checker"' /tmp/INDEPENDENT_CONFORMANCE_RECEIPT.json
+          grep -q '"required-member-absent"' /tmp/INDEPENDENT_CONFORMANCE_RECEIPT.json
+          /tmp/counterproof-clean/bin/counterproof verify-conformance-receipt \
+            /tmp/INDEPENDENT_CONFORMANCE_RECEIPT.json \
+            --manifest "$GITHUB_WORKSPACE/examples/interop/in-toto-597/manifest.json" \
+            --observations "$GITHUB_WORKSPACE/examples/interop/in-toto-597/observations-rul1an-rev27.json"
+
 
       - name: Run packaged trace-to-proof workflow
         run: |

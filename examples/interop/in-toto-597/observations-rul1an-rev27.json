@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "verifier": {
+    "name": "Rul1an/aee-checker",
+    "version": "suiteRevision-27-directed",
+    "repository": "Rul1an/aee-checker",
+    "commit": "ef8438c4d6651090f0298516663fc03febe432ac",
+    "checker_commit": "61b5e28b84ede1dec26ae8d1e33f9e65f84cb013",
+    "checker_source_digest": "sha256:5fbe879e9d6a7355d5af8c4ea6f7c055f9289753c69b9336b5ce0a213371b596",
+    "suite_revision": 27,
+    "suite_commit_at_declaration": "94c163c",
+    "suite_commit_after_history_rewrite": "e98de66",
+    "report_path": "reports/v0.7-rev27-directed-run.json",
+    "report_sha256": "sha256:5d0137b3d567df7dd5088b10098ce88b1834940c645af1ba994f5438d4a9a107",
+    "report_git_blob_sha": "f74c0652e8dca842cda92e89f39659e26835e008",
+    "index_git_blob_sha": "245f670226328724adae333aab790aa083e9204a"
+  },
+  "results": [
+    {
+      "id": "v48542b44ffd26237",
+      "verdict": "valid",
+      "result": "fail",
+      "codes": []
+    },
+    {
+      "id": "v18bdbadef67b38f4",
+      "verdict": "valid",
+      "result": "fail",
+      "codes": []
+    },
+    {
+      "id": "v2adb319fc7515885",
+      "verdict": "invalid",
+      "codes": ["required-member-absent"]
+    },
+    {
+      "id": "v3418101227718535",
+      "verdict": "invalid",
+      "codes": ["manifest-declares-no-attack"]
+    }
+  ]
+}
