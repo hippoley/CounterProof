@@ -43,6 +43,7 @@ observations:
         kind: issue
         state: open
         updated_at: "2026-10-02T17:46:36Z"
+        comments: 6
       - url: https://github.com/Open-fab-ai/openfab
         kind: repository_file
         path: docs/generation-predicate-v0.1.md
