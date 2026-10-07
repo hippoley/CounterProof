@@ -854,7 +854,16 @@ def render_witness_review_note(
     integrity_payload: dict[str, Any] | None = None,
     expected_head: str | None = None,
 ) -> str:
-    """Render a concise reviewer-facing note from stored witness evidence."""
+    """Render a concise reviewer-facing note from validated witness evidence."""
+    validation_failures = (
+        *verify_witness_payload_digest(payload),
+        *verify_witness_payload_semantics(payload),
+    )
+    if validation_failures:
+        raise ValueError(
+            "invalid witness payload: " + "; ".join(validation_failures)
+        )
+
     status = str(payload.get("status", "unknown"))
     tests = [str(item) for item in payload.get("tests", [])]
     support_files = [
