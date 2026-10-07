@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -102,7 +103,6 @@ def test_proof_lab_lifecycle_matches_canonical_reality_contracts():
         Path("examples/claim_matrix/reality-contracts.yml").read_text(encoding="utf-8")
     )
     contracts = {item["id"]: item for item in suite["contracts"]}
-
     bound_cases = [item for item in published["cases"] if item.get("reality_contract_id")]
     assert bound_cases, "Proof Lab must publish at least one Reality Contract-bound case"
 
@@ -139,6 +139,10 @@ def test_high_signal_public_claims_match_canonical_reality_contracts():
         Path("examples/claim_matrix/reality-contracts.yml").read_text(encoding="utf-8")
     )
     contracts = {item["id"]: item for item in suite["contracts"]}
+    external_state = yaml.safe_load(
+        Path("examples/claim_matrix/external-state.yml").read_text(encoding="utf-8")
+    )
+    observations = {item["id"]: item for item in external_state["observations"]}
 
     assert public_claims["schema_version"] == 1
     assert public_claims["claims"], "at least one public claim must be bound"
@@ -198,6 +202,17 @@ def test_high_signal_public_claims_match_canonical_reality_contracts():
                     f'{claim["id"]} expected {dotted}={expected_value!r}, '
                     f'observed={observed_value!r}'
                 )
+
+        state_ref = claim.get("external_state_ref")
+        if state_ref:
+            observation = observations[state_ref]
+            observed_at = date.fromisoformat(observation["observed_at"])
+            today_utc = datetime.now(timezone.utc).date()
+            age_days = (today_utc - observed_at).days
+            assert age_days <= observation["refresh_after_days"], (
+                f'{claim["id"]} external state snapshot is {age_days} days old; '
+                f'refresh after {observation["refresh_after_days"]}'
+            )
 
         assert bool(claim.get("reality_contract_id")) ^ bool(provenance), (
             f'{claim["id"]} must bind exactly one canonical evidence source'
