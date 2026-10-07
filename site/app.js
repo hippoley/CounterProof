@@ -391,6 +391,7 @@ function renderRealityCases() {
       '</div>' +
       '<h3>' + esc(item.external_pr) + '</h3>' +
       '<p class="reality-question">' + esc(item.question) + '</p>' +
+      (item.lifecycle ? '<p class="reality-lifecycle"><b>LIFECYCLE ' + esc(item.lifecycle) + '</b>' + (item.lifecycle_note ? ' · ' + esc(item.lifecycle_note) : '') + '</p>' : '') +
       '<p class="reality-learned">' + esc(item.learned) + '</p>' +
       (item.counterproof_change ? '<a class="reality-change" href="' + esc(item.counterproof_change_url) + '" target="_blank" rel="noopener noreferrer"><span>CHANGED COUNTERPROOF</span><b>' + esc(item.counterproof_change) + ' ↗</b></a>' : '') +
       '<div class="reality-links">' +
