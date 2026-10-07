@@ -176,7 +176,7 @@ def test_verified_or_contradicted_oracle_requires_probe():
         "https://",
         " https://oracle-source.example.test/leading-space",
         "https://oracle-source.example.test/inner space",
-        "https://example.test/evidence\\other",
+        r"https://example.test/evidence\other",
         "https://oracle-source.example.test:99999/invalid-port",
     ],
 )
