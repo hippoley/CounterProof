@@ -105,6 +105,8 @@ Current field cases include a genuine regression witness, a compiler-failure fal
 
 These are evidence links, not endorsements. CounterProof still treats every new claim as unproven until its evidence earns a stronger status.
 
+High-signal public claims are declared in [`examples/claim_matrix/public-claims.yml`](examples/claim_matrix/public-claims.yml) and CI checks them against canonical Reality Contract lifecycle and claim expectations.
+
 ---
 
 A green CI run proves that your code passes **now**.
