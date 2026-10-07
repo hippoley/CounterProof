@@ -2,18 +2,25 @@
   "schema_version": 1,
   "verifier": {
     "name": "Rul1an/aee-checker",
-    "version": "suiteRevision-27-directed",
+    "version": "checker-sequence-27-directed",
     "repository": "Rul1an/aee-checker",
     "commit": "ef8438c4d6651090f0298516663fc03febe432ac",
     "checker_commit": "61b5e28b84ede1dec26ae8d1e33f9e65f84cb013",
     "checker_source_digest": "sha256:5fbe879e9d6a7355d5af8c4ea6f7c055f9289753c69b9336b5ce0a213371b596",
-    "suite_revision": 27,
-    "suite_commit_at_declaration": "94c163c",
-    "suite_commit_after_history_rewrite": "e98de66",
+    "checker_sequence_revision": 27,
+    "corpus_suite_revision": 28,
+    "corpus_commit_before_history_rewrite": "94c163c8e4d9b52a7056c63bc489932329d42a42",
+    "corpus_commit_after_history_rewrite": "e98de66d7296c4eb01abc38b6aee0b51b0c87a8e",
     "report_path": "reports/v0.7-rev27-directed-run.json",
     "report_sha256": "sha256:5d0137b3d567df7dd5088b10098ce88b1834940c645af1ba994f5438d4a9a107",
     "report_git_blob_sha": "f74c0652e8dca842cda92e89f39659e26835e008",
-    "index_git_blob_sha": "245f670226328724adae333aab790aa083e9204a"
+    "index_git_blob_sha": "245f670226328724adae333aab790aa083e9204a",
+    "vector_git_blobs": {
+      "v48542b44ffd26237": "fe8b67cf6259446d04147753e0dcdbaee343a2eb",
+      "v18bdbadef67b38f4": "862db2af4b99b4638a39fb05f4b21c6fbb3f03ce",
+      "v2adb319fc7515885": "bf8106a749fb47b9e102f089c7625506e6905fa2",
+      "v3418101227718535": "7d476005fd32af6172578970fe7dd3c9c3c23b2f"
+    }
   },
   "results": [
     {
@@ -31,12 +38,16 @@
     {
       "id": "v2adb319fc7515885",
       "verdict": "invalid",
-      "codes": ["required-member-absent"]
+      "codes": [
+        "required-member-absent"
+      ]
     },
     {
       "id": "v3418101227718535",
       "verdict": "invalid",
-      "codes": ["manifest-declares-no-attack"]
+      "codes": [
+        "manifest-declares-no-attack"
+      ]
     }
   ]
 }

@@ -85,6 +85,7 @@ def test_normative_divergence_is_not_hidden_by_matching_measured_code(tmp_path: 
     assert receipt["divergence_count"] == 1
     assert receipt["vectors"][0]["normative_mismatches"] == ["verdict"]
 
+
 def test_independent_checker_preserves_normative_and_reason_parity_split():
     receipt = build_conformance_receipt(
         FIXTURE / "manifest.json",
@@ -95,7 +96,15 @@ def test_independent_checker_preserves_normative_and_reason_parity_split():
     assert receipt["divergence_count"] == 0
     assert receipt["vector_count"] == 4
     assert receipt["verifier"]["name"] == "Rul1an/aee-checker"
-    assert receipt["verifier"]["suite_revision"] == 27
+    assert "suite_revision" not in receipt["verifier"]
+    assert receipt["verifier"]["checker_sequence_revision"] == 27
+    assert receipt["verifier"]["corpus_suite_revision"] == 28
+    assert receipt["verifier"]["vector_git_blobs"] == {
+        "v48542b44ffd26237": "fe8b67cf6259446d04147753e0dcdbaee343a2eb",
+        "v18bdbadef67b38f4": "862db2af4b99b4638a39fb05f4b21c6fbb3f03ce",
+        "v2adb319fc7515885": "bf8106a749fb47b9e102f089c7625506e6905fa2",
+        "v3418101227718535": "7d476005fd32af6172578970fe7dd3c9c3c23b2f",
+    }
     assert receipt["verifier"]["checker_source_digest"] == (
         "sha256:5fbe879e9d6a7355d5af8c4ea6f7c055f9289753c69b9336b5ce0a213371b596"
     )
