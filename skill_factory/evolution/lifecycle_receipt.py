@@ -10,6 +10,8 @@ import yaml
 
 from .claim_matrix import load_claim_matrix
 from .effective_lifecycle import EffectiveLifecycleObservation
+from .evidence_lifecycle import EvidenceLifecycle, resolve_effective_lifecycle
+from .evidence_supersession import load_evidence_graph
 from .reality_contracts import validate_reality_contracts
 
 
@@ -229,6 +231,220 @@ def _provenance_diff(
     return failures
 
 
+
+def _verify_observation_semantics(
+    observations: list[Any],
+    *,
+    suite_file: Path,
+    graph_file: Path | None,
+) -> list[str]:
+    """Re-derive lifecycle decisions from pinned inputs and recorded freshness."""
+    failures: list[str] = []
+    raw = yaml.safe_load(suite_file.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict) or not isinstance(raw.get("contracts"), list):
+        return ["invalid reality contract suite for lifecycle observation verification"]
+
+    root = suite_file.parent.resolve()
+    graph = load_evidence_graph(graph_file) if graph_file else None
+    expected: dict[str, dict[str, Any]] = {}
+
+    for contract in raw["contracts"]:
+        if not isinstance(contract, dict):
+            continue
+        contract_id = contract.get("id")
+        manifest_name = contract.get("manifest")
+        if not isinstance(contract_id, str) or not contract_id:
+            continue
+        if not isinstance(manifest_name, str) or not manifest_name:
+            continue
+
+        manifest_path = _resolve_dependency(
+            root,
+            root / manifest_name,
+            label=f"contract {contract_id!r} manifest",
+        )
+        manifest = load_claim_matrix(manifest_path)
+        declared = EvidenceLifecycle(
+            contract.get("lifecycle", EvidenceLifecycle.CURRENT.value)
+        )
+        evidence_id_raw = contract.get("evidence_id")
+        evidence_id = (
+            str(evidence_id_raw) if evidence_id_raw is not None else None
+        )
+        graph_signal: EvidenceLifecycle | None = None
+        if graph is not None and evidence_id is not None:
+            try:
+                graph_signal = graph.lifecycle_suggestions[evidence_id]
+            except KeyError as exc:
+                raise ValueError(
+                    f"contract {contract_id!r} evidence_id {evidence_id!r} "
+                    "is missing from evidence graph"
+                ) from exc
+
+        expected[contract_id] = {
+            "evidence_id": evidence_id,
+            "declared": declared,
+            "graph_signal": graph_signal,
+            "source_pr": manifest.source_pr,
+            "frozen_base_sha": contract.get("expected_base_sha") or manifest.base_sha,
+            "frozen_head_sha": contract.get("expected_head_sha") or manifest.head_sha,
+        }
+
+    seen: set[str] = set()
+    for item in observations:
+        if not isinstance(item, dict):
+            failures.append("lifecycle receipt observation must be an object")
+            continue
+
+        contract_id = item.get("contract_id")
+        if not isinstance(contract_id, str) or not contract_id:
+            failures.append("lifecycle receipt observation requires contract_id")
+            continue
+        if contract_id in seen:
+            failures.append(f"duplicate lifecycle observation for contract {contract_id!r}")
+            continue
+        seen.add(contract_id)
+
+        contract = expected.get(contract_id)
+        if contract is None:
+            failures.append(f"unexpected lifecycle observation for contract {contract_id!r}")
+            continue
+
+        if item.get("evidence_id") != contract["evidence_id"]:
+            failures.append(
+                f"observation {contract_id!r} evidence_id expected "
+                f"{contract['evidence_id']!r}, observed {item.get('evidence_id')!r}"
+            )
+
+        declared = contract["declared"]
+        if item.get("declared") != declared.value:
+            failures.append(
+                f"observation {contract_id!r} declared lifecycle expected "
+                f"{declared.value!r}, observed {item.get('declared')!r}"
+            )
+
+        graph_signal = contract["graph_signal"]
+        expected_graph_signal = graph_signal.value if graph_signal else None
+        if item.get("graph_signal") != expected_graph_signal:
+            failures.append(
+                f"observation {contract_id!r} graph signal expected "
+                f"{expected_graph_signal!r}, observed {item.get('graph_signal')!r}"
+            )
+
+        freshness = item.get("freshness")
+        if not isinstance(freshness, dict):
+            failures.append(
+                f"observation {contract_id!r} freshness must be an object"
+            )
+            continue
+
+        status = freshness.get("status")
+        freshness_signal: EvidenceLifecycle | None = None
+
+        if status is None:
+            failures.append(
+                f"observation {contract_id!r} requires a recorded freshness status"
+            )
+        elif status in {"FRESH", "DRIFTED", "UNRESOLVED"}:
+            for field in ("source_pr", "frozen_base_sha", "frozen_head_sha"):
+                if freshness.get(field) != contract[field]:
+                    failures.append(
+                        f"observation {contract_id!r} freshness {field} expected "
+                        f"{contract[field]!r}, observed {freshness.get(field)!r}"
+                    )
+
+            live_base = freshness.get("live_base_sha")
+            live_head = freshness.get("live_head_sha")
+            frozen_base = contract["frozen_base_sha"]
+            frozen_head = contract["frozen_head_sha"]
+
+            if status in {"FRESH", "DRIFTED"}:
+                if not isinstance(live_base, str) or not live_base:
+                    failures.append(
+                        f"observation {contract_id!r} {status} freshness requires live_base_sha"
+                    )
+                if not isinstance(live_head, str) or not live_head:
+                    failures.append(
+                        f"observation {contract_id!r} {status} freshness requires live_head_sha"
+                    )
+
+                drift: list[str] = []
+                if frozen_base and live_base != frozen_base:
+                    drift.append("base")
+                if frozen_head and live_head != frozen_head:
+                    drift.append("head")
+
+                if status == "FRESH":
+                    if drift:
+                        failures.append(
+                            f"observation {contract_id!r} freshness says FRESH "
+                            f"but captured candidate drift is {'/'.join(drift)}"
+                        )
+                    if freshness.get("reason") is not None:
+                        failures.append(
+                            f"observation {contract_id!r} FRESH freshness must not carry a reason"
+                        )
+                else:
+                    if not drift:
+                        failures.append(
+                            f"observation {contract_id!r} freshness says DRIFTED "
+                            "but captured candidates match the frozen identities"
+                        )
+                    expected_reason = (
+                        f"live PR {'/'.join(drift)} candidate drift" if drift else None
+                    )
+                    if freshness.get("reason") != expected_reason:
+                        failures.append(
+                            f"observation {contract_id!r} drift reason expected "
+                            f"{expected_reason!r}, observed {freshness.get('reason')!r}"
+                        )
+                    promoted = resolve_effective_lifecycle(
+                        declared,
+                        freshness_signal=EvidenceLifecycle.STALE,
+                    )
+                    if promoted is not declared:
+                        freshness_signal = EvidenceLifecycle.STALE
+            else:
+                if live_base is not None or live_head is not None:
+                    failures.append(
+                        f"observation {contract_id!r} UNRESOLVED freshness "
+                        "must not carry live candidate identities"
+                    )
+                if not freshness.get("reason"):
+                    failures.append(
+                        f"observation {contract_id!r} UNRESOLVED freshness requires a reason"
+                    )
+        else:
+            failures.append(
+                f"observation {contract_id!r} has invalid freshness status {status!r}"
+            )
+
+        expected_freshness_signal = (
+            freshness_signal.value if freshness_signal else None
+        )
+        if item.get("freshness_signal") != expected_freshness_signal:
+            failures.append(
+                f"observation {contract_id!r} freshness signal expected "
+                f"{expected_freshness_signal!r}, observed {item.get('freshness_signal')!r}"
+            )
+
+        effective = resolve_effective_lifecycle(
+            declared,
+            freshness_signal=freshness_signal,
+            graph_signal=graph_signal,
+        )
+        if item.get("effective") != effective.value:
+            failures.append(
+                f"observation {contract_id!r} effective lifecycle expected "
+                f"{effective.value!r}, observed {item.get('effective')!r}"
+            )
+
+    for contract_id in sorted(set(expected) - seen):
+        failures.append(f"missing lifecycle observation for contract {contract_id!r}")
+
+    return failures
+
+
 def build_lifecycle_receipt(
     observations: list[EffectiveLifecycleObservation],
     *,
@@ -355,6 +571,17 @@ def verify_lifecycle_receipt(
         failures.append("lifecycle receipt observations must be a list")
         return failures
 
+    try:
+        failures.extend(
+            _verify_observation_semantics(
+                observations,
+                suite_file=suite_file,
+                graph_file=graph_file,
+            )
+        )
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        failures.append(f"lifecycle observation semantics could not be rebuilt: {exc}")
+
     mismatches = 0
     for item in observations:
         if not isinstance(item, dict):
@@ -370,7 +597,7 @@ def verify_lifecycle_receipt(
                 f"observation {item.get('contract_id')!r} freshness must be an object"
             )
             continue
-        if freshness.get("status") not in {"FRESH", "DRIFTED", "UNRESOLVED", None}:
+        if freshness.get("status") not in {"FRESH", "DRIFTED", "UNRESOLVED"}:
             failures.append(
                 f"observation {item.get('contract_id')!r} has invalid freshness status"
             )
