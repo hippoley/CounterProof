@@ -1,15 +1,12 @@
-from __future__ import annotations
-
-from pathlib import Path
-
 import yaml
 
 
-LEDGER = Path("examples/claim_matrix/external-evidence-ledger.yml")
+LEDGER = "examples/claim_matrix/external-evidence-ledger.yml"
 
 
 def test_external_evidence_ledger_preserves_recognition_boundaries():
-    value = yaml.safe_load(LEDGER.read_text(encoding="utf-8"))
+    with open(LEDGER, encoding="utf-8") as handle:
+        value = yaml.safe_load(handle)
     records = {item["id"]: item for item in value["records"]}
 
     avera = records["avera-first-consumer"]
