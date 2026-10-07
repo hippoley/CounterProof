@@ -26,6 +26,7 @@ def test_upstream_avera_v0_frozen_example_verifies_end_to_end():
     envelope, baseline, current = _fixture()
 
     assert envelope["schema_version"] == AVERA_CHECK_V0_SCHEMA
+    assert envelope["tool"] == {"name": "avera", "version": "0.2.0"}
     assert avera_check_v0_digest(envelope) == envelope["digest"]
     assert verify_avera_check_v0(
         envelope,
