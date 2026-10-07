@@ -124,11 +124,14 @@ def test_causal_replay_requires_distinct_candidate_identities(tmp_path: Path):
     text = manifest.read_text(encoding="utf-8").replace(
         "identity: revert-sha",
         "identity: control-sha",
-    ).replace(
-        "candidate: revert-sha",
-        "candidate: control-sha",
     )
     manifest.write_text(text, encoding="utf-8")
+    _write_evidence(
+        tmp_path / "revert.json",
+        identity="control-sha",
+        failed=False,
+        count=0,
+    )
 
     with pytest.raises(ValueError, match="identities must be distinct"):
         build_causal_replay_receipt(manifest)
