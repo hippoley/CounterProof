@@ -48,8 +48,8 @@ def signature(row: dict) -> tuple[bool, bool, bool]:
     )
 
 
-def _load_diagnostics(diagnostics_dir: Path) -> dict[str, dict]:
-    by_image: dict[str, dict] = {}
+def _load_diagnostics(diagnostics_dir: Path) -> dict[str, tuple[Path, dict]]:
+    by_image: dict[str, tuple[Path, dict]] = {}
     for path in sorted(diagnostics_dir.rglob("counterproof-keyring-diagnostic-*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         image = data["image"]
@@ -58,7 +58,7 @@ def _load_diagnostics(diagnostics_dir: Path) -> dict[str, dict]:
                 "AMBIGUOUS_EVIDENCE: multiple published diagnostics found "
                 f"for image {image!r}"
             )
-        by_image[image] = data["snapshot"]
+        by_image[image] = (path, data["snapshot"])
     return by_image
 
 
@@ -81,7 +81,7 @@ def _candidate_roles(
 
 
 def _require_published(
-    by_image: dict[str, dict],
+    by_image: dict[str, tuple[Path, dict]],
     roles: dict[str, str],
 ) -> None:
     missing = {role: image for role, image in roles.items() if image not in by_image}
@@ -109,7 +109,7 @@ def build_receipt(
     _require_published(by_image, roles)
 
     candidates = {
-        role: summarize(by_image[image], image)
+        role: summarize(by_image[image][1], image)
         for role, image in roles.items()
     }
 
@@ -152,19 +152,25 @@ def prepare_generic_replay(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     candidates: dict[str, dict[str, str]] = {}
+    sources_dir = output_dir / "sources"
+    sources_dir.mkdir(exist_ok=True)
     for role, image in roles.items():
+        source_path, snapshot = by_image[image]
         evidence_name = f"{role.lower()}.json"
+        source_name = f"sources/{role.lower()}-diagnostic.json"
         payload = {
             "candidate": image,
-            "observation": summarize(by_image[image], image),
+            "observation": summarize(snapshot, image),
         }
         (output_dir / evidence_name).write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        (output_dir / source_name).write_bytes(source_path.read_bytes())
         candidates[role] = {
             "identity": image,
             "evidence": evidence_name,
+            "source_evidence": source_name,
         }
 
     manifest = {
