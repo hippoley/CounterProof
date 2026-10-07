@@ -21,11 +21,16 @@ from skill_factory.evolution.claim_matrix import (
 from skill_factory.evolution.cli import cli
 
 
+TEST_ORACLE_SOURCE = "https://oracle-source.example.test/synthetic-test-input"
+ASSERTED_ORACLES = {OracleAlignment.ALIGNED, OracleAlignment.CONTRADICTED}
+
+
 def _claim(
     *,
     submitted: SubmittedTestEvidence,
     oracle: OracleAlignment,
     oracle_probe: str | None = None,
+    oracle_source_url: str | None = None,
     evidence_scope: EvidenceScope = EvidenceScope.BEHAVIOR,
     required_scope: EvidenceScope = EvidenceScope.BEHAVIOR,
 ) -> ClaimEvidence:
@@ -44,6 +49,11 @@ def _claim(
         required_scope=required_scope,
         oracle_alignment=oracle,
         oracle_probe=oracle_probe,
+        oracle_source_url=(
+            oracle_source_url
+            if oracle_source_url is not None
+            else TEST_ORACLE_SOURCE if oracle in ASSERTED_ORACLES else None
+        ),
     )
 
 
@@ -150,7 +160,53 @@ def test_verified_or_contradicted_oracle_requires_probe():
             claim="behavior",
             submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
             oracle_alignment=OracleAlignment.CONTRADICTED,
+            oracle_source_url=TEST_ORACLE_SOURCE,
         )
+
+
+@pytest.mark.parametrize("oracle", [OracleAlignment.ALIGNED, OracleAlignment.CONTRADICTED])
+@pytest.mark.parametrize(
+    "oracle_source_url",
+    [
+        None,
+        "",
+        "oracle-source.example.test/no-scheme",
+        "/relative/evidence",
+        "ftp://oracle-source.example.test/evidence",
+        "https://",
+        " https://oracle-source.example.test/leading-space",
+        "https://oracle-source.example.test/inner space",
+        "https://example.test/evidence\\other",
+        "https://oracle-source.example.test:99999/invalid-port",
+    ],
+)
+def test_asserted_oracle_requires_auditable_http_source(
+    oracle: OracleAlignment,
+    oracle_source_url: str | None,
+):
+    with pytest.raises(ValidationError, match="requires oracle_source_url"):
+        ClaimEvidence(
+            id="claim-1",
+            claim="behavior",
+            submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
+            oracle_alignment=oracle,
+            oracle_probe="authoritative product probe",
+            oracle_source_url=oracle_source_url,
+        )
+
+
+@pytest.mark.parametrize("oracle", [OracleAlignment.ALIGNED, OracleAlignment.CONTRADICTED])
+def test_asserted_oracle_accepts_absolute_http_source(oracle: OracleAlignment):
+    claim = ClaimEvidence(
+        id="claim-1",
+        claim="behavior",
+        submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
+        oracle_alignment=oracle,
+        oracle_probe="authoritative product probe",
+        oracle_source_url=TEST_ORACLE_SOURCE,
+    )
+
+    assert claim.oracle_source_url == TEST_ORACLE_SOURCE
 
 
 def test_render_keeps_submitted_judge_scope_explicit():
