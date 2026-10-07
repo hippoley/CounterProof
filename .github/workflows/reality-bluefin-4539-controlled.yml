@@ -188,6 +188,32 @@ jobs:
           printf '\n' >>"$GITHUB_STEP_SUMMARY"
           cat bluefin-4539-generic-causal-summary.md >>"$GITHUB_STEP_SUMMARY"
 
+      - name: Build flagship causal receipt
+        shell: bash
+        env:
+          CONTROL_IMAGE: ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101
+          BAD_IMAGE: ${{ needs.build-candidates.outputs.bad_image }}
+          REVERT_IMAGE: ${{ needs.build-candidates.outputs.revert_image }}
+          ORACLE_REVISION: 1c0a23317d420b77396770ae2a8fdf71804cde4e
+        run: |
+          python3 scripts/reality_bluefin_4539_flagship.py replay-results \
+            --control-image "$CONTROL_IMAGE" \
+            --bad-image "$BAD_IMAGE" \
+            --revert-image "$REVERT_IMAGE" \
+            --oracle-revision "$ORACLE_REVISION" \
+            --source-run "${{ github.run_id }}" \
+            --workflow-head-sha "${{ github.sha }}" \
+            --workflow-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --control-runtime-result "${{ needs.e2e-control.result }}" \
+            --bad-runtime-result "${{ needs.e2e-bad.result }}" \
+            --revert-runtime-result "${{ needs.e2e-revert.result }}" \
+            --upstream-workflow-revision a99ca5ea0553f778a74f5d5152fefbbb47d86da4 \
+            --output bluefin-4539-flagship-receipt.json \
+            --summary bluefin-4539-flagship-summary.md
+
+          printf '\n' >>"$GITHUB_STEP_SUMMARY"
+          cat bluefin-4539-flagship-summary.md >>"$GITHUB_STEP_SUMMARY"
+
       - name: Upload CounterProof receipt
         uses: actions/upload-artifact@v4
         with:
@@ -197,5 +223,7 @@ jobs:
             bluefin-4539-controlled-summary.md
             bluefin-4539-generic-causal-receipt.json
             bluefin-4539-generic-causal-summary.md
+            bluefin-4539-flagship-receipt.json
+            bluefin-4539-flagship-summary.md
             bluefin-generic-causal/
           if-no-files-found: error

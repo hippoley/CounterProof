@@ -49,3 +49,15 @@ The generic adapter intentionally scopes its oracle to the observable keyring
 service lifecycle and portal dependency. The missing `login` Secret Service alias
 is recorded as a shared fixture state, not silently promoted into proof that the
 login keyring is unlocked.
+
+
+## Published flagship receipt
+
+The strongest frozen artifact from the successful controlled replay is:
+
+- [Flagship causal receipt](../../../examples/claim_matrix/receipts/bluefin-4539-flagship-causal.json)
+- source workflow run: https://github.com/hippoley/CounterProof/actions/runs/37412091382
+- oracle revision: `1c0a23317d420b77396770ae2a8fdf71804cde4e`
+- upstream QEMU workflow revision: `a99ca5ea0553f778a74f5d5152fefbbb47d86da4`
+
+The flagship receipt keeps runtime execution success separate from the behavioral candidate signature and records the causal scope explicitly as `CONTROLLED_CAUSAL`.
