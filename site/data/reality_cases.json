@@ -2,6 +2,48 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "bluefin-4539",
+      "external_pr": "ublue-os/bluefin#4539",
+      "question": "Can one controlled intervention produce a runtime signature that disappears again after revert?",
+      "result": "CAUSAL WITNESS",
+      "result_class": "witnessed",
+      "learned": "The same GNOME/QEMU oracle produced CONTROL→BAD→REVERT with the BAD-only keyring/portal signature and recovery after removing the intervention. Raw runtime diagnostics are candidate-bound and provenance-pinned.",
+      "source_url": "https://github.com/ublue-os/bluefin/pull/4539",
+      "probe_url": "https://github.com/hippoley/CounterProof/actions/runs/37412091382",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/bluefin-4539/REPLAY_BOUNDARY.md",
+      "artifact_label": "FLAGSHIP PROOF",
+      "counterproof_change": "Generic causal replay + raw runtime provenance",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/122"
+    },
+    {
+      "id": "claude-code-89404",
+      "external_pr": "anthropics/claude-code#89404",
+      "question": "What if the submitted tests are green but the product's authoritative parser rejects the fixtures?",
+      "result": "ORACLE CONTRADICTED",
+      "result_class": "boundary",
+      "learned": "Reviewer-supplied evidence shows claude plugin validate --json rejects fixtures the submitted validator accepts, while the submitted suite can remain green across a multi-line extraction regression. Green judge evidence must not be promoted into product truth.",
+      "source_url": "https://github.com/anthropics/claude-code/pull/89404",
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/claude-code-89404/ORACLE_DISAGREEMENT.md",
+      "artifact_label": "ORACLE ARTIFACT",
+      "counterproof_change": "Authoritative-oracle contradiction receipt",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/124"
+    },
+    {
+      "id": "gramps-2484",
+      "external_pr": "gramps-project/gramps#2484",
+      "question": "What if a changed fixture exposes the bug while the existing test itself is unchanged?",
+      "result": "CHALLENGE / REPAIR",
+      "result_class": "witnessed",
+      "learned": "One trusted run executed three states under the same RelaxNG oracle: BASE+original fixture PASS, BASE+submitted fixture FAIL, HEAD+submitted fixture PASS. CounterProof keeps this challenge/repair triad distinct from revert-causal replay.",
+      "source_url": "https://github.com/gramps-project/gramps/pull/2484",
+      "probe_url": "https://github.com/hippoley/CounterProof/actions/runs/36224298359",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/gramps-2484/TRIAD_PROOF.md",
+      "artifact_label": "TRIAD PROOF",
+      "counterproof_change": "Explicit support-file replay + executed triad artifact",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/126"
+    },
+    {
       "id": "async-rithmic-53",
       "external_pr": "rundef/async_rithmic#53",
       "question": "Does the submitted regression actually distinguish the fix from old code?",
@@ -48,18 +90,6 @@
       "probe_url": "https://github.com/hippoley/CounterProof/issues/17",
       "counterproof_change": "Infrastructure failure no longer mints a witness",
       "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/10"
-    },
-    {
-      "id": "claude-code-89404",
-      "external_pr": "anthropics/claude-code#89404",
-      "question": "What if the submitted tests are internally green but disagree with the product's authoritative parser?",
-      "result": "OPEN PROBE",
-      "result_class": "open",
-      "learned": "This is not implemented as a product feature yet. The real case suggests red→green can still be weak when the submitted judge is misaligned with product truth.",
-      "source_url": "https://github.com/anthropics/claude-code/pull/89404",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
-      "counterproof_change": "Not built yet — waiting for reviewer validation",
-      "counterproof_change_url": "https://github.com/hippoley/CounterProof/issues/16"
     }
   ]
 }
