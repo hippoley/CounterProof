@@ -1,0 +1,27 @@
+schema_version: 1
+case: counterproof/example-controlled-causal
+experiment: CONTROL -> introduce intervention -> BAD -> remove intervention -> REVERT
+oracle:
+  id: example-runtime-oracle
+  revision: v1
+identity_path: candidate
+observation_root: snapshot
+candidates:
+  CONTROL:
+    identity: control-v1
+    evidence: control.json
+  BAD:
+    identity: bad-v1
+    evidence: bad.json
+  REVERT:
+    identity: revert-v1
+    evidence: revert.json
+expectations:
+  - path: failure
+    CONTROL: false
+    BAD: true
+    REVERT: false
+  - path: error_count
+    CONTROL: 0
+    BAD: 2
+    REVERT: 0
