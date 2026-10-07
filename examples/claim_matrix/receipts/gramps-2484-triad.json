@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "receipt_type": "EXECUTED_CHALLENGE_REPAIR_TRIAD",
+  "case": "gramps-project/gramps#2484",
+  "verdict": "WITNESSED_CHALLENGE_REPAIR",
+  "source_run": {
+    "run_id": 36224298359,
+    "run_url": "https://github.com/hippoley/CounterProof/actions/runs/36224298359",
+    "workflow": "Reality probe - gramps",
+    "workflow_head_sha": "578b20af71c241d689b30e5adb9e0a605030602b",
+    "conclusion": "success"
+  },
+  "candidate_identity": {
+    "base_sha": "48e067ced96ad83b7498587ea1562c2d327b41aa",
+    "head_sha": "faee7435ebb7ddcc5522b83028eddae5a5ef39e3"
+  },
+  "oracle": {
+    "id": "lxml-relaxng-grampsxml",
+    "runtime": "Python 3.12.14 + lxml 6.1.3",
+    "validator": "lxml.etree.RelaxNG.validate",
+    "network": "disabled for XML parsing"
+  },
+  "states": {
+    "CONTROL": {
+      "schema": "BASE",
+      "fixture": "BASE original",
+      "result": "PASS"
+    },
+    "CHALLENGE": {
+      "schema": "BASE",
+      "fixture": "HEAD submitted",
+      "result": "FAIL",
+      "failure_excerpt": [
+        "RELAXNG_ERR_ELEMNAME: Expecting element attribute, got dateval",
+        "RELAXNG_ERR_EXTRACONTENT: Element event has extra content: dateval"
+      ]
+    },
+    "REPAIR": {
+      "schema": "HEAD",
+      "fixture": "HEAD submitted",
+      "result": "PASS"
+    }
+  },
+  "interpretation": "The submitted fixture exposes a schema capability missing on BASE, and the HEAD schema repairs that exact failure under the same RelaxNG oracle.",
+  "does_not_claim": [
+    "This is a CONTROL/BAD/REVERT causal replay.",
+    "The fixture change itself is the bug.",
+    "The entire pull request is proven beyond the exercised schema behavior."
+  ]
+}
