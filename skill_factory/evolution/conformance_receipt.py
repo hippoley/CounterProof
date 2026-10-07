@@ -189,3 +189,66 @@ def verify_conformance_receipt(
                 )
 
     return tuple(failures)
+
+def validate_external_harness_report(report: dict[str, Any]) -> tuple[str, ...]:
+    """Validate that a harness report proves the named external verifier actually ran.
+
+    This validates execution identity/completeness only. A fully executed verifier may
+    still disagree with the corpus; those conformance failures remain valid evidence.
+    """
+    failures: list[str] = []
+
+    if report.get("rail") != "external":
+        failures.append(
+            f"report rail is {report.get('rail')!r}; external verifier execution not proven"
+        )
+
+    totals = report.get("totals")
+    if not isinstance(totals, dict):
+        return tuple(failures + ["report totals must be an object"])
+
+    total_vectors = totals.get("vectors")
+    if not isinstance(total_vectors, int) or total_vectors <= 0:
+        failures.append("totals.vectors must be a positive integer")
+
+    verifier = report.get("verifier")
+    if not isinstance(verifier, dict):
+        failures.append("report verifier identity is missing")
+        return tuple(failures)
+
+    command = verifier.get("command")
+    if not isinstance(command, str) or not command.strip():
+        failures.append("verifier.command is missing")
+
+    executed = verifier.get("vectorsExecuted")
+    if not isinstance(executed, int):
+        failures.append("verifier.vectorsExecuted must be an integer")
+    elif isinstance(total_vectors, int) and executed != total_vectors:
+        failures.append(
+            f"external verifier ran on {executed} of {total_vectors} vectors"
+        )
+
+    suite_refusals = totals.get("suiteRefusals")
+    if not isinstance(suite_refusals, int):
+        failures.append("totals.suiteRefusals must be an integer")
+    elif suite_refusals != 0:
+        failures.append(
+            f"corpus harness reported {suite_refusals} suite refusal(s)"
+        )
+
+    rows = report.get("vectors")
+    if isinstance(rows, list):
+        not_run = [
+            row.get("id", "<unknown>")
+            for row in rows
+            if isinstance(row, dict) and row.get("verifierRan") is False
+        ]
+        if not_run:
+            preview = ", ".join(str(item) for item in not_run[:5])
+            suffix = "" if len(not_run) <= 5 else f" (+{len(not_run) - 5} more)"
+            failures.append(
+                f"per-vector report says verifier did not run: {preview}{suffix}"
+            )
+
+    return tuple(failures)
+
