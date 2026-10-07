@@ -663,6 +663,26 @@ def test_review_note_renderer_rejects_tampered_payload(tmp_path):
         render_witness_review_note(payload)
 
 
+def test_review_note_renderer_rejects_stale_expected_head(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    payload = witness_to_dict(witness)
+    stale_head = "0" * len(witness.head_sha)
+
+    with pytest.raises(ValueError, match="stale witness payload"):
+        render_witness_review_note(
+            payload,
+            expected_head=stale_head,
+        )
+
+
 def test_review_note_includes_explicit_support_and_integrity_findings(tmp_path):
     repo = tmp_path / "repo"
     _init_repo(repo, base_value=1)
