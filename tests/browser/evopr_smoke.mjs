@@ -80,10 +80,14 @@ try {
     "openai/codex-plugin-cc#731",
     "openai/codex-plugin-cc#456",
     "MetrolistGroup/Metrolist#4097",
+    "ublue-os/bluefin#4539",
     "anthropics/claude-code#89404",
+    "gramps-project/gramps#2484",
+    "CAUSAL WITNESS",
+    "ORACLE CONTRADICTED",
+    "CHALLENGE / REPAIR",
     "WITNESSED",
     "INCONCLUSIVE",
-    "OPEN PROBE",
   ]) {
     if (!realityText.includes(expected)) {
       throw new Error(`Reality Lab is missing ${expected}`);
@@ -91,8 +95,12 @@ try {
   }
 
   const sourceLinks = await page.locator('.reality-links a').count();
-  if (sourceLinks < 10) {
-    throw new Error("Reality Lab did not render both source and probe links");
+  if (sourceLinks < 17) {
+    throw new Error("Reality Lab did not render source, probe, and artifact links");
+  }
+  const artifactLinks = await page.locator('.reality-links a').filter({ hasText: /PROOF|ARTIFACT/ }).count();
+  if (artifactLinks < 3) {
+    throw new Error("Reality Lab did not render the three machine-backed proof artifact links");
   }
 
   const productChanges = await page.locator('.reality-change').count();
@@ -110,7 +118,9 @@ try {
     "Node .test.mjs/.cjs discovery",
     "Changed test-support integrity finding",
     "Infrastructure failure no longer mints a witness",
-    "Not built yet — waiting for reviewer validation",
+    "Generic causal replay + raw runtime provenance",
+    "Authoritative-oracle contradiction receipt",
+    "Explicit support-file replay + executed triad artifact",
   ]) {
     if (!productChangeText.includes(expected)) {
       throw new Error(`Reality Lab is missing product change: ${expected}`);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="CounterProof replays the same PR evidence on BASE and HEAD, keeps claim scope explicit, and surfaces when the test or CI judge changed.">
+  <meta name="description" content="CounterProof replays candidate-bound evidence, tests explicit oracles, and publishes auditable proof artifacts for AI-assisted pull requests.">
   <title>CounterProof · Proof Lab</title>
   <style>@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap');
 :root{--paper:#f2efe8;--ink:#171814;--muted:#77796f;--rule:#cbc7bc;--red:#d74c35;--blue:#3f63a8;--green:#386c49;--yellow:#e2d46d;--white:#fbfaf6}
@@ -36,7 +36,7 @@
       <div>
         <p class="overline">EVIDENCE REPLAY FOR AI-ASSISTED PULL REQUESTS</p>
         <h1>Green says it passes now.<br><em>Prove the exact claim.</em></h1>
-        <p class="opening-copy">CounterProof replays the same submitted evidence against pre-change code, then checks whether the PR changed the test or CI judge. It tells you what the evidence establishes — not whether the PR should merge.</p>
+        <p class="opening-copy">CounterProof replays candidate-bound evidence, checks whether the judge changed, and tests whether the declared oracle actually represents product truth. It tells you what the evidence establishes — not whether the PR should merge.</p>
       </div>
     </section>
 
@@ -214,7 +214,7 @@
         <p class="overline">REALITY LAB / FIELD EVIDENCE</p>
         <div class="reality-heading">
           <h2>Real PRs changed the product.</h2>
-          <p>CounterProof is not tuned only against fixtures. These public AI-assisted pull requests exposed proof boundaries, infrastructure false positives, and evidence-integrity gaps in the tool itself.</p>
+          <p>CounterProof is not tuned only against fixtures. These public AI-assisted pull requests now include machine-backed causal, oracle-contradiction, and challenge/repair artifacts alongside regression and integrity cases.</p>
         </div>
 
         <div class="reality-legend" aria-label="Reality Lab result legend">
@@ -1127,6 +1127,48 @@ const __COUNTERPROOF_REALITY__={
   "schema_version": 1,
   "cases": [
     {
+      "id": "bluefin-4539",
+      "external_pr": "ublue-os/bluefin#4539",
+      "question": "Can one controlled intervention produce a runtime signature that disappears again after revert?",
+      "result": "CAUSAL WITNESS",
+      "result_class": "witnessed",
+      "learned": "The same GNOME/QEMU oracle produced CONTROL→BAD→REVERT with the BAD-only keyring/portal signature and recovery after removing the intervention. Raw runtime diagnostics are candidate-bound and provenance-pinned.",
+      "source_url": "https://github.com/ublue-os/bluefin/pull/4539",
+      "probe_url": "https://github.com/hippoley/CounterProof/actions/runs/37412091382",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/bluefin-4539/REPLAY_BOUNDARY.md",
+      "artifact_label": "FLAGSHIP PROOF",
+      "counterproof_change": "Generic causal replay + raw runtime provenance",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/122"
+    },
+    {
+      "id": "claude-code-89404",
+      "external_pr": "anthropics/claude-code#89404",
+      "question": "What if the submitted tests are green but the product's authoritative parser rejects the fixtures?",
+      "result": "ORACLE CONTRADICTED",
+      "result_class": "boundary",
+      "learned": "Reviewer-supplied evidence shows claude plugin validate --json rejects fixtures the submitted validator accepts, while the submitted suite can remain green across a multi-line extraction regression. Green judge evidence must not be promoted into product truth.",
+      "source_url": "https://github.com/anthropics/claude-code/pull/89404",
+      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/claude-code-89404/ORACLE_DISAGREEMENT.md",
+      "artifact_label": "ORACLE ARTIFACT",
+      "counterproof_change": "Authoritative-oracle contradiction receipt",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/124"
+    },
+    {
+      "id": "gramps-2484",
+      "external_pr": "gramps-project/gramps#2484",
+      "question": "What if a changed fixture exposes the bug while the existing test itself is unchanged?",
+      "result": "CHALLENGE / REPAIR",
+      "result_class": "witnessed",
+      "learned": "One trusted run executed three states under the same RelaxNG oracle: BASE+original fixture PASS, BASE+submitted fixture FAIL, HEAD+submitted fixture PASS. CounterProof keeps this challenge/repair triad distinct from revert-causal replay.",
+      "source_url": "https://github.com/gramps-project/gramps/pull/2484",
+      "probe_url": "https://github.com/hippoley/CounterProof/actions/runs/36224298359",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/gramps-2484/TRIAD_PROOF.md",
+      "artifact_label": "TRIAD PROOF",
+      "counterproof_change": "Explicit support-file replay + executed triad artifact",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/126"
+    },
+    {
       "id": "async-rithmic-53",
       "external_pr": "rundef/async_rithmic#53",
       "question": "Does the submitted regression actually distinguish the fix from old code?",
@@ -1173,22 +1215,9 @@ const __COUNTERPROOF_REALITY__={
       "probe_url": "https://github.com/hippoley/CounterProof/issues/17",
       "counterproof_change": "Infrastructure failure no longer mints a witness",
       "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/10"
-    },
-    {
-      "id": "claude-code-89404",
-      "external_pr": "anthropics/claude-code#89404",
-      "question": "What if the submitted tests are internally green but disagree with the product's authoritative parser?",
-      "result": "OPEN PROBE",
-      "result_class": "open",
-      "learned": "This is not implemented as a product feature yet. The real case suggests red→green can still be weak when the submitted judge is misaligned with product truth.",
-      "source_url": "https://github.com/anthropics/claude-code/pull/89404",
-      "probe_url": "https://github.com/hippoley/CounterProof/issues/16",
-      "counterproof_change": "Not built yet — waiting for reviewer validation",
-      "counterproof_change_url": "https://github.com/hippoley/CounterProof/issues/16"
     }
   ]
-}
-;
+};
 const __nativeFetch=window.fetch?window.fetch.bind(window):null;
 window.fetch=async function(url,options){
   const u=String(url);
@@ -1597,6 +1626,7 @@ function renderRealityCases() {
       '<div class="reality-links">' +
         '<a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">SOURCE PR ↗</a>' +
         '<a href="' + esc(item.probe_url) + '" target="_blank" rel="noopener noreferrer">REALITY PROBE ↗</a>' +
+        (item.artifact_url ? '<a href="' + esc(item.artifact_url) + '" target="_blank" rel="noopener noreferrer">' + esc(item.artifact_label || "PROOF ARTIFACT") + ' ↗</a>' : '') +
       '</div>' +
     '</article>'
   ).join("");

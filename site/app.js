@@ -396,6 +396,7 @@ function renderRealityCases() {
       '<div class="reality-links">' +
         '<a href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">SOURCE PR ↗</a>' +
         '<a href="' + esc(item.probe_url) + '" target="_blank" rel="noopener noreferrer">REALITY PROBE ↗</a>' +
+        (item.artifact_url ? '<a href="' + esc(item.artifact_url) + '" target="_blank" rel="noopener noreferrer">' + esc(item.artifact_label || "PROOF ARTIFACT") + ' ↗</a>' : '') +
       '</div>' +
     '</article>'
   ).join("");
