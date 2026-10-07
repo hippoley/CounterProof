@@ -262,16 +262,33 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     assert proposal["state"] == "open"
     assert proposal["updated_at"] == "2026-10-02T17:46:36Z"
 
-    assert (
-        sources["https://github.com/Open-fab-ai/openfab"]["observed_commit"]
-        == "3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b"
-    )
-    assert (
-        sources["https://github.com/probityai/agent-evidence-vectors"][
-            "observed_commit"
-        ]
-        == "b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a"
-    )
+    openfab = [
+        item
+        for item in observation["sources"]
+        if item["url"] == "https://github.com/Open-fab-ai/openfab"
+    ]
+    assert openfab == [
+        {
+            "url": "https://github.com/Open-fab-ai/openfab",
+            "kind": "repository_file",
+            "path": "docs/generation-predicate-v0.1.md",
+            "blob_sha": "77051b33a8ab5c9fdf95bab8c6b263a173810ad4",
+        }
+    ]
+
+    vectors = [
+        item
+        for item in observation["sources"]
+        if item["url"] == "https://github.com/probityai/agent-evidence-vectors"
+    ]
+    assert {item["path"]: item["blob_sha"] for item in vectors} == {
+        "vectors-ai-generation/MANIFEST.json": (
+            "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5"
+        ),
+        "docs/proposals/ai-generation-v01-findings.md": (
+            "0b764141c515f4b6c408b92a906147a7c35d2451"
+        ),
+    }
 
     dry_run = Path("docs/interop/ite63-openfab-604-dry-run.md").read_text(
         encoding="utf-8"
@@ -281,8 +298,9 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     expected_fragments = {
         "ef11838ea97886f5e3702513983c4bf0af50d3b3",
         "2026-10-02T17:46:36Z",
-        "3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b",
-        "b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a",
+        "77051b33a8ab5c9fdf95bab8c6b263a173810ad4",
+        "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5",
+        "0b764141c515f4b6c408b92a906147a7c35d2451",
     }
     for fragment in expected_fragments:
         assert fragment in dry_run

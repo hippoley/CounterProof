@@ -37,6 +37,7 @@ from .doctor import doctor_json, render_doctor, run_doctor
 from .effective_lifecycle import resolve_effective_contract_lifecycles
 from .evidence_freshness import FreshnessStatus, resolve_contract_freshness
 from .evidence_supersession import load_evidence_graph
+from .external_state_freshness import resolve_external_state_drift
 from .integrity import (
     inspect_proof_integrity,
     render_integrity_markdown,
@@ -432,6 +433,30 @@ def evidence_graph(graph_file: str) -> None:
         click.echo(
             f"  {record.id}: {graph.lifecycle_suggestions[record.id].value}"
         )
+
+
+@cli.command("external-state-freshness")
+@click.argument("state_file", type=click.Path(exists=True, dir_okay=False))
+def external_state_freshness(state_file: str) -> None:
+    """Fail when a pinned external-state observation has remotely drifted."""
+    try:
+        drifts = resolve_external_state_drift(Path(state_file))
+    except (OSError, RuntimeError, ValueError, TypeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if drifts:
+        for drift in drifts:
+            click.echo(
+                f"DRIFT {drift.observation_id}: {drift.field} "
+                f"expected={drift.expected!r} observed={drift.observed!r} "
+                f"source={drift.source_url}",
+                err=True,
+            )
+        raise click.ClickException(
+            f"{len(drifts)} external-state observation(s) require refresh"
+        )
+
+    click.echo("External-state observations match pinned remote state")
 
 
 @cli.command("reality-freshness")

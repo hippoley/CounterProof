@@ -7,6 +7,7 @@ observations:
       - url: https://github.com/mikheil-galoian/avera/issues/12
         kind: issue
         state: closed
+        updated_at: "2026-10-07T06:38:58Z"
       - url: https://github.com/mikheil-galoian/avera/pull/14
         kind: pull_request
         state: closed
@@ -26,6 +27,7 @@ observations:
         kind: pull_request
         state: open
         merged: false
+        head_sha: 8c8d21c4908cff5b5c241e7fce32d342975216f9
     note: "Candidate standards node: predicate conformance vectors and independent-verifier parity. CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
 
   - id: ite63-openfab-604-dry-run
@@ -42,9 +44,15 @@ observations:
         state: open
         updated_at: "2026-10-02T17:46:36Z"
       - url: https://github.com/Open-fab-ai/openfab
-        kind: repository
-        observed_commit: 3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b
+        kind: repository_file
+        path: docs/generation-predicate-v0.1.md
+        blob_sha: 77051b33a8ab5c9fdf95bab8c6b263a173810ad4
       - url: https://github.com/probityai/agent-evidence-vectors
-        kind: repository
-        observed_commit: b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a
+        kind: repository_file
+        path: vectors-ai-generation/MANIFEST.json
+        blob_sha: 89cbc4f7d8f0e268a2da35e2417eb2c5090629d5
+      - url: https://github.com/probityai/agent-evidence-vectors
+        kind: repository_file
+        path: docs/proposals/ai-generation-v01-findings.md
+        blob_sha: 0b764141c515f4b6c408b92a906147a7c35d2451
     note: "Governance dry-run snapshot. Conclusions about which ITE #63 evidence facts are publicly established must be refreshed when this observation expires or when any pinned source materially changes."
