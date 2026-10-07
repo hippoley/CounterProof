@@ -27,3 +27,24 @@ observations:
         state: open
         merged: false
     note: "Candidate standards node: predicate conformance vectors and independent-verifier parity. CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
+
+  - id: ite63-openfab-604-dry-run
+    observed_at: "2026-10-07"
+    refresh_after_days: 14
+    sources:
+      - url: https://github.com/in-toto/ITE/pull/63
+        kind: pull_request
+        state: open
+        merged: false
+        head_sha: ef11838ea97886f5e3702513983c4bf0af50d3b3
+      - url: https://github.com/in-toto/attestation/issues/604
+        kind: issue
+        state: open
+        updated_at: "2026-10-02T17:46:36Z"
+      - url: https://github.com/Open-fab-ai/openfab
+        kind: repository
+        head_sha: 3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b
+      - url: https://github.com/probityai/agent-evidence-vectors
+        kind: repository
+        head_sha: b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a
+    note: "Governance dry-run snapshot. Conclusions about which ITE #63 evidence facts are publicly established must be refreshed when this observation expires or when any pinned source materially changes."
