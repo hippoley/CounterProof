@@ -1,0 +1,127 @@
+name: ExecSurface typed-evidence initial trial
+
+on:
+  push:
+    branches:
+      - experiment/execsurface-typed-evidence-initial
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zero-assistance-initial-trial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout workflow branch
+        uses: actions/checkout@v4
+        with:
+          path: trial-driver
+
+      - name: Checkout frozen CounterProof workload
+        uses: actions/checkout@v4
+        with:
+          ref: 71b16b25d80d167d736ffd4ab7f6846980193811
+          path: counterproof-workload
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof workload dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./counterproof-workload[dev]"
+
+      - name: Materialize frozen ExecSurface trial packet and product target
+        run: |
+          set -euo pipefail
+          git clone https://github.com/AETHERXGLOBAL/execsurface.git execsurface-packet
+          git -C execsurface-packet checkout 03cb5dd656d6090cd2cc5c5d40885334b06b344a
+          git -C execsurface-packet worktree add ../execsurface-typed-target \
+            cea214244d7efe05fea2108a5f5d8ed6287d9a3f
+          test "$(git -C execsurface-packet rev-parse HEAD)" = \
+            "03cb5dd656d6090cd2cc5c5d40885334b06b344a"
+          test "$(git -C execsurface-typed-target rev-parse HEAD)" = \
+            "cea214244d7efe05fea2108a5f5d8ed6287d9a3f"
+          test -z "$(git -C execsurface-packet status --porcelain --untracked-files=no)"
+          test -z "$(git -C execsurface-typed-target status --porcelain --untracked-files=no)"
+
+      - name: Record evaluator-controlled metadata
+        run: |
+          python - <<'PY'
+          import json
+          import platform
+          import subprocess
+          from pathlib import Path
+
+          def out(*cmd):
+              return subprocess.check_output(cmd, text=True).strip()
+
+          value = {
+              "relationship": "Unaffiliated",
+              "assistance_before_initial_result": "ZERO_ASSISTANCE",
+              "workload_origin": "Evaluator's own project",
+              "workload_repository": "https://github.com/hippoley/CounterProof",
+              "workload_commit": "71b16b25d80d167d736ffd4ab7f6846980193811",
+              "packet_sha": "03cb5dd656d6090cd2cc5c5d40885334b06b344a",
+              "product_target_sha": "cea214244d7efe05fea2108a5f5d8ed6287d9a3f",
+              "environment": {
+                  "os": platform.system(),
+                  "kernel": platform.release(),
+                  "architecture": platform.machine(),
+                  "python": platform.python_version(),
+                  "rustc": out("rustc", "--version"),
+                  "cargo": out("cargo", "--version"),
+              },
+              "workload_command": (
+                  "python -m pytest -q "
+                  "tests/unit/test_conformance_receipt.py "
+                  "tests/unit/test_external_state_freshness.py"
+              ),
+          }
+          Path("/tmp/execsurface-evaluator-metadata.json").write_text(
+              json.dumps(value, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run preserved zero-assistance initial trial
+        id: trial
+        continue-on-error: true
+        run: |
+          python execsurface-packet/scripts/p8_a3_external_trial_capture.py \
+            --expected-packet-sha 03cb5dd656d6090cd2cc5c5d40885334b06b344a \
+            --target-source "$GITHUB_WORKSPACE/execsurface-typed-target" \
+            --workdir "$GITHUB_WORKSPACE/counterproof-workload" \
+            --output-dir "$RUNNER_TEMP/execsurface-typed-trial-initial" \
+            -- \
+            python -m pytest -q \
+              tests/unit/test_conformance_receipt.py \
+              tests/unit/test_external_state_freshness.py
+
+      - name: Preserve privacy-minimized first result
+        if: always()
+        run: |
+          set -euo pipefail
+          cp /tmp/execsurface-evaluator-metadata.json \
+            "$RUNNER_TEMP/execsurface-typed-trial-initial/evaluator-metadata.json"
+          cat "$RUNNER_TEMP/execsurface-typed-trial-initial/trial-summary.json"
+          if test -f "$RUNNER_TEMP/execsurface-typed-trial-initial/consumer-report.json"; then
+            cat "$RUNNER_TEMP/execsurface-typed-trial-initial/consumer-report.json"
+          fi
+          if test -f "$RUNNER_TEMP/execsurface-typed-trial-initial/typed-evidence.json"; then
+            sha256sum "$RUNNER_TEMP/execsurface-typed-trial-initial/typed-evidence.json" \
+              > "$RUNNER_TEMP/execsurface-typed-trial-initial/typed-evidence.sha256"
+          fi
+
+      - name: Upload preserved initial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execsurface-typed-evidence-initial
+          path: ${{ runner.temp }}/execsurface-typed-trial-initial/
+          if-no-files-found: error
+          retention-days: 30
