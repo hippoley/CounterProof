@@ -27,19 +27,25 @@ def build_conformance_receipt(
     comparison = manifest.get("comparisonSurface")
     verifier = observations.get("verifier")
     results = observations.get("results")
-    if not isinstance(vectors, list) or not vectors:
+    if not isinstance(vectors, list):
+        raise TypeError("conformance manifest vectors must be a list")
+    if not vectors:
         raise ValueError("conformance manifest must declare non-empty vectors")
     if not isinstance(comparison, dict):
-        raise ValueError("conformance manifest must declare comparisonSurface")
-    if not isinstance(verifier, dict) or not verifier.get("name"):
+        raise TypeError("conformance manifest comparisonSurface must be an object")
+    if not isinstance(verifier, dict):
+        raise TypeError("observations verifier must be an object")
+    if not verifier.get("name"):
         raise ValueError("observations must declare verifier identity")
     if not isinstance(results, list):
-        raise ValueError("observations must declare results")
+        raise TypeError("observations results must be a list")
 
     observed_by_id: dict[str, dict[str, Any]] = {}
     for result in results:
-        if not isinstance(result, dict) or not isinstance(result.get("id"), str):
-            raise ValueError("every observed result must declare a string id")
+        if not isinstance(result, dict):
+            raise TypeError("every observed result must be an object")
+        if not isinstance(result.get("id"), str):
+            raise TypeError("every observed result id must be a string")
         vector_id = result["id"]
         if vector_id in observed_by_id:
             raise ValueError(f"duplicate observed vector id: {vector_id}")
@@ -57,8 +63,10 @@ def build_conformance_receipt(
     manifest_ids: set[str] = set()
 
     for vector in vectors:
-        if not isinstance(vector, dict) or not isinstance(vector.get("id"), str):
-            raise ValueError("every conformance vector must declare a string id")
+        if not isinstance(vector, dict):
+            raise TypeError("every conformance vector must be an object")
+        if not isinstance(vector.get("id"), str):
+            raise TypeError("every conformance vector id must be a string")
         vector_id = vector["id"]
         if vector_id in manifest_ids:
             raise ValueError(f"duplicate manifest vector id: {vector_id}")
