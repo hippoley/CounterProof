@@ -104,6 +104,7 @@ claims:
     oracle_applicability: APPLICABLE
     oracle_alignment: ALIGNED
     oracle_probe: behavior oracle
+    oracle_source_url: https://oracle-source.example.test/test-evidence
     oracle_source_url: https://oracle-source.example.test/reality-contract
     receipt_file: receipts/receipt.json
     receipt_expected_verdicts:
@@ -171,6 +172,7 @@ claims:
     oracle_applicability: APPLICABLE
     oracle_alignment: ALIGNED
     oracle_probe: behavior oracle
+    oracle_source_url: https://oracle-source.example.test/test-evidence
     oracle_source_url: https://oracle-source.example.test/reality-contract
     receipt_file: receipts/receipt.json
     receipt_expected_verdicts:
