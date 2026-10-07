@@ -343,3 +343,31 @@ def test_external_evidence_ledger_preserves_recognition_boundaries():
     assert execsurface["observed_result"]["status"] == "TRIAL_CAPTURE_COMPLETE_UNQUALIFIED"
     assert "qualified external evidence" in execsurface["non_claims"]
 
+def test_external_evidence_ledger_orders_recognition_without_claim_inflation():
+    ledger = yaml.safe_load(
+        Path("examples/claim_matrix/external-evidence-ledger.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    records = {item["id"]: item for item in ledger["records"]}
+
+    reviewer = records["reviewer-claim-matrix-use-intent"]
+    assert reviewer["status"] == "THIRD_PARTY_CONFIRMED_USE_INTENT"
+    assert reviewer["durable_value"]["explicit_use_intent"] is True
+    assert reviewer["durable_value"]["producer_owned_artifact"] is False
+
+    prove = records["codex-prove-optional-handoff"]
+    assert prove["status"] == "MAINTAINER_CONFIRMED_INTEROP_BOUNDARY"
+    assert prove["durable_value"]["maintainer_boundary_confirmation"] is True
+    assert prove["durable_value"]["upstream_adoption"] is False
+
+    claimproof = records["claimproof-first-class-use-case-invitation"]
+    assert claimproof["status"] == "UPSTREAM_USE_CASE_INVITATION"
+    assert claimproof["durable_value"]["explicit_upstream_invitation"] is True
+    assert claimproof["durable_value"]["upstream_artifact_landed"] is False
+
+    agent_done = records["agent-done-or-not-receipt-input"]
+    assert agent_done["status"] == "MAINTAINER_APPROVED_INPUT_BOUNDARY"
+    assert agent_done["durable_value"]["explicit_reuse_permission"] is True
+    assert agent_done["durable_value"]["frozen_payload_landed"] is False
+
