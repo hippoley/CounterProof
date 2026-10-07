@@ -8,7 +8,6 @@ from skill_factory.evolution.conformance_receipt import (
     verify_conformance_receipt,
 )
 
-
 FIXTURE = Path("examples/interop/in-toto-597")
 
 
