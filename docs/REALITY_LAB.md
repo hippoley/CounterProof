@@ -51,7 +51,7 @@ These cases test whether CounterProof reduces **maintainer review cost**, not wh
 
 ### External feedback received; follow-up still active
 
-- [#16 — submitted judge vs authoritative oracle](https://github.com/hippoley/CounterProof/issues/16) — external reviewers confirmed the oracle-alignment model and identified a provenance trust boundary. An external contributor proposed hardening in [#50](https://github.com/hippoley/CounterProof/pull/50), but that PR closed unmerged. CounterProof therefore does not count it as adopted; the compatible oracle-source requirement is being carried forward separately against current main.
+- [#16 — submitted judge vs authoritative oracle](https://github.com/hippoley/CounterProof/issues/16) — external reviewers confirmed the oracle-alignment model and identified a provenance trust boundary. An external contributor proposed hardening in [#50](https://github.com/hippoley/CounterProof/pull/50), but that PR closed unmerged. CounterProof therefore does not count it as adopted; the compatible oracle-source requirement is being carried forward against current main in [#133](https://github.com/hippoley/CounterProof/pull/133).
 
 ### Waiting for external feedback
 
