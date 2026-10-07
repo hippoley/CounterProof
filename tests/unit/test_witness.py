@@ -784,6 +784,70 @@ def test_share_witness_cli_writes_review_note(tmp_path):
     assert "Would this evidence materially help review this change?" in text
 
 
+def test_share_witness_rejects_tampered_witness_payload(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=2)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    assert witness.status == "not-witnessed"
+
+    payload = witness_to_dict(witness)
+    payload["status"] = "witnessed"
+    payload["witnessed"] = True
+    payload["note"] = "The changed test proves the fix."
+    payload["base_with_head_tests"]["returncode"] = 1
+
+    receipt = tmp_path / "tampered-witness.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "tampered-review.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            witness.head_sha,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "witness evidence digest mismatch" in result.output
+    assert not output.exists()
+
+
+def test_share_witness_rejects_missing_witness_digest(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    payload = witness_to_dict(witness)
+    payload.pop("evidence_digest_sha256")
+    receipt = tmp_path / "missing-digest.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["share-witness", str(receipt)],
+    )
+
+    assert result.exit_code != 0
+    assert "witness evidence digest is missing or malformed" in result.output
+
+
 def test_share_witness_can_bind_note_to_expected_head(tmp_path):
     repo = tmp_path / "repo"
     base = _init_repo(repo, base_value=1)
