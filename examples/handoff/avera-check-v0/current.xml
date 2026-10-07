@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="pytest" tests="3" failures="1" errors="0" skipped="0">
+    <testcase classname="tests.test_pricing" name="test_discount_applies_at_threshold" time="0.002">
+      <failure message="assert 100.0 == 90.0">discount not applied when total == threshold</failure>
+    </testcase>
+    <testcase classname="tests.test_pricing" name="test_no_discount_below_threshold" time="0.001"/>
+    <testcase classname="tests.test_pricing" name="test_total_rounds_to_cents" time="0.001"/>
+  </testsuite>
+</testsuites>
