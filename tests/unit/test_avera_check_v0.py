@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import copy
 import json
+from pathlib import Path
 
 import pytest
-from pathlib import Path
 
 from skill_factory.evolution.avera_check_v0 import (
     AVERA_CHECK_V0_SCHEMA,
