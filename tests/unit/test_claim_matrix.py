@@ -494,6 +494,7 @@ def test_missing_oracle_precondition_cannot_be_marked_contradicted():
             oracle_precondition="login alias must exist",
             oracle_alignment=OracleAlignment.CONTRADICTED,
             oracle_probe="read login collection Locked property",
+            oracle_source_url=TEST_ORACLE_SOURCE,
         )
 
 
