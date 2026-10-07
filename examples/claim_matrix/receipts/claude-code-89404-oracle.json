@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "case": "anthropics/claude-code#89404",
+  "verdict": "ORACLE_CONTRADICTED_BY_PRODUCT",
+  "evidence_kind": "REVIEWER_SUPPLIED_EXTERNAL_ORACLE",
+  "source_pr": "https://github.com/anthropics/claude-code/pull/89404",
+  "candidate": {
+    "base_sha": "8b6ef81f636a7697e5ae2338428fa0b272993845",
+    "head_sha": "0989f29b0bca412edc58018c462cae7344bb1a2f"
+  },
+  "submitted_judge": {
+    "test": "plugins/plugin-dev/skills/agent-development/scripts/validate-agent.test.sh",
+    "reported_result": "5/5 PASS",
+    "limitation": "Reviewer reproduced that reverting the multi-line description extraction still leaves the suite green while the false <example> warning returns."
+  },
+  "authoritative_oracle": {
+    "command": "claude plugin validate --json",
+    "reported_versions": [
+      "2.1.268",
+      "2.1.270"
+    ],
+    "result": "REJECT",
+    "reason": "The product parser rejects fixtures that the submitted validator test treats as valid.",
+    "review_source": "https://github.com/anthropics/claude-code/pull/89404#pullrequestreview-5190939241",
+    "inline_source": "https://github.com/anthropics/claude-code/pull/89404#discussion_r3999827406",
+    "followup_source": "https://github.com/anthropics/claude-code/pull/89404#issuecomment-5555827628"
+  },
+  "conclusion": "The submitted judge is not aligned with the product parser for the claimed-valid fixtures. A green submitted suite must not be promoted to product-level proof.",
+  "does_not_claim": [
+    "CounterProof independently executed the Claude Code binary.",
+    "The entire pull request is invalid.",
+    "Every submitted regression assertion is false."
+  ]
+}
