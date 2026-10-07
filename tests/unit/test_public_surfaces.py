@@ -282,10 +282,12 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
         if item["url"] == "https://github.com/probityai/agent-evidence-vectors"
     ]
     assert {item["path"]: item["blob_sha"] for item in vectors} == {
-        "vectors-ai-generation/MANIFEST.json":
-            "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5",
-        "docs/proposals/ai-generation-v01-findings.md":
-            "0b764141c515f4b6c408b92a906147a7c35d2451",
+        "vectors-ai-generation/MANIFEST.json": (
+            "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5"
+        ),
+        "docs/proposals/ai-generation-v01-findings.md": (
+            "0b764141c515f4b6c408b92a906147a7c35d2451"
+        ),
     }
 
     dry_run = Path("docs/interop/ite63-openfab-604-dry-run.md").read_text(
