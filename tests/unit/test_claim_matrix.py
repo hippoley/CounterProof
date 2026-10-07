@@ -209,6 +209,46 @@ def test_asserted_oracle_accepts_absolute_http_source(oracle: OracleAlignment):
     assert claim.oracle_source_url == TEST_ORACLE_SOURCE
 
 
+def test_cli_rejects_unsourced_asserted_oracle_without_writing_outputs(tmp_path: Path):
+    manifest = tmp_path / "claims.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "title": "Known-bad provenance control",
+                "claims": [
+                    {
+                        "id": "unsourced-oracle",
+                        "claim": "asserted oracle states need inspectable provenance",
+                        "submitted_test_evidence": "UNPROVEN",
+                        "oracle_alignment": "CONTRADICTED",
+                        "oracle_probe": "product parser rejects the fixture",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    md_out = tmp_path / "matrix.md"
+    json_out = tmp_path / "matrix.json"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "claim-matrix",
+            str(manifest),
+            "--out",
+            str(md_out),
+            "--json-out",
+            str(json_out),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "requires oracle_source_url" in result.output
+    assert not md_out.exists()
+    assert not json_out.exists()
+
+
 def test_render_keeps_submitted_judge_scope_explicit():
     manifest = ClaimMatrixManifest(
         title="Review matrix",
