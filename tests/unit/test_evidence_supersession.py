@@ -219,6 +219,7 @@ claims:
     oracle_applicability: APPLICABLE
     oracle_alignment: ALIGNED
     oracle_probe: authoritative behavior oracle
+    oracle_source_url: https://oracle-source.example.test/evidence-supersession
 """.strip()
         + "\n",
         encoding="utf-8",
