@@ -31,6 +31,24 @@ The reviewed snapshot is:
 The observation expires after 14 days. Expiry means **refresh the governance
 assessment**; it does not retroactively make the historical note false.
 
+
+### Discussion refresh
+
+A follow-up review of the #604 discussion observed six comments. The discussion
+now explicitly separates generation/review provenance from runtime-effect
+evidence and records a planned non-goal in the registration text. It also
+clarifies the ACP-to-Generation join through the commit tree rather than by
+assuming equal Statement subjects.
+
+Those are useful interoperability refinements, but they do **not** change this
+dry run's E2/E3 assessment: the reviewed discussion still does not establish the
+named independent implementer/consent facts required by E2 or the complete
+full-corpus promotion-run packaging required by E3.
+
+The external-state snapshot therefore also pins the issue's comment count.
+A new comment is treated as a re-review trigger rather than silently allowing
+the governance reading to remain current.
+
 ## Candidate claim
 
 #604 says the Generation predicate has:

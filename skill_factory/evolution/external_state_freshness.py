@@ -125,7 +125,7 @@ def resolve_external_state_drift(
                     f"/issues/{match.group(3)}"
                 )
                 payload = fetcher(api)
-                for field in ("state", "updated_at"):
+                for field in ("state", "updated_at", "comments"):
                     if field in source:
                         _record(
                             drifts,

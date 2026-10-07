@@ -261,6 +261,7 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     assert proposal["kind"] == "issue"
     assert proposal["state"] == "open"
     assert proposal["updated_at"] == "2026-10-02T17:46:36Z"
+    assert proposal["comments"] == 6
 
     openfab = [
         item
