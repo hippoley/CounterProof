@@ -24,6 +24,38 @@
 
 ---
 
+## Flagship proof: one intervention, same oracle, recovery after revert
+
+CounterProof's clearest end-to-end causal case is a controlled replay of [ublue-os/bluefin#4539](https://github.com/ublue-os/bluefin/pull/4539).
+
+```text
+CONTROL   baseline signature
+   ↓ add historical 30-after-keyring.conf
+BAD       late-keyring / portal-dependency signature appears
+   ↓ remove that exact intervention
+REVERT    baseline signature returns
+```
+
+All three candidates ran the **same projectbluefin/testsuite GNOME/QEMU oracle** in [workflow run #37412091382](https://github.com/hippoley/CounterProof/actions/runs/37412091382). The runtime jobs completed successfully for CONTROL, BAD, and REVERT; the behavioral verdict comes from the published candidate diagnostics, not from treating workflow success as the verdict.
+
+| Candidate | QEMU runtime | keyring active | portal→keyring | NotInInitialization |
+|---|---|---:|---:|---:|
+| CONTROL | success | false | false | false |
+| BAD | success | true | true | true |
+| REVERT | success | false | false | false |
+
+**Machine verdict: `WITNESSED_CONTROLLED_CAUSAL`**
+
+> In the frozen controlled environment, adding the historical intervention is sufficient to produce the observed divergent signature, and removing that exact intervention restores the CONTROL signature.
+
+This is deliberately **not** presented as an exact replay of the unavailable May 2026 historical registry images.
+
+The same QEMU artifacts now feed three evidence layers: the Bluefin-specific controlled receipt, the reusable generic causal-replay receipt, and the provenance-bound flagship receipt.
+
+**[Read the flagship machine receipt →](examples/claim_matrix/receipts/bluefin-4539-flagship-causal.json)** · **[Read the replay boundary →](reality/bluefin-4539/REPLAY_BOUNDARY.md)** · **[Open the source run →](https://github.com/hippoley/CounterProof/actions/runs/37412091382)**
+
+---
+
 ## Tested on real agent PRs
 
 CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.
