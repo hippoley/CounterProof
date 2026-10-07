@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .effective_lifecycle import EffectiveLifecycleObservation
+from .reality_contracts import validate_reality_contracts
 
 
 def git_blob_sha(path: Path) -> str:
@@ -101,6 +102,16 @@ def verify_lifecycle_receipt(
         failures.append(
             f"suite git blob sha expected {suite_sha!r}, observed {observed_suite_sha!r}"
         )
+
+    try:
+        contract_failures = validate_reality_contracts(suite_file)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        failures.append(f"Reality Contract validation could not run: {exc}")
+    else:
+        for failure in contract_failures:
+            failures.append(
+                f"Reality Contract invalid: {failure.contract_id}: {failure.message}"
+            )
 
     expected_graph = inputs.get("graph_git_blob_sha")
     if graph_file is None:

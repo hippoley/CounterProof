@@ -8,6 +8,7 @@ import yaml
 from .evidence_freshness import FreshnessObservation, resolve_contract_freshness
 from .evidence_lifecycle import EvidenceLifecycle, resolve_effective_lifecycle
 from .evidence_supersession import EvidenceGraph, load_evidence_graph
+from .reality_contracts import validate_reality_contracts
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,21 @@ def resolve_effective_contract_lifecycles(
     graph_file: Path | None = None,
     freshness_observations: list[FreshnessObservation] | None = None,
 ) -> list[EffectiveLifecycleObservation]:
+    try:
+        contract_failures = validate_reality_contracts(suite_file)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise ValueError(
+            f"Reality Contract validation could not run: {exc}"
+        ) from exc
+    if contract_failures:
+        detail = "; ".join(
+            f"{failure.contract_id}: {failure.message}"
+            for failure in contract_failures
+        )
+        raise ValueError(
+            f"Reality Contract validation failed before lifecycle resolution: {detail}"
+        )
+
     raw = yaml.safe_load(suite_file.read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or not isinstance(raw.get("contracts"), list):
         raise TypeError("invalid reality contract suite")
