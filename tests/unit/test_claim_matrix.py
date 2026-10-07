@@ -8,18 +8,17 @@ from click.testing import CliRunner
 from pydantic import ValidationError
 
 from skill_factory.evolution.claim_matrix import (
-    claim_matrix_to_dict,
     ClaimEvidence,
     ClaimMatrixManifest,
     EvidenceScope,
     OracleAlignment,
     OracleApplicability,
     OverallClaim,
-    render_claim_matrix_markdown,
     SubmittedTestEvidence,
+    claim_matrix_to_dict,
+    render_claim_matrix_markdown,
 )
 from skill_factory.evolution.cli import cli
-
 
 TEST_ORACLE_SOURCE = "https://oracle-source.example.test/synthetic-test-input"
 ASSERTED_ORACLES = {OracleAlignment.ALIGNED, OracleAlignment.CONTRADICTED}
