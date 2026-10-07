@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 PUBLIC_SURFACES = (
@@ -6,6 +7,19 @@ PUBLIC_SURFACES = (
     Path("site/index.html"),
     Path("site/standalone.html"),
 )
+
+
+
+
+def _standalone_json(name: str, *, next_name: str | None) -> object:
+    text = Path("site/standalone.html").read_text(encoding="utf-8")
+    start_marker = f"const {name}="
+    start = text.index(start_marker) + len(start_marker)
+    if next_name is None:
+        end = text.index(";\nconst __nativeFetch", start)
+    else:
+        end = text.index(f";\nconst {next_name}=", start)
+    return json.loads(text[start:end])
 
 
 def test_public_surfaces_use_canonical_counterproof_repository():
@@ -73,3 +87,18 @@ def test_reality_lab_tracks_avera_release_provenance_correction():
     assert "not reproducible from an installable release" in text
     assert "v0.2.0" in text
     assert "pull/140" in text
+
+
+def test_standalone_embedded_data_matches_site_json_sources():
+    assert _standalone_json(
+        "__COUNTERPROOF_CASES__",
+        next_name="__COUNTERPROOF_CAPS__",
+    ) == json.loads(Path("site/data/evolution_cases.json").read_text(encoding="utf-8"))
+    assert _standalone_json(
+        "__COUNTERPROOF_CAPS__",
+        next_name="__COUNTERPROOF_REALITY__",
+    ) == json.loads(Path("site/data/capabilities.json").read_text(encoding="utf-8"))
+    assert _standalone_json(
+        "__COUNTERPROOF_REALITY__",
+        next_name=None,
+    ) == json.loads(Path("site/data/reality_cases.json").read_text(encoding="utf-8"))
