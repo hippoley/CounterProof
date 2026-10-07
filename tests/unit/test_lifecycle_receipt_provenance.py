@@ -232,7 +232,10 @@ def test_verify_lifecycle_receipt_rejects_claim_matrix_tamper_inside_closure(
     failures = verify_lifecycle_receipt(receipt, suite_file=suite)
 
     assert not any("suite git blob sha" in item for item in failures)
-    assert any("recursive provenance manifest" in item for item in failures)
+    assert any(
+        "claim matrix 'claims.yml' git_blob_sha expected" in item
+        for item in failures
+    )
 
 
 def test_verify_lifecycle_receipt_rejects_machine_receipt_tamper_inside_closure(
@@ -251,7 +254,10 @@ def test_verify_lifecycle_receipt_rejects_machine_receipt_tamper_inside_closure(
     failures = verify_lifecycle_receipt(receipt, suite_file=suite)
 
     assert not any("suite git blob sha" in item for item in failures)
-    assert any("recursive provenance manifest" in item for item in failures)
+    assert any(
+        "machine receipt 'receipt.json'" in item and "git_blob_sha expected" in item
+        for item in failures
+    )
 
 
 def test_verify_lifecycle_receipt_rejects_missing_recursive_provenance(
