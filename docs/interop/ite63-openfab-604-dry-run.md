@@ -21,10 +21,12 @@ The reviewed snapshot is:
 
 - ITE #63 head: `ef11838ea97886f5e3702513983c4bf0af50d3b3`;
 - #604: open, last observed update `2026-10-02T17:46:36Z`;
-- OpenFab repository commit observed:
-  `3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b`;
-- agent-evidence-vectors repository commit observed:
-  `b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a`.
+- OpenFab predicate-spec Git blob:
+  `77051b33a8ab5c9fdf95bab8c6b263a173810ad4`;
+- agent-evidence-vectors AI-generation manifest Git blob:
+  `89cbc4f7d8f0e268a2da35e2417eb2c5090629d5`;
+- agent-evidence-vectors findings Git blob:
+  `0b764141c515f4b6c408b92a906147a7c35d2451`.
 
 The observation expires after 14 days. Expiry means **refresh the governance
 assessment**; it does not retroactively make the historical note false.
