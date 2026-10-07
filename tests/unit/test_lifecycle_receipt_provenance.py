@@ -351,6 +351,36 @@ def test_verify_lifecycle_receipt_rejects_internal_status_tamper(tmp_path: Path)
     assert any("status expected" in item for item in failures)
 
 
+def test_verify_lifecycle_receipt_rejects_erased_freshness_snapshot(
+    tmp_path: Path,
+):
+    suite, graph = _write_observation_suite(tmp_path)
+    receipt = build_lifecycle_receipt(
+        [_observation()],
+        suite_file=suite,
+        graph_file=graph,
+        environment={},
+    )
+    tampered = copy.deepcopy(receipt)
+    observation = tampered["observations"][0]
+    observation["freshness_signal"] = None
+    observation["freshness"]["status"] = None
+    observation["freshness"]["source_pr"] = None
+    observation["freshness"]["frozen_base_sha"] = None
+    observation["freshness"]["frozen_head_sha"] = None
+    observation["freshness"]["live_base_sha"] = None
+    observation["freshness"]["live_head_sha"] = None
+    observation["freshness"]["reason"] = None
+
+    failures = verify_lifecycle_receipt(
+        tampered,
+        suite_file=suite,
+        graph_file=graph,
+    )
+
+    assert any("requires a recorded freshness status" in item for item in failures)
+
+
 def test_verify_lifecycle_receipt_rederives_observation_semantics(tmp_path: Path):
     suite, graph = _write_observation_suite(tmp_path)
     receipt = build_lifecycle_receipt(
