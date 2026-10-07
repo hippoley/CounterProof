@@ -239,3 +239,59 @@ def test_public_capability_json_matches_runtime_truth_table():
         Path("site/data/capabilities.json").read_text(encoding="utf-8")
     )
     assert published == capability_report()
+
+def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
+    external_state = yaml.safe_load(
+        Path("examples/claim_matrix/external-state.yml").read_text(encoding="utf-8")
+    )
+    observations = {item["id"]: item for item in external_state["observations"]}
+    observation = observations["ite63-openfab-604-dry-run"]
+
+    assert observation["refresh_after_days"] == 14
+    assert observation["sources"], "governance dry-run must pin source observations"
+
+    sources = {item["url"]: item for item in observation["sources"]}
+    ite = sources["https://github.com/in-toto/ITE/pull/63"]
+    assert ite["kind"] == "pull_request"
+    assert ite["state"] == "open"
+    assert ite["merged"] is False
+    assert ite["head_sha"] == "ef11838ea97886f5e3702513983c4bf0af50d3b3"
+
+    proposal = sources["https://github.com/in-toto/attestation/issues/604"]
+    assert proposal["kind"] == "issue"
+    assert proposal["state"] == "open"
+    assert proposal["updated_at"] == "2026-10-02T17:46:36Z"
+
+    assert (
+        sources["https://github.com/Open-fab-ai/openfab"]["observed_commit"]
+        == "3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b"
+    )
+    assert (
+        sources["https://github.com/probityai/agent-evidence-vectors"][
+            "observed_commit"
+        ]
+        == "b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a"
+    )
+
+    dry_run = Path("docs/interop/ite63-openfab-604-dry-run.md").read_text(
+        encoding="utf-8"
+    )
+    assert "ite63-openfab-604-dry-run" in dry_run
+
+    expected_fragments = {
+        "ef11838ea97886f5e3702513983c4bf0af50d3b3",
+        "2026-10-02T17:46:36Z",
+        "3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b",
+        "b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a",
+    }
+    for fragment in expected_fragments:
+        assert fragment in dry_run
+
+    observed_at = date.fromisoformat(observation["observed_at"])
+    today_utc = datetime.now(timezone.utc).date()
+    age_days = (today_utc - observed_at).days
+    assert age_days <= observation["refresh_after_days"], (
+        f"governance dry-run snapshot is {age_days} days old; "
+        f"refresh after {observation['refresh_after_days']}"
+    )
+
