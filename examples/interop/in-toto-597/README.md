@@ -90,3 +90,9 @@ handoff: in-toto #597 head
 
 So the cross-check is bound to identical statement bytes, not merely matching
 vector labels.
+
+The four statement files are also vendored under `statements/` so CI can
+recompute their Git blob identities from local bytes. This turns the
+cross-repository byte-equality claim into a reproducible check rather than a
+hand-copied provenance assertion.
+
