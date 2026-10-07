@@ -395,7 +395,6 @@ def test_verify_lifecycle_receipt_rederives_observation_semantics(tmp_path: Path
     observation["graph_signal"] = None
     observation["effective"] = "CURRENT"
     observation["freshness"]["status"] = "FRESH"
-    observation["freshness"]["live_base_sha"] = "base-old"
     observation["freshness"]["reason"] = None
     tampered["mismatch_count"] = 0
     tampered["status"] = "PASS"
