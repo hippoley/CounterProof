@@ -1,0 +1,34 @@
+schema_version: 1
+claims:
+  - id: bluefin-readme-flagship
+    surface: README.md
+    contains: "## Flagship proof: one intervention, same oracle, recovery after revert"
+    reality_contract_id: bluefin-4539-oracle-applicability
+    allowed_lifecycles:
+      - CURRENT
+    expectation:
+      claim_id: keyring-login-safety
+      overall_claim: "WITNESSED (scope insufficient)"
+      receipt_verdict: WITNESSED_CONTROLLED_CAUSAL
+
+  - id: clash-reality-lab-stale
+    surface: docs/REALITY_LAB.md
+    contains: "historical behavior witness complete; lifecycle STALE after live BASE drift"
+    reality_contract_id: clash-8017-candidate-bound-behavior
+    allowed_lifecycles:
+      - STALE
+    expectation:
+      claim_id: unchanged-config-not-rewritten-on-exit
+      overall_claim: PROVEN
+      receipt_verdict: WITNESSED_BEHAVIOR
+
+  - id: scancode-reality-lab-current
+    surface: docs/REALITY_LAB.md
+    contains: "strong positive evidence-side case; handoff artifact complete, upstream delivery blocked by connector permissions"
+    reality_contract_id: scancode-2207-db-backed-behavior
+    allowed_lifecycles:
+      - CURRENT
+    expectation:
+      claim_id: run-command-input-location-optional
+      overall_claim: PROVEN
+      receipt_verdict: WITNESSED_BEHAVIOR_DELTA

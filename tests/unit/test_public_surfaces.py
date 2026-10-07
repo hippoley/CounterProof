@@ -118,6 +118,56 @@ def test_proof_lab_lifecycle_matches_canonical_reality_contracts():
     assert "Historical proof remains valid only for the pinned candidates" in clash["lifecycle_note"]
 
 
+def test_readme_public_case_count_matches_reality_lab_table():
+    readme = Path("README.md").read_text(encoding="utf-8")
+    reality_lab = Path("docs/REALITY_LAB.md").read_text(encoding="utf-8")
+    field_rows = [
+        line
+        for line in reality_lab.splitlines()
+        if line.startswith("| [") and "](https://github.com/" in line
+    ]
+    assert field_rows, "Reality Lab must publish at least one field case"
+    assert f"| **{len(field_rows)} public PR cases** |" in readme
+
+
+def test_high_signal_public_claims_match_canonical_reality_contracts():
+    public_claims = yaml.safe_load(
+        Path("examples/claim_matrix/public-claims.yml").read_text(encoding="utf-8")
+    )
+    suite = yaml.safe_load(
+        Path("examples/claim_matrix/reality-contracts.yml").read_text(encoding="utf-8")
+    )
+    contracts = {item["id"]: item for item in suite["contracts"]}
+
+    assert public_claims["schema_version"] == 1
+    assert public_claims["claims"], "at least one public claim must be bound"
+
+    for claim in public_claims["claims"]:
+        surface = Path(claim["surface"]).read_text(encoding="utf-8")
+        assert claim["contains"] in surface, (
+            f'{claim["id"]} is declared but its public statement is missing'
+        )
+
+        contract = contracts[claim["reality_contract_id"]]
+        assert contract["lifecycle"] in claim["allowed_lifecycles"], (
+            f'{claim["id"]} publishes lifecycle {contract["lifecycle"]}, '
+            f'allowed={claim["allowed_lifecycles"]}'
+        )
+
+        expected = claim.get("expectation")
+        if expected:
+            observed = next(
+                item
+                for item in contract["expectations"]
+                if item["claim_id"] == expected["claim_id"]
+            )
+            for field in ("overall_claim", "receipt_verdict"):
+                assert observed.get(field) == expected[field], (
+                    f'{claim["id"]} expected {field}={expected[field]!r}, '
+                    f'observed={observed.get(field)!r}'
+                )
+
+
 def test_standalone_embedded_data_matches_site_json_sources():
     assert _standalone_json(
         "__COUNTERPROOF_CASES__",
