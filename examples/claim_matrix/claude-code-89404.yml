@@ -7,8 +7,11 @@ claims:
     submitted_test_evidence: UNPROVEN
     oracle_alignment: CONTRADICTED
     oracle_probe: "claude plugin validate rejects fixtures that the submitted validator treats as valid"
-    oracle_source_url: "https://github.com/anthropics/claude-code/pull/89404"
-    note: "Reviewer evidence establishes product-oracle contradiction; CounterProof has not independently replayed BASE/HEAD for this row."
+    oracle_source_url: "https://github.com/anthropics/claude-code/pull/89404#pullrequestreview-5190939241"
+    receipt_file: "receipts/claude-code-89404-oracle.json"
+    receipt_expected_verdicts:
+      - ORACLE_CONTRADICTED_BY_PRODUCT
+    note: "Reviewer evidence establishes product-oracle contradiction; CounterProof has not independently executed the Claude binary for this row."
   - id: multiline-description-regression
     claim: "The submitted suite protects the multi-line description extraction behavior"
     submitted_test_evidence: UNPROVEN
