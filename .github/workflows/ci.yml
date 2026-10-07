@@ -250,6 +250,15 @@ jobs:
           /tmp/counterproof-clean/bin/counterproof build "$GITHUB_WORKSPACE/examples/evolution_pr.json" --out /tmp/EVOLUTION_PR.md
           grep -q "Eligible for promotion" /tmp/EVOLUTION_PR.md
 
+      - name: Run packaged in-toto conformance consumer
+        run: |
+          cd /tmp
+          /tmp/counterproof-clean/bin/counterproof conformance-receipt             "$GITHUB_WORKSPACE/examples/interop/in-toto-597/manifest.json"             "$GITHUB_WORKSPACE/examples/interop/in-toto-597/observations.json"             --output /tmp/CONFORMANCE_RECEIPT.json
+          grep -q '"verdict": "CONFORMING"' /tmp/CONFORMANCE_RECEIPT.json
+          grep -q '"vector_count": 4' /tmp/CONFORMANCE_RECEIPT.json
+          /tmp/counterproof-clean/bin/counterproof verify-conformance-receipt             /tmp/CONFORMANCE_RECEIPT.json             --manifest "$GITHUB_WORKSPACE/examples/interop/in-toto-597/manifest.json"             --observations "$GITHUB_WORKSPACE/examples/interop/in-toto-597/observations.json"
+
+
       - name: Run packaged trace-to-proof workflow
         run: |
           cd /tmp
