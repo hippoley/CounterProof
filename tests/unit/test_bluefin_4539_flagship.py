@@ -31,7 +31,7 @@ def _write_diag(root: Path, image: str, *, active: bool, dep: bool, late: bool) 
         "secret_login_alias": {"stdout": "(objectpath '/',)"},
     }
     payload = {"image": image, "snapshot": snapshot}
-    path = root / f"diag-{len(list(root.iterdir()))}.json"
+    path = root / f"counterproof-keyring-diagnostic-{len(list(root.iterdir()))}.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
