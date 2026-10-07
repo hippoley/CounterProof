@@ -37,3 +37,15 @@ Interpretation:
 - all pass = the historical regression does not reproduce on the current
   environment; keep historical behavior inconclusive.
 - infrastructure/setup failure = inconclusive, never behavioral evidence.
+
+
+The workflow now publishes two receipts from the same QEMU artifacts:
+
+- the original Bluefin-specific controlled-causal receipt, preserved for continuity;
+- a generic CounterProof `WITNESSED_CAUSAL_REPLAY` receipt produced through the
+  reusable CONTROL/BAD/REVERT core protocol.
+
+The generic adapter intentionally scopes its oracle to the observable keyring
+service lifecycle and portal dependency. The missing `login` Secret Service alias
+is recorded as a shared fixture state, not silently promoted into proof that the
+login keyring is unlocked.
