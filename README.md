@@ -321,6 +321,55 @@ When supplied, the note keeps the two evidence layers separate while putting the
 - Proof Integrity status plus concrete changed evidence surfaces;
 - the scope limit that a regression witness proves the tested before/after delta — not every claimed production cause or merge readiness.
 
+### When two commits are not enough: CONTROL / BAD / REVERT
+
+A BASE→HEAD witness shows that behavior changed. It does not, by itself, isolate the
+intervention as the cause.
+
+For a stronger controlled replay, CounterProof now has a three-candidate receipt:
+
+```text
+CONTROL     expected healthy state
+BAD         intervention present
+REVERT      intervention removed again
+
+same oracle
+same observation contract
+same receipt semantics
+```
+
+Declare the candidate identities, evidence artifacts, frozen oracle, and expected
+observations:
+
+```bash
+counterproof causal-replay examples/causal_replay/manifest.yml \
+  --output CAUSAL_REPLAY_RECEIPT.json \
+  --summary CAUSAL_REPLAY.md \
+  --require-witness
+```
+
+A witnessed result requires at least one pre-registered observation with:
+
+```text
+CONTROL == REVERT != BAD
+```
+
+and every declared observation must match all three candidates. Each evidence file
+is SHA-256 pinned, candidate identities must be distinct, evidence paths cannot escape
+the manifest directory, and an optional `identity_path` can bind the declared
+candidate identity to the evidence payload itself.
+
+Rebuild the receipt later to detect either evidence or manifest drift:
+
+```bash
+counterproof verify-causal-replay-receipt CAUSAL_REPLAY_RECEIPT.json \
+  --manifest examples/causal_replay/manifest.yml
+```
+
+This protocol grew out of the Bluefin #4539 CONTROL/BAD/REVERT QEMU experiment.
+The historical Bluefin receipt remains frozen; the generic command is the reusable
+path for new flagship causal replays.
+
 ### When one PR contains multiple review claims
 
 A real PR can have one genuinely witnessed regression and several adjacent concerns that its tests do not exercise.
