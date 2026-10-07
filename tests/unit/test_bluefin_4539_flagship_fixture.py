@@ -29,6 +29,10 @@ def test_frozen_bluefin_flagship_receipt_preserves_source_run_and_oracle_identit
         "a99ca5ea0553f778a74f5d5152fefbbb47d86da4"
     )
     assert receipt["experiment"]["same_oracle_for_all_candidates"] is True
+    assert {
+        receipt["runtime_execution"][role]["job_result"]
+        for role in ("CONTROL", "BAD", "REVERT")
+    } == {"success"}
 
 
 
