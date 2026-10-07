@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from skill_factory.evolution.conformance_receipt import (
     build_conformance_receipt,
     verify_conformance_receipt,
