@@ -105,7 +105,7 @@ def verify_lifecycle_receipt(
 
     try:
         contract_failures = validate_reality_contracts(suite_file)
-    except (OSError, ValueError, TypeError) as exc:
+    except (OSError, ValueError, TypeError, KeyError) as exc:
         failures.append(f"Reality Contract validation could not run: {exc}")
     else:
         for failure in contract_failures:
