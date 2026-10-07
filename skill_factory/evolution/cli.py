@@ -188,7 +188,7 @@ def verify_causal_replay_receipt_command(
     try:
         receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
         if not isinstance(receipt, dict):
-            raise ValueError("causal replay receipt must be an object")
+            raise TypeError("causal replay receipt must be an object")
         failures = verify_causal_replay_receipt(
             receipt,
             manifest_file=Path(manifest_file),
