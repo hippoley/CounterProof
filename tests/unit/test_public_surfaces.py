@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -148,24 +149,59 @@ def test_high_signal_public_claims_match_canonical_reality_contracts():
             f'{claim["id"]} is declared but its public statement is missing'
         )
 
-        contract = contracts[claim["reality_contract_id"]]
-        assert contract["lifecycle"] in claim["allowed_lifecycles"], (
-            f'{claim["id"]} publishes lifecycle {contract["lifecycle"]}, '
-            f'allowed={claim["allowed_lifecycles"]}'
-        )
-
-        expected = claim.get("expectation")
-        if expected:
-            observed = next(
-                item
-                for item in contract["expectations"]
-                if item["claim_id"] == expected["claim_id"]
+        if claim.get("must_also_contain"):
+            assert claim["must_also_contain"] in surface, (
+                f'{claim["id"]} is missing its public boundary statement'
             )
-            for field in ("overall_claim", "receipt_verdict"):
-                assert observed.get(field) == expected[field], (
-                    f'{claim["id"]} expected {field}={expected[field]!r}, '
-                    f'observed={observed.get(field)!r}'
+
+        if claim.get("reality_contract_id"):
+            contract = contracts[claim["reality_contract_id"]]
+            assert contract["lifecycle"] in claim["allowed_lifecycles"], (
+                f'{claim["id"]} publishes lifecycle {contract["lifecycle"]}, '
+                f'allowed={claim["allowed_lifecycles"]}'
+            )
+
+            expected = claim.get("expectation")
+            if expected:
+                observed = next(
+                    item
+                    for item in contract["expectations"]
+                    if item["claim_id"] == expected["claim_id"]
                 )
+                for field in ("overall_claim", "receipt_verdict"):
+                    assert observed.get(field) == expected[field], (
+                        f'{claim["id"]} expected {field}={expected[field]!r}, '
+                        f'observed={observed.get(field)!r}'
+                    )
+
+        provenance = claim.get("provenance")
+        if provenance:
+            handoff = Path(provenance["handoff_file"]).read_text(encoding="utf-8")
+            for fragment in provenance["handoff_contains"]:
+                assert fragment in handoff, (
+                    f'{claim["id"]} handoff provenance lost {fragment!r}'
+                )
+
+            envelope_path = Path(provenance["envelope_file"])
+            envelope_bytes = envelope_path.read_bytes()
+            git_blob = hashlib.sha1(
+                f"blob {len(envelope_bytes)}\0".encode() + envelope_bytes
+            ).hexdigest()
+            assert git_blob == provenance["envelope_git_blob_sha"]
+
+            envelope = json.loads(envelope_bytes)
+            for dotted, expected_value in provenance["json_expectations"].items():
+                observed_value = envelope
+                for key in dotted.split("."):
+                    observed_value = observed_value[key]
+                assert observed_value == expected_value, (
+                    f'{claim["id"]} expected {dotted}={expected_value!r}, '
+                    f'observed={observed_value!r}'
+                )
+
+        assert bool(claim.get("reality_contract_id")) ^ bool(provenance), (
+            f'{claim["id"]} must bind exactly one canonical evidence source'
+        )
 
 
 def test_standalone_embedded_data_matches_site_json_sources():
