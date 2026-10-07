@@ -13,6 +13,11 @@ import yaml
 
 from .adapter_binding import bind_probe_adapter
 from .capabilities import capability_report
+from .causal_replay import (
+    build_causal_replay_receipt,
+    render_causal_replay_markdown,
+    verify_causal_replay_receipt,
+)
 from .claim_matrix import (
     claim_matrix_to_dict,
     load_claim_matrix,
@@ -104,6 +109,100 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("causal-replay")
+@click.argument("manifest_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--output",
+    "output_file",
+    type=click.Path(dir_okay=False),
+    default="CAUSAL_REPLAY_RECEIPT.json",
+    show_default=True,
+)
+@click.option(
+    "--summary",
+    "summary_file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Optional reviewer-facing Markdown summary.",
+)
+@click.option(
+    "--require-witness",
+    is_flag=True,
+    help="Exit non-zero unless CONTROL/BAD/REVERT matches the declared causal pattern.",
+)
+def causal_replay(
+    manifest_file: str,
+    output_file: str,
+    summary_file: str | None,
+    require_witness: bool,
+) -> None:
+    """Build a frozen CONTROL/BAD/REVERT causal replay receipt."""
+    try:
+        receipt = build_causal_replay_receipt(Path(manifest_file))
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(output_file).write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    if summary_file:
+        Path(summary_file).write_text(
+            render_causal_replay_markdown(receipt),
+            encoding="utf-8",
+        )
+
+    click.echo(f"Causal replay: {receipt['verdict']}")
+    click.echo(
+        "Candidates: "
+        + ", ".join(
+            f"{role}={receipt['candidates'][role]['identity']}"
+            for role in ("CONTROL", "BAD", "REVERT")
+        )
+    )
+    click.echo(f"Wrote {output_file}")
+    if summary_file:
+        click.echo(f"Wrote {summary_file}")
+
+    if require_witness and receipt["verdict"] != "WITNESSED_CAUSAL_REPLAY":
+        raise click.ClickException(
+            f"causal replay witness required, got {receipt['verdict']}"
+        )
+
+
+@cli.command("verify-causal-replay-receipt")
+@click.argument("receipt_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--manifest",
+    "manifest_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+def verify_causal_replay_receipt_command(
+    receipt_file: str,
+    manifest_file: str,
+) -> None:
+    """Rebuild a causal replay receipt and reject evidence or manifest drift."""
+    try:
+        receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
+        if not isinstance(receipt, dict):
+            raise TypeError("causal replay receipt must be an object")
+        failures = verify_causal_replay_receipt(
+            receipt,
+            manifest_file=Path(manifest_file),
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if failures:
+        for failure in failures:
+            click.echo(f"FAIL {failure}", err=True)
+        raise click.ClickException(
+            f"{len(failures)} causal replay receipt verification failure(s)"
+        )
+    click.echo("Causal replay receipt verified")
 
 
 @cli.command("reality-lifecycle")
