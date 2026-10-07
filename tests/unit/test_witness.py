@@ -14,6 +14,7 @@ from skill_factory.evolution.witness import (
     render_witness_markdown,
     render_witness_review_note,
     run_regression_witness,
+    witness_payload_digest,
     witness_to_dict,
 )
 
@@ -820,6 +821,47 @@ def test_share_witness_rejects_tampered_witness_payload(tmp_path):
 
     assert result.exit_code != 0
     assert "witness evidence digest mismatch" in result.output
+    assert not output.exists()
+
+
+def test_share_witness_rejects_semantically_forged_witness_with_valid_digest(
+    tmp_path,
+):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=2)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    assert witness.status == "not-witnessed"
+
+    payload = witness_to_dict(witness)
+    payload["status"] = "witnessed"
+    payload["witnessed"] = True
+    payload["note"] = "Forged witnessed claim with unchanged execution evidence."
+    payload["evidence_digest_sha256"] = witness_payload_digest(payload)
+
+    receipt = tmp_path / "forged-witness.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "forged-review.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            witness.head_sha,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "witnessed BASE must exit non-zero" in result.output
     assert not output.exists()
 
 
