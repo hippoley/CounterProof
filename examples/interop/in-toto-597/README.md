@@ -65,8 +65,28 @@ The #597 manifest declares `verdict` / accepted `result` as normative and
 example of why those surfaces should remain separate.
 
 The external checker also publishes an important scope boundary of its own:
-its suiteRevision 27 corpus is pinned to an older predicate specification than
-the then-current upstream pull-request head, and an unexercised newer rule is
-explicitly not claimed as covered. CounterProof preserves that distinction
+its producer-local checker sequence labels this run `27`, while
+`agent-evidence-vectors` records the same run beside corpus `suiteRevision 28`.
+CounterProof keeps those namespaces separate. The corpus is pinned to an older
+predicate specification than the then-current upstream pull-request head, and an
+unexercised newer rule is explicitly not claimed as covered. CounterProof preserves that distinction
 rather than turning a historical 272/272 result into timeless conformance.
 
+
+### Byte identity of the four overlapping vectors
+
+The four content-addressed statement files were checked on both sides of the
+handoff: in-toto #597 head
+`8c8d21c4908cff5b5c241e7fce32d342975216f9` and the rewritten
+`agent-evidence-vectors` corpus commit
+`e98de66d7296c4eb01abc38b6aee0b51b0c87a8e`.
+
+| vector | Git blob on both sides |
+| --- | --- |
+| `v48542b44ffd26237` | `fe8b67cf6259446d04147753e0dcdbaee343a2eb` |
+| `v18bdbadef67b38f4` | `862db2af4b99b4638a39fb05f4b21c6fbb3f03ce` |
+| `v2adb319fc7515885` | `bf8106a749fb47b9e102f089c7625506e6905fa2` |
+| `v3418101227718535` | `7d476005fd32af6172578970fe7dd3c9c3c23b2f` |
+
+So the cross-check is bound to identical statement bytes, not merely matching
+vector labels.
