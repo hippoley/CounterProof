@@ -1,0 +1,29 @@
+schema_version: 1
+observations:
+  - id: avera-check-v0-upstream
+    observed_at: "2026-10-07"
+    refresh_after_days: 30
+    sources:
+      - url: https://github.com/mikheil-galoian/avera/issues/12
+        kind: issue
+        state: closed
+      - url: https://github.com/mikheil-galoian/avera/pull/14
+        kind: pull_request
+        state: closed
+        merged: true
+        merged_at: "2026-10-07T04:26:03Z"
+        head_sha: a6bdb0d005fc5cc72b5814255105fbaad3b62d6d
+    note: "The design thread is closed because the v0 producer contract landed; CounterProof's public interoperability claim is about the implemented producer/consumer relationship, not an open-issue status."
+
+  - id: in-toto-conformance-layer-node
+    observed_at: "2026-10-07"
+    refresh_after_days: 14
+    sources:
+      - url: https://github.com/in-toto/attestation/issues/554
+        kind: issue
+        state: open
+      - url: https://github.com/in-toto/attestation/pull/597
+        kind: pull_request
+        state: open
+        merged: false
+    note: "Candidate standards node: predicate conformance vectors and independent-verifier parity. CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
