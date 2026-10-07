@@ -662,6 +662,86 @@ def verify_witness_payload_digest(payload: dict[str, Any]) -> tuple[str, ...]:
     return ()
 
 
+def verify_witness_payload_semantics(payload: dict[str, Any]) -> tuple[str, ...]:
+    """Reject witness payloads whose stored verdict contradicts their execution data."""
+    failures: list[str] = []
+
+    if payload.get("schema_version") != 4:
+        failures.append("unsupported witness payload schema_version")
+
+    status = payload.get("status")
+    witnessed = payload.get("witnessed")
+    expected_witnessed = status == "witnessed"
+    if not isinstance(witnessed, bool) or witnessed is not expected_witnessed:
+        failures.append(
+            "witnessed flag must be true exactly when status is 'witnessed'"
+        )
+
+    if status != "witnessed":
+        return tuple(failures)
+
+    if payload.get("mode") != "precise":
+        failures.append("witnessed payload requires precise test execution mode")
+
+    tests = payload.get("tests")
+    if not isinstance(tests, list) or not tests or any(
+        not isinstance(item, str) or not item for item in tests
+    ):
+        failures.append("witnessed payload requires non-empty test paths")
+
+    head = payload.get("head")
+    base = payload.get("base_with_head_tests")
+    if not isinstance(head, dict):
+        failures.append("witnessed payload requires HEAD execution evidence")
+    if not isinstance(base, dict):
+        failures.append("witnessed payload requires BASE execution evidence")
+    if failures and (not isinstance(head, dict) or not isinstance(base, dict)):
+        return tuple(failures)
+
+    assert isinstance(head, dict)
+    assert isinstance(base, dict)
+
+    if head.get("timed_out") is True:
+        failures.append("witnessed payload cannot use a timed-out HEAD execution")
+    if base.get("timed_out") is True:
+        failures.append("witnessed payload cannot use a timed-out BASE execution")
+
+    protocol = payload.get("result_protocol")
+    if protocol == "json-v1":
+        if head.get("semantic_error"):
+            failures.append("witnessed json-v1 HEAD cannot have semantic_error")
+        if base.get("semantic_error"):
+            failures.append("witnessed json-v1 BASE cannot have semantic_error")
+        if head.get("semantic_verdict") != "pass":
+            failures.append("witnessed json-v1 HEAD must have semantic_verdict='pass'")
+        if base.get("semantic_verdict") != "fail":
+            failures.append("witnessed json-v1 BASE must have semantic_verdict='fail'")
+        if head.get("returncode") != 0 or base.get("returncode") != 0:
+            failures.append(
+                "witnessed json-v1 executions must complete with returncode 0"
+            )
+    elif protocol == "exit-code":
+        if head.get("returncode") != 0:
+            failures.append("witnessed HEAD must exit 0")
+        base_returncode = base.get("returncode")
+        if not isinstance(base_returncode, int) or base_returncode == 0:
+            failures.append("witnessed BASE must exit non-zero")
+        argv_raw = base.get("argv")
+        argv = (
+            tuple(str(item) for item in argv_raw)
+            if isinstance(argv_raw, list)
+            else ()
+        )
+        if argv and _is_pytest_command(argv) and base_returncode != 1:
+            failures.append(
+                "witnessed pytest BASE must exit 1; infrastructure exits are inconclusive"
+            )
+    else:
+        failures.append(f"unsupported witness result_protocol {protocol!r}")
+
+    return tuple(failures)
+
+
 def _command_behavior_label(command: WitnessCommand) -> str:
     if command.semantic_error:
         return "INCONCLUSIVE"
