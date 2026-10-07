@@ -13,7 +13,9 @@
       "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/reality/bluefin-4539/REPLAY_BOUNDARY.md",
       "artifact_label": "FLAGSHIP PROOF",
       "counterproof_change": "Generic causal replay + raw runtime provenance",
-      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/122"
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/122",
+      "reality_contract_id": "bluefin-4539-oracle-applicability",
+      "lifecycle": "CURRENT"
     },
     {
       "id": "claude-code-89404",
@@ -42,6 +44,23 @@
       "artifact_label": "TRIAD PROOF",
       "counterproof_change": "Explicit support-file replay + executed triad artifact",
       "counterproof_change_url": "https://github.com/hippoley/CounterProof/pull/126"
+    },
+    {
+      "id": "clash-8017",
+      "external_pr": "clash-verge-rev/clash-verge-rev#8017",
+      "question": "What if a behavior witness is valid for frozen candidates but the live PR base later moves?",
+      "result": "WITNESSED · STALE",
+      "result_class": "boundary",
+      "learned": "The candidate-neutral production replay remains valid for its frozen BASE/HEAD pair, but the live PR base later drifted. The Reality Contract therefore marks this evidence STALE; Proof Lab must not present the historical witness as current evidence for the changed live candidate.",
+      "source_url": "https://github.com/clash-verge-rev/clash-verge-rev/pull/8017",
+      "probe_url": "https://github.com/hippoley/CounterProof/actions/runs/36391467118",
+      "artifact_url": "https://github.com/hippoley/CounterProof/blob/main/examples/claim_matrix/clash-8017.yml",
+      "artifact_label": "CLAIM MATRIX",
+      "counterproof_change": "Evidence lifecycle + candidate freshness",
+      "counterproof_change_url": "https://github.com/hippoley/CounterProof/blob/main/examples/claim_matrix/reality-contracts.yml",
+      "reality_contract_id": "clash-8017-candidate-bound-behavior",
+      "lifecycle": "STALE",
+      "lifecycle_note": "Live PR BASE drifted after the frozen replay. Historical proof remains valid only for the pinned candidates."
     },
     {
       "id": "async-rithmic-53",
