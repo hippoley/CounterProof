@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import yaml
+
 from skill_factory.evolution.capabilities import capability_report
 
 PUBLIC_SURFACES = (
@@ -89,6 +91,31 @@ def test_reality_lab_tracks_avera_release_provenance_correction():
     assert "not reproducible from an installable release" in text
     assert "v0.2.0" in text
     assert "pull/140" in text
+
+
+def test_proof_lab_lifecycle_matches_canonical_reality_contracts():
+    published = json.loads(
+        Path("site/data/reality_cases.json").read_text(encoding="utf-8")
+    )
+    suite = yaml.safe_load(
+        Path("examples/claim_matrix/reality-contracts.yml").read_text(encoding="utf-8")
+    )
+    contracts = {item["id"]: item for item in suite["contracts"]}
+
+    bound_cases = [item for item in published["cases"] if item.get("reality_contract_id")]
+    assert bound_cases, "Proof Lab must publish at least one Reality Contract-bound case"
+
+    for item in bound_cases:
+        contract = contracts[item["reality_contract_id"]]
+        assert item["lifecycle"] == contract["lifecycle"]
+        if item["lifecycle"] != "CURRENT":
+            assert item.get("lifecycle_note"), (
+                f'{item["id"]} publishes non-current evidence without a public reason'
+            )
+
+    clash = next(item for item in bound_cases if item["id"] == "clash-8017")
+    assert clash["lifecycle"] == "STALE"
+    assert "Historical proof remains valid only for the pinned candidates" in clash["lifecycle_note"]
 
 
 def test_standalone_embedded_data_matches_site_json_sources():
