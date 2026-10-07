@@ -20,6 +20,7 @@ claims:
     oracle_probe: "Run the exact submitted Django management-command test in ScanCode.io's PostgreSQL test environment."
     oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36373412716"
     receipt_file: "receipts/scancode-2207-behavior.json"
+    receipt_expected_case: "aboutcode-org/scancode.io#2207"
     receipt_expected_verdicts:
       - WITNESSED_BEHAVIOR_DELTA
     note: "BASE fails at the CLI parser because input_location is still required; HEAD passes the exact same submitted behavior test."
