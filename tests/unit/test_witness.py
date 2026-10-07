@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from skill_factory.evolution.cli import cli
@@ -14,6 +15,7 @@ from skill_factory.evolution.witness import (
     render_witness_markdown,
     render_witness_review_note,
     run_regression_witness,
+    witness_payload_digest,
     witness_to_dict,
 )
 
@@ -643,6 +645,44 @@ def test_review_note_exposes_minimum_reviewer_evidence(tmp_path):
     assert "[runner](https://github.com/example/proof/actions/runs/7)" in note
 
 
+def test_review_note_renderer_rejects_tampered_payload(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    payload = witness_to_dict(witness)
+    payload["note"] = "tampered after execution"
+
+    with pytest.raises(ValueError, match="invalid witness payload"):
+        render_witness_review_note(payload)
+
+
+def test_review_note_renderer_rejects_stale_expected_head(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    payload = witness_to_dict(witness)
+    stale_head = "0" * len(witness.head_sha)
+
+    with pytest.raises(ValueError, match="stale witness payload"):
+        render_witness_review_note(
+            payload,
+            expected_head=stale_head,
+        )
+
+
 def test_review_note_includes_explicit_support_and_integrity_findings(tmp_path):
     repo = tmp_path / "repo"
     _init_repo(repo, base_value=1)
@@ -782,6 +822,111 @@ def test_share_witness_cli_writes_review_note(tmp_path):
     text = output.read_text(encoding="utf-8")
     assert "Counterproof replay: WITNESSED" in text
     assert "Would this evidence materially help review this change?" in text
+
+
+def test_share_witness_rejects_tampered_witness_payload(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=2)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    assert witness.status == "not-witnessed"
+
+    payload = witness_to_dict(witness)
+    payload["status"] = "witnessed"
+    payload["witnessed"] = True
+    payload["note"] = "The changed test proves the fix."
+    payload["base_with_head_tests"]["returncode"] = 1
+
+    receipt = tmp_path / "tampered-witness.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "tampered-review.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            witness.head_sha,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "witness evidence digest mismatch" in result.output
+    assert not output.exists()
+
+
+def test_share_witness_rejects_semantically_forged_witness_with_valid_digest(
+    tmp_path,
+):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=2)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+    assert witness.status == "not-witnessed"
+
+    payload = witness_to_dict(witness)
+    payload["status"] = "witnessed"
+    payload["witnessed"] = True
+    payload["note"] = "Forged witnessed claim with unchanged execution evidence."
+    payload["evidence_digest_sha256"] = witness_payload_digest(payload)
+
+    receipt = tmp_path / "forged-witness.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+    output = tmp_path / "forged-review.md"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "share-witness",
+            str(receipt),
+            "--expected-head",
+            witness.head_sha,
+            "--out",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "witnessed BASE must exit non-zero" in result.output
+    assert not output.exists()
+
+
+def test_share_witness_rejects_missing_witness_digest(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    payload = witness_to_dict(witness)
+    payload.pop("evidence_digest_sha256")
+    receipt = tmp_path / "missing-digest.json"
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["share-witness", str(receipt)],
+    )
+
+    assert result.exit_code != 0
+    assert "witness evidence digest is missing or malformed" in result.output
 
 
 def test_share_witness_can_bind_note_to_expected_head(tmp_path):

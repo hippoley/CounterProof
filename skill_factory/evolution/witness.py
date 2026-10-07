@@ -631,6 +631,119 @@ def witness_to_dict(witness: RegressionWitness) -> dict[str, Any]:
     return payload
 
 
+def witness_payload_digest(payload: dict[str, Any]) -> str:
+    """Recompute the canonical digest for a stored witness payload."""
+    canonical_payload = {
+        key: value
+        for key, value in payload.items()
+        if key != "evidence_digest_sha256"
+    }
+    canonical = json.dumps(
+        canonical_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def verify_witness_payload_digest(payload: dict[str, Any]) -> tuple[str, ...]:
+    """Reject missing or tampered witness payload digests."""
+    expected = payload.get("evidence_digest_sha256")
+    if not isinstance(expected, str) or len(expected) != 64:
+        return ("witness evidence digest is missing or malformed",)
+
+    observed = witness_payload_digest(payload)
+    if observed != expected.lower():
+        return (
+            (
+                "witness evidence digest mismatch: "
+                f"expected {expected!r}, observed {observed!r}"
+            ),
+        )
+    return ()
+
+
+def verify_witness_payload_semantics(payload: dict[str, Any]) -> tuple[str, ...]:
+    """Reject witness payloads whose stored verdict contradicts their execution data."""
+    failures: list[str] = []
+
+    if payload.get("schema_version") != 4:
+        failures.append("unsupported witness payload schema_version")
+
+    status = payload.get("status")
+    witnessed = payload.get("witnessed")
+    expected_witnessed = status == "witnessed"
+    if not isinstance(witnessed, bool) or witnessed is not expected_witnessed:
+        failures.append(
+            "witnessed flag must be true exactly when status is 'witnessed'"
+        )
+
+    if status != "witnessed":
+        return tuple(failures)
+
+    if payload.get("mode") != "precise":
+        failures.append("witnessed payload requires precise test execution mode")
+
+    tests = payload.get("tests")
+    if not isinstance(tests, list) or not tests or any(
+        not isinstance(item, str) or not item for item in tests
+    ):
+        failures.append("witnessed payload requires non-empty test paths")
+
+    head = payload.get("head")
+    base = payload.get("base_with_head_tests")
+    if not isinstance(head, dict):
+        failures.append("witnessed payload requires HEAD execution evidence")
+    if not isinstance(base, dict):
+        failures.append("witnessed payload requires BASE execution evidence")
+    if failures and (not isinstance(head, dict) or not isinstance(base, dict)):
+        return tuple(failures)
+
+    assert isinstance(head, dict)
+    assert isinstance(base, dict)
+
+    if head.get("timed_out") is True:
+        failures.append("witnessed payload cannot use a timed-out HEAD execution")
+    if base.get("timed_out") is True:
+        failures.append("witnessed payload cannot use a timed-out BASE execution")
+
+    protocol = payload.get("result_protocol")
+    if protocol == "json-v1":
+        if head.get("semantic_error"):
+            failures.append("witnessed json-v1 HEAD cannot have semantic_error")
+        if base.get("semantic_error"):
+            failures.append("witnessed json-v1 BASE cannot have semantic_error")
+        if head.get("semantic_verdict") != "pass":
+            failures.append("witnessed json-v1 HEAD must have semantic_verdict='pass'")
+        if base.get("semantic_verdict") != "fail":
+            failures.append("witnessed json-v1 BASE must have semantic_verdict='fail'")
+        if head.get("returncode") != 0 or base.get("returncode") != 0:
+            failures.append(
+                "witnessed json-v1 executions must complete with returncode 0"
+            )
+    elif protocol == "exit-code":
+        if head.get("returncode") != 0:
+            failures.append("witnessed HEAD must exit 0")
+        base_returncode = base.get("returncode")
+        if not isinstance(base_returncode, int) or base_returncode == 0:
+            failures.append("witnessed BASE must exit non-zero")
+        argv_raw = base.get("argv")
+        argv = (
+            tuple(str(item) for item in argv_raw)
+            if isinstance(argv_raw, list)
+            else ()
+        )
+        if argv and _is_pytest_command(argv) and base_returncode != 1:
+            failures.append(
+                "witnessed pytest BASE must exit 1; infrastructure exits are inconclusive"
+            )
+    else:
+        failures.append(f"unsupported witness result_protocol {protocol!r}")
+
+    return tuple(failures)
+
+
 def _command_behavior_label(command: WitnessCommand) -> str:
     if command.semantic_error:
         return "INCONCLUSIVE"
@@ -743,7 +856,29 @@ def render_witness_review_note(
     integrity_payload: dict[str, Any] | None = None,
     expected_head: str | None = None,
 ) -> str:
-    """Render a concise reviewer-facing note from stored witness evidence."""
+    """Render a concise reviewer-facing note from validated witness evidence."""
+    validation_failures = (
+        *verify_witness_payload_digest(payload),
+        *verify_witness_payload_semantics(payload),
+    )
+    if validation_failures:
+        raise ValueError(
+            "invalid witness payload: " + "; ".join(validation_failures)
+        )
+
+    if expected_head is not None:
+        receipt_head = payload.get("head_sha")
+        if not isinstance(receipt_head, str) or not receipt_head.strip():
+            raise ValueError(
+                "candidate binding requested but witness payload has no head_sha"
+            )
+        if receipt_head.strip().lower() != expected_head.strip().lower():
+            raise ValueError(
+                "stale witness payload: "
+                f"receipt HEAD {receipt_head} does not match expected candidate "
+                f"{expected_head}"
+            )
+
     status = str(payload.get("status", "unknown"))
     tests = [str(item) for item in payload.get("tests", [])]
     support_files = [

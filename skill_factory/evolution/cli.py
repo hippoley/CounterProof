@@ -58,6 +58,8 @@ from .witness import (
     render_witness_markdown,
     render_witness_review_note,
     run_regression_witness,
+    verify_witness_payload_digest,
+    verify_witness_payload_semantics,
     write_witness_json,
 )
 
@@ -1286,6 +1288,14 @@ def share_witness(
         raise click.ClickException(f"could not read witness receipt: {exc}") from exc
     if not isinstance(payload, dict) or "status" not in payload:
         raise click.ClickException("witness receipt must be a JSON object with status")
+
+    digest_failures = verify_witness_payload_digest(payload)
+    if digest_failures:
+        raise click.ClickException("; ".join(digest_failures))
+
+    semantic_failures = verify_witness_payload_semantics(payload)
+    if semantic_failures:
+        raise click.ClickException("; ".join(semantic_failures))
 
     if expected_head is not None:
         receipt_head = payload.get("head_sha")
