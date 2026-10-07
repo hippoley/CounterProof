@@ -625,3 +625,28 @@ def test_claude_oracle_disagreement_binds_external_oracle_receipt():
     )
     assert receipt["authoritative_oracle"]["result"] == "REJECT"
     assert receipt["does_not_claim"]
+
+
+def test_gramps_executed_triad_receipt_is_bound_without_revert_semantic_drift():
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(Path("examples/claim_matrix/gramps-2484.yml"))
+    payload = claim_matrix_to_dict(manifest)
+
+    assert manifest.base_sha == "48e067ced96ad83b7498587ea1562c2d327b41aa"
+    assert manifest.head_sha == "faee7435ebb7ddcc5522b83028eddae5a5ef39e3"
+    claim = payload["claims"][0]
+    assert claim["overall_claim"] == "PROVEN"
+    assert claim["receipt_observed_verdict"] == "WITNESSED_CHALLENGE_REPAIR"
+    assert claim["receipt_case"] == "gramps-project/gramps#2484"
+
+    receipt = json.loads(
+        Path("examples/claim_matrix/receipts/gramps-2484-triad.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["receipt_type"] == "EXECUTED_CHALLENGE_REPAIR_TRIAD"
+    assert receipt["states"]["CONTROL"]["result"] == "PASS"
+    assert receipt["states"]["CHALLENGE"]["result"] == "FAIL"
+    assert receipt["states"]["REPAIR"]["result"] == "PASS"
+    assert "REVERT" in receipt["does_not_claim"][0]

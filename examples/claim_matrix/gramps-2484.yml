@@ -1,0 +1,24 @@
+schema_version: 1
+title: "Executed Challenge / Repair Matrix — gramps-project/gramps #2484"
+source_pr: "https://github.com/gramps-project/gramps/pull/2484"
+base_sha: "48e067ced96ad83b7498587ea1562c2d327b41aa"
+head_sha: "faee7435ebb7ddcc5522b83028eddae5a5ef39e3"
+runner_url: "https://github.com/hippoley/CounterProof/actions/runs/36224298359"
+claims:
+  - id: from-to-schema-support
+    claim: "The HEAD RelaxNG schema accepts the submitted Gramps fixture using FROM/TO date modifiers, while the BASE schema rejects that same fixture."
+    source_url: "https://github.com/gramps-project/gramps/pull/2484"
+    tests:
+      - "lxml RelaxNG validation: data/grampsxml.rng × example/gramps/data.gramps"
+    base_result: "FAIL with submitted HEAD fixture"
+    head_result: "PASS with submitted HEAD fixture"
+    submitted_test_evidence: WITNESSED
+    evidence_scope: BEHAVIOR
+    required_scope: BEHAVIOR
+    oracle_alignment: ALIGNED
+    oracle_probe: "Run the same lxml.etree.RelaxNG.validate path against BASE and HEAD schema candidates while holding the submitted fixture constant."
+    receipt_file: "receipts/gramps-2484-triad.json"
+    receipt_expected_verdicts:
+      - WITNESSED_CHALLENGE_REPAIR
+    assertion_excerpt: "RELAXNG_ERR_ELEMNAME: Expecting element attribute, got dateval"
+    note: "The additional BASE+original-fixture guard passes, showing the failure is exposed by the submitted fixture rather than by a generally broken BASE validator."
