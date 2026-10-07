@@ -569,7 +569,10 @@ claims:
 
     assert payload["claims"][0]["receipt_observed_verdict"] == "WITNESSED_CONTROLLED_CAUSAL"
     assert payload["claims"][0]["receipt_case"] == "ublue-os/bluefin#4539"
-    assert "Receipt verdict: `WITNESSED_CONTROLLED_CAUSAL`" in markdown
+    assert "Receipt expected verdict(s): `WITNESSED_CONTROLLED_CAUSAL`" in markdown
+    assert "Receipt observed verdict: `WITNESSED_CONTROLLED_CAUSAL`" in markdown
+    assert "Receipt expected case: ublue-os/bluefin#4539" in markdown
+    assert "Receipt observed case: ublue-os/bluefin#4539" in markdown
 
 
 def test_claim_matrix_rejects_receipt_verdict_mismatch(tmp_path: Path):
