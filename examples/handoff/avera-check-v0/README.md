@@ -7,14 +7,17 @@ through [AVERA #12](https://github.com/mikheil-galoian/avera/issues/12) and
 Upstream source pin:
 
 - repository: `mikheil-galoian/avera`
-- upstream main commit containing the v0 contract:
-  `c5f2c43e4dd67617db430978870bd7013a8777e9`
+- stable upstream tag: `v0.2.0`
+- annotated tag resolves to commit:
+  `348ea426d201596ed79046372098f7cc001e6682`
 - implementation PR:
   [AVERA #14](https://github.com/mikheil-galoian/avera/pull/14)
 - upstream spec:
-  [AVERA_CHECK_EVIDENCE_V0.md](https://github.com/mikheil-galoian/avera/blob/c5f2c43e4dd67617db430978870bd7013a8777e9/docs/AVERA_CHECK_EVIDENCE_V0.md)
+  [AVERA_CHECK_EVIDENCE_V0.md](https://github.com/mikheil-galoian/avera/blob/v0.2.0/docs/AVERA_CHECK_EVIDENCE_V0.md)
+- reproducible install target:
+  `pip install "git+https://github.com/mikheil-galoian/avera@v0.2.0"`
 
-The three files here are copied from AVERA's frozen example at that contract:
+The three files here are copied from AVERA's frozen example at the `v0.2.0` tag:
 
 - `baseline.xml`
 - `current.xml`
@@ -37,7 +40,11 @@ current.xml SHA-256 matches envelope
 ## Boundary
 
 A successful handoff establishes only that CounterProof can consume and verify
-the integrity/binding rules of this experimental AVERA artifact.
+the integrity/binding rules of this experimental AVERA artifact from an
+installable tagged upstream build.
+
+The tag is a stable source reference, not a producer-authenticity claim; the
+tag itself is not treated here as a signed attestation.
 
 It does **not** establish:
 
