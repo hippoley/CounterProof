@@ -1,0 +1,31 @@
+name: External state freshness
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-state-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Detect remote evidence drift
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          counterproof external-state-freshness \
+            examples/claim_matrix/external-state.yml
