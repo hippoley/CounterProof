@@ -82,3 +82,64 @@ future reviewer can re-check it
 
 The identity value comes from the external evidence. This page only makes that
 evidence cheap to discover.
+
+## Additional third-party signals
+
+These records are useful, but they are deliberately kept below the AVERA
+producer-owned role.
+
+### External reviewer — claim/evidence matrix
+
+An external reviewer confirmed that CounterProof's automated matrix preserved
+the requested semantics and stated:
+
+> "I would use this shape in review."
+
+This is durable **use intent plus semantic acceptance**. It is not evidence that
+the upstream project adopted CounterProof or that the reviewer represents that
+project's maintainers.
+
+### Codex PROVE — optional handoff boundary
+
+The PROVE maintainer confirmed that the documented CounterProof → PROVE handoff
+matches the intended composition, clarified stale-evidence/scoped-reuse rules,
+and agreed the optional handoff is the right stopping point.
+
+This compresses a future proof burden: CounterProof no longer needs to re-prove
+from scratch that its receipts can be composed as optional requirement evidence
+without owning PROVE's final decision.
+
+It does not establish a PROVE dependency or adoption.
+
+### claimproof — first-class use-case invitation
+
+The claimproof maintainer confirmed that CounterProof found a real gap at the
+durable `ClaimBasis` layer and invited a first-class candidate-bound export use
+case.
+
+That is stronger than discussion but weaker than a shipped producer artifact.
+Until such an export lands, the record stays an invitation/gap confirmation.
+
+### agent-done-or-not — receipt reuse boundary
+
+The maintainer explicitly agreed that `review-pr` receipts may be reused as
+input to a CounterProof BASE→HEAD check while CounterProof remains responsible
+for deciding whether the evidence demonstrates a fix.
+
+No frozen producer payload or adapter has landed yet, so this remains a
+confirmed interoperability boundary rather than an implementation credential.
+
+## Credential strength
+
+The current ordering is intentionally conservative:
+
+```text
+producer-owned named role + shipped interop
+    > maintainer-confirmed executable boundary
+    > explicit reviewer use intent
+    > upstream use-case invitation
+    > discussion only
+```
+
+A future identity claim should cite the strongest applicable record rather than
+collapsing all external interactions into one "adoption" bucket.

@@ -63,3 +63,89 @@ records:
       - adoption
       - endorsement
       - qualified external evidence
+  - id: reviewer-claim-matrix-use-intent
+    status: THIRD_PARTY_CONFIRMED_USE_INTENT
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: claim/evidence matrix usable in external review
+    external_sources:
+      - repository: hippoley/CounterProof
+        issue: 13
+        third_party_user: sylvesterkaczmarek
+        comment_id: 5812942595
+        claim: "External reviewer confirmed the automated artifact preserved the intended semantics and stated they would use this shape in review."
+    durable_value:
+      external_naming: false
+      explicit_use_intent: true
+      semantic_acceptance: true
+      producer_owned_artifact: false
+    non_claims:
+      - adoption by codex-plugin-cc
+      - maintainer endorsement by the upstream repository
+      - production use
+
+  - id: codex-prove-optional-handoff
+    status: MAINTAINER_CONFIRMED_INTEROP_BOUNDARY
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: optional verifier evidence input to PROVE requirements
+    external_sources:
+      - repository: hippoley/CounterProof
+        issue: 42
+        third_party_user: yehyakin
+        comment_id: 5888649005
+        claim: "PROVE maintainer confirmed the documented optional handoff matches the intended boundary and is a good stopping point."
+      - repository: hippoley/CounterProof
+        issue: 42
+        third_party_user: yehyakin
+        comment_id: 5857431779
+        claim: "PROVE maintainer defined the stale-evidence and scoped-reuse semantics CounterProof should preserve."
+    durable_value:
+      maintainer_boundary_confirmation: true
+      executable_handoff: true
+      upstream_adapter_required: false
+      upstream_adoption: false
+    non_claims:
+      - PROVE dependency on CounterProof
+      - PROVE adoption of CounterProof
+      - standardization
+
+  - id: claimproof-first-class-use-case-invitation
+    status: UPSTREAM_USE_CASE_INVITATION
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: candidate-bound consumer use case for durable ClaimBasis evidence
+    external_sources:
+      - repository: hippoley/CounterProof
+        issue: 64
+        third_party_user: Cshearer210
+        comment_id: 5862027109
+        claim: "claimproof maintainer confirmed the durable-layer gap and invited a first-class candidate-bound export use case for CounterProof."
+    durable_value:
+      maintainer_gap_confirmation: true
+      explicit_upstream_invitation: true
+      upstream_artifact_landed: false
+    non_claims:
+      - claimproof adoption
+      - shipped export
+      - dependency
+
+  - id: agent-done-or-not-receipt-input
+    status: MAINTAINER_APPROVED_INPUT_BOUNDARY
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: potential consumer of review-pr receipts for BASE-to-HEAD verification
+    external_sources:
+      - repository: hippoley/CounterProof
+        issue: 82
+        third_party_user: mohamedzhioua
+        comment_id: 5909900493
+        claim: "Maintainer explicitly agreed review-pr receipts may be reused as input while CounterProof owns whether the evidence demonstrates a fix."
+    durable_value:
+      maintainer_boundary_confirmation: true
+      explicit_reuse_permission: true
+      frozen_payload_landed: false
+    non_claims:
+      - agent-done-or-not adoption of CounterProof
+      - implemented adapter
+      - stable receipt contract
