@@ -74,6 +74,26 @@ def _is_absolute_http_url(value: str | None) -> bool:
     return True
 
 
+_HTTP_SOURCE = TypeAdapter(AnyHttpUrl)
+
+
+def _is_absolute_http_url(value: str | None) -> bool:
+    """Validate an inspectable HTTP(S) provenance reference without fetching it."""
+    if not value or any(
+        char == "\\" or char.isspace() or unicodedata.category(char) in {"Cc", "Cf"}
+        for char in value
+    ):
+        return False
+    try:
+        parts = urlsplit(value)
+        if not parts.hostname:
+            return False
+        _HTTP_SOURCE.validate_python(value)
+    except ValueError:
+        return False
+    return True
+
+
 class ClaimEvidence(BaseModel):
     id: str = Field(min_length=1)
     claim: str = Field(min_length=1)
