@@ -90,6 +90,37 @@ def verify_avera_check_v0(
         if not isinstance(verdict, str) or not verdict:
             failures.append("result.verdict must be a non-empty AVERA verdict string")
 
+        gate_status = result.get("gate_status")
+        if not isinstance(gate_status, str) or not gate_status:
+            failures.append("result.gate_status must be a non-empty string")
+
+        introduced_failures = result.get("introduced_failures")
+        if (
+            not isinstance(introduced_failures, list)
+            or any(
+                not isinstance(item, str) or not item
+                for item in introduced_failures
+            )
+        ):
+            failures.append(
+                "result.introduced_failures must be a list of non-empty strings"
+            )
+
+        risk = result.get("risk")
+        if not isinstance(risk, str) or not risk:
+            failures.append("result.risk must be a non-empty string")
+
+        confidence = result.get("confidence")
+        if not isinstance(confidence, str) or not confidence:
+            failures.append("result.confidence must be a non-empty string")
+
+        confidence_score = result.get("confidence_score")
+        if (
+            isinstance(confidence_score, bool)
+            or not isinstance(confidence_score, (int, float))
+        ):
+            failures.append("result.confidence_score must be a JSON number")
+
     expected_digest = envelope.get("digest")
     if not isinstance(expected_digest, str) or not _SHA256_RE.fullmatch(
         expected_digest
