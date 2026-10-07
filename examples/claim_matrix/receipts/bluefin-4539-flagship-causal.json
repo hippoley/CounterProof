@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "receipt_type": "FLAGSHIP_CONTROLLED_CAUSAL",
+  "case": "ublue-os/bluefin#4539",
+  "verdict": "WITNESSED_CONTROLLED_CAUSAL",
+  "experiment": {
+    "design": "CONTROL -> + historical drop-in -> BAD -> remove drop-in -> REVERT",
+    "intervention": "historical 30-after-keyring.conf",
+    "same_oracle_for_all_candidates": true,
+    "historical_image_status": "ORIGINAL_REGISTRY_ARTIFACTS_UNAVAILABLE"
+  },
+  "source_run": {
+    "workflow_run": 37412091382,
+    "workflow_url": "https://github.com/hippoley/CounterProof/actions/runs/37412091382",
+    "workflow_head_sha": "8b422a2334a093185bf91e6783e454077eb7cffa",
+    "workflow_name": "Reality — Bluefin 4539 controlled causal replay"
+  },
+  "oracle_identity": {
+    "runtime": "projectbluefin/testsuite GNOME/QEMU",
+    "test_repository": "hippoley/CounterProof",
+    "test_revision": "1c0a23317d420b77396770ae2a8fdf71804cde4e",
+    "upstream_workflow": "projectbluefin/testsuite/.github/workflows/e2e.yml",
+    "upstream_workflow_revision": "a99ca5ea0553f778a74f5d5152fefbbb47d86da4",
+    "suite": "common"
+  },
+  "runtime_execution": {
+    "CONTROL": {
+      "job_result": "success",
+      "image": "ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101"
+    },
+    "BAD": {
+      "job_result": "success",
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:bad-37412091382"
+    },
+    "REVERT": {
+      "job_result": "success",
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:revert-37412091382"
+    }
+  },
+  "candidates": {
+    "CONTROL": {
+      "image": "ghcr.io/ublue-os/bluefin@sha256:76aa5d6f4f2f3e18b244587bfbd45ae1777a7d0934f869534228eab6af1f0101",
+      "keyring_unit_active": false,
+      "keyring_pid_nonzero": false,
+      "portal_wants_keyring": false,
+      "not_in_initialization": false,
+      "login_alias": "(objectpath '/',)"
+    },
+    "BAD": {
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:bad-37412091382",
+      "keyring_unit_active": true,
+      "keyring_pid_nonzero": true,
+      "portal_wants_keyring": true,
+      "not_in_initialization": true,
+      "login_alias": "(objectpath '/',)"
+    },
+    "REVERT": {
+      "image": "ghcr.io/hippoley/counterproof-bluefin-4539:revert-37412091382",
+      "keyring_unit_active": false,
+      "keyring_pid_nonzero": false,
+      "portal_wants_keyring": false,
+      "not_in_initialization": false,
+      "login_alias": "(objectpath '/',)"
+    }
+  },
+  "causal_conclusion": {
+    "pattern": "CONTROL_BASELINE -> BAD_DIVERGENCE -> REVERT_RECOVERY",
+    "statement": "In the frozen controlled environment, adding the historical 30-after-keyring.conf intervention is sufficient to produce the observed late-keyring/portal dependency signature, and removing that exact intervention restores the CONTROL signature.",
+    "scope": "CONTROLLED_CAUSAL",
+    "does_not_claim": [
+      "exact replay of the unavailable May 2026 historical Bluefin images",
+      "proof that every user-visible symptom from issue #4683 is reproduced",
+      "general causality outside the frozen control environment"
+    ]
+  }
+}
