@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "verifier": {
+    "name": "counterproof-demo-observer",
+    "version": "0"
+  },
+  "results": [
+    {"id": "v48542b44ffd26237", "verdict": "valid", "result": "fail", "codes": []},
+    {"id": "v18bdbadef67b38f4", "verdict": "valid", "result": "fail", "codes": []},
+    {"id": "v2adb319fc7515885", "verdict": "invalid", "codes": ["environment-incomplete"]},
+    {"id": "v3418101227718535", "verdict": "invalid", "codes": ["corpus-manifest-no-attacks"]}
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "$comment": "Frozen from in-toto/attestation PR #597 head 8c8d21c4908cff5b5c241e7fce32d342975216f9 for a CounterProof consumer experiment.",
+  "predicateType": "https://in-toto.io/attestation/adversarial-execution-evidence/v0.7",
+  "specPath": "spec/predicates/adversarial-execution-evidence.md",
+  "comparisonSurface": {
+    "normative": ["verdict", "result"],
+    "measured": ["codes"],
+    "note": "Normative verdict/result decide conformance; codes remain measured reason-parity data."
+  },
+  "counts": {"accept": 2, "reject": 2},
+  "vectors": [
+    {
+      "id": "v48542b44ffd26237",
+      "kind": "accept",
+      "file": "statements/v48542b44ffd26237.json",
+      "conditions": ["aee-c-5", "aee-c-42", "aee-c-44"],
+      "expected": {"verdict": "valid", "result": "fail"}
+    },
+    {
+      "id": "v18bdbadef67b38f4",
+      "kind": "accept",
+      "file": "statements/v18bdbadef67b38f4.json",
+      "conditions": ["aee-c-1"],
+      "expected": {"verdict": "valid", "result": "fail"}
+    },
+    {
+      "id": "v2adb319fc7515885",
+      "kind": "reject",
+      "file": "statements/v2adb319fc7515885.json",
+      "conditions": ["aee-c-78"],
+      "expected": {"verdict": "invalid", "codes": ["environment-incomplete"]}
+    },
+    {
+      "id": "v3418101227718535",
+      "kind": "reject",
+      "file": "statements/v3418101227718535.json",
+      "conditions": ["aee-c-92"],
+      "expected": {"verdict": "invalid", "codes": ["corpus-manifest-no-attacks"]}
+    }
+  ]
+}

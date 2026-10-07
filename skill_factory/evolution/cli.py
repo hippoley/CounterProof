@@ -23,6 +23,10 @@ from .claim_matrix import (
     load_claim_matrix,
     render_claim_matrix_markdown,
 )
+from .conformance_receipt import (
+    build_conformance_receipt,
+    verify_conformance_receipt,
+)
 from .discriminate import (
     discrimination_to_dict,
     render_discrimination_markdown,
@@ -111,6 +115,83 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("conformance-receipt")
+@click.argument("manifest_file", type=click.Path(exists=True, dir_okay=False))
+@click.argument("observations_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--output",
+    "output_file",
+    type=click.Path(dir_okay=False),
+    default="CONFORMANCE_RECEIPT.json",
+    show_default=True,
+)
+def conformance_receipt_command(
+    manifest_file: str,
+    observations_file: str,
+    output_file: str,
+) -> None:
+    """Bind external verifier observations to one exact conformance corpus."""
+    try:
+        receipt = build_conformance_receipt(
+            Path(manifest_file),
+            Path(observations_file),
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    Path(output_file).write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    click.echo(
+        f"Conformance: {receipt['verdict']} "
+        f"vectors={receipt['vector_count']} "
+        f"divergences={receipt['divergence_count']}"
+    )
+    click.echo(f"Wrote {output_file}")
+
+
+@cli.command("verify-conformance-receipt")
+@click.argument("receipt_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--manifest",
+    "manifest_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+)
+@click.option(
+    "--observations",
+    "observations_file",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+)
+def verify_conformance_receipt_command(
+    receipt_file: str,
+    manifest_file: str,
+    observations_file: str | None,
+) -> None:
+    """Reject changed conformance corpus or substituted observation inputs."""
+    try:
+        receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
+        if not isinstance(receipt, dict):
+            raise TypeError("conformance receipt must be an object")
+        failures = verify_conformance_receipt(
+            receipt,
+            manifest_path=Path(manifest_file),
+            observations_path=Path(observations_file) if observations_file else None,
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if failures:
+        for failure in failures:
+            click.echo(f"FAIL {failure}", err=True)
+        raise click.ClickException(
+            f"{len(failures)} conformance receipt verification failure(s)"
+        )
+    click.echo("Conformance receipt verified")
 
 
 @cli.command("causal-replay")
