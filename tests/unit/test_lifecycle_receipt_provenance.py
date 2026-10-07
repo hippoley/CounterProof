@@ -28,6 +28,61 @@ def _observation() -> EffectiveLifecycleObservation:
     )
 
 
+def _write_observation_suite(tmp_path: Path) -> tuple[Path, Path]:
+    manifest = tmp_path / "lifecycle-claims.yml"
+    manifest.write_text(
+        """
+schema_version: 1
+title: Lifecycle observation fixture
+source_pr: https://github.com/example/repo/pull/1
+base_sha: base-old
+head_sha: head
+claims:
+  - id: behavior
+    claim: Behavior remains reviewable
+    submitted_test_evidence: UNPROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "lifecycle-suite.yml"
+    suite.write_text(
+        """
+schema_version: 1
+contracts:
+  - id: example
+    lifecycle: CURRENT
+    manifest: lifecycle-claims.yml
+    evidence_id: evidence-1
+    expected_base_sha: base-old
+    expected_head_sha: head
+    expectations: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    graph = tmp_path / "graph.yml"
+    graph.write_text(
+        """
+schema_version: 1
+evidence:
+  - id: evidence-1
+    claim_key: example:behavior
+    observed_at: 2026-10-01T00:00:00+00:00
+    scope: BEHAVIOR
+    overall_claim: PROVEN
+  - id: evidence-2
+    claim_key: example:behavior
+    observed_at: 2026-10-02T00:00:00+00:00
+    scope: BEHAVIOR
+    overall_claim: PROVEN
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    return suite, graph
+
+
 def _write_recursive_suite(tmp_path: Path) -> tuple[Path, Path, Path]:
     receipt = tmp_path / "receipt.json"
     receipt.write_text(
@@ -154,10 +209,7 @@ def test_lifecycle_receipt_exposes_recursive_claim_and_receipt_identities(
 
 
 def test_verify_lifecycle_receipt_accepts_matching_inputs(tmp_path: Path):
-    suite = tmp_path / "suite.yml"
-    suite.write_text("schema_version: 1\ncontracts: []\n", encoding="utf-8")
-    graph = tmp_path / "graph.yml"
-    graph.write_text("schema_version: 1\nevidence: []\n", encoding="utf-8")
+    suite, graph = _write_observation_suite(tmp_path)
     receipt = build_lifecycle_receipt(
         [_observation()],
         suite_file=suite,
@@ -192,10 +244,7 @@ def test_verify_lifecycle_receipt_rejects_suite_tamper(tmp_path: Path):
 
 
 def test_verify_lifecycle_receipt_rejects_graph_tamper(tmp_path: Path):
-    suite = tmp_path / "suite.yml"
-    suite.write_text("schema_version: 1\ncontracts: []\n", encoding="utf-8")
-    graph = tmp_path / "graph.yml"
-    graph.write_text("schema_version: 1\nevidence: []\n", encoding="utf-8")
+    suite, graph = _write_observation_suite(tmp_path)
     receipt = build_lifecycle_receipt(
         [_observation()],
         suite_file=suite,
@@ -204,7 +253,14 @@ def test_verify_lifecycle_receipt_rejects_graph_tamper(tmp_path: Path):
     )
 
     graph.write_text(
-        "schema_version: 1\nevidence:\n  - id: changed\n",
+        graph.read_text(encoding="utf-8")
+        + """
+  - id: unrelated
+    claim_key: other:claim
+    observed_at: 2026-10-03T00:00:00+00:00
+    scope: BEHAVIOR
+    overall_claim: PROVEN
+""",
         encoding="utf-8",
     )
 
@@ -274,18 +330,55 @@ def test_verify_lifecycle_receipt_rejects_missing_recursive_provenance(
 
 
 def test_verify_lifecycle_receipt_rejects_internal_status_tamper(tmp_path: Path):
-    suite = tmp_path / "suite.yml"
-    suite.write_text("schema_version: 1\ncontracts: []\n", encoding="utf-8")
+    suite, graph = _write_observation_suite(tmp_path)
     receipt = build_lifecycle_receipt(
         [_observation()],
         suite_file=suite,
+        graph_file=graph,
         environment={},
     )
     tampered = copy.deepcopy(receipt)
     tampered["mismatch_count"] = 0
     tampered["status"] = "PASS"
 
-    failures = verify_lifecycle_receipt(tampered, suite_file=suite)
+    failures = verify_lifecycle_receipt(
+        tampered,
+        suite_file=suite,
+        graph_file=graph,
+    )
 
     assert any("mismatch_count" in item for item in failures)
     assert any("status expected" in item for item in failures)
+
+
+def test_verify_lifecycle_receipt_rederives_observation_semantics(tmp_path: Path):
+    suite, graph = _write_observation_suite(tmp_path)
+    receipt = build_lifecycle_receipt(
+        [_observation()],
+        suite_file=suite,
+        graph_file=graph,
+        environment={},
+    )
+    tampered = copy.deepcopy(receipt)
+    observation = tampered["observations"][0]
+    observation["freshness_signal"] = None
+    observation["graph_signal"] = None
+    observation["effective"] = "CURRENT"
+    observation["freshness"]["status"] = "FRESH"
+    observation["freshness"]["live_base_sha"] = "base-old"
+    observation["freshness"]["reason"] = None
+    tampered["mismatch_count"] = 0
+    tampered["status"] = "PASS"
+
+    failures = verify_lifecycle_receipt(
+        tampered,
+        suite_file=suite,
+        graph_file=graph,
+    )
+
+    assert any("graph signal expected 'SUPERSEDED'" in item for item in failures)
+    assert any("freshness says FRESH" in item for item in failures)
+    assert any(
+        "effective lifecycle expected 'SUPERSEDED'" in item
+        for item in failures
+    )
