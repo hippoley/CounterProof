@@ -34,7 +34,12 @@ def resolve_effective_contract_lifecycles(
     graph_file: Path | None = None,
     freshness_observations: list[FreshnessObservation] | None = None,
 ) -> list[EffectiveLifecycleObservation]:
-    contract_failures = validate_reality_contracts(suite_file)
+    try:
+        contract_failures = validate_reality_contracts(suite_file)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise ValueError(
+            f"Reality Contract validation could not run: {exc}"
+        ) from exc
     if contract_failures:
         detail = "; ".join(
             f"{failure.contract_id}: {failure.message}"
