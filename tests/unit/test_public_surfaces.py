@@ -250,6 +250,29 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     assert observation["refresh_after_days"] == 14
     assert observation["sources"], "governance dry-run must pin source observations"
 
+    sources = {item["url"]: item for item in observation["sources"]}
+    ite = sources["https://github.com/in-toto/ITE/pull/63"]
+    assert ite["kind"] == "pull_request"
+    assert ite["state"] == "open"
+    assert ite["merged"] is False
+    assert ite["head_sha"] == "ef11838ea97886f5e3702513983c4bf0af50d3b3"
+
+    proposal = sources["https://github.com/in-toto/attestation/issues/604"]
+    assert proposal["kind"] == "issue"
+    assert proposal["state"] == "open"
+    assert proposal["updated_at"] == "2026-10-02T17:46:36Z"
+
+    assert (
+        sources["https://github.com/Open-fab-ai/openfab"]["observed_commit"]
+        == "3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b"
+    )
+    assert (
+        sources["https://github.com/probityai/agent-evidence-vectors"][
+            "observed_commit"
+        ]
+        == "b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a"
+    )
+
     dry_run = Path("docs/interop/ite63-openfab-604-dry-run.md").read_text(
         encoding="utf-8"
     )
