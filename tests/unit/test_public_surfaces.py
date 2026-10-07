@@ -58,3 +58,18 @@ def test_proof_lab_public_copy_reflects_candidate_and_oracle_model():
         text = path.read_text(encoding="utf-8")
         assert "candidate-bound evidence" in text
         assert "declared oracle" in text
+
+
+def test_reality_lab_does_not_present_stale_clash_evidence_as_current():
+    text = Path("docs/REALITY_LAB.md").read_text(encoding="utf-8")
+    assert "WITNESSED_BEHAVIOR on frozen candidates · lifecycle STALE" in text
+    assert "historical behavior witness complete; lifecycle STALE" in text
+    assert "must not be presented as current evidence for the changed candidate" in text
+
+
+def test_reality_lab_tracks_avera_release_provenance_correction():
+    text = Path("docs/REALITY_LAB.md").read_text(encoding="utf-8")
+    assert "tool.version: 0.1.1" in text
+    assert "not reproducible from an installable release" in text
+    assert "v0.2.0" in text
+    assert "pull/140" in text
