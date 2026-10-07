@@ -19,6 +19,7 @@ claims:
     oracle_probe: "Run the same lxml.etree.RelaxNG.validate path against BASE and HEAD schema candidates while holding the submitted fixture constant."
     oracle_source_url: "https://github.com/hippoley/CounterProof/actions/runs/36224298359"
     receipt_file: "receipts/gramps-2484-triad.json"
+    receipt_expected_case: "gramps-project/gramps#2484"
     receipt_expected_verdicts:
       - WITNESSED_CHALLENGE_REPAIR
     assertion_excerpt: "RELAXNG_ERR_ELEMNAME: Expecting element attribute, got dateval"
