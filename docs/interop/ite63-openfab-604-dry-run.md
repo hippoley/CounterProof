@@ -21,9 +21,9 @@ The reviewed snapshot is:
 
 - ITE #63 head: `ef11838ea97886f5e3702513983c4bf0af50d3b3`;
 - #604: open, last observed update `2026-10-02T17:46:36Z`;
-- OpenFab repository head observed:
+- OpenFab repository commit observed:
   `3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b`;
-- agent-evidence-vectors repository head observed:
+- agent-evidence-vectors repository commit observed:
   `b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a`.
 
 The observation expires after 14 days. Expiry means **refresh the governance
