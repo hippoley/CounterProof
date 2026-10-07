@@ -174,8 +174,19 @@ jobs:
             --revert-image "$REVERT_IMAGE" \
             --oracle-revision "$ORACLE_REVISION" \
             --output bluefin-4539-controlled-receipt.json \
-            --summary bluefin-4539-controlled-summary.md
+            --summary bluefin-4539-controlled-summary.md \
+            --generic-dir bluefin-generic-causal \
+            --adapter-revision "${{ github.sha }}"
+
+          python3 -m skill_factory.evolution.cli causal-replay \
+            bluefin-generic-causal/manifest.json \
+            --output bluefin-4539-generic-causal-receipt.json \
+            --summary bluefin-4539-generic-causal-summary.md \
+            --require-witness
+
           cat bluefin-4539-controlled-summary.md >>"$GITHUB_STEP_SUMMARY"
+          printf '\n' >>"$GITHUB_STEP_SUMMARY"
+          cat bluefin-4539-generic-causal-summary.md >>"$GITHUB_STEP_SUMMARY"
 
       - name: Upload CounterProof receipt
         uses: actions/upload-artifact@v4
@@ -184,4 +195,7 @@ jobs:
           path: |
             bluefin-4539-controlled-receipt.json
             bluefin-4539-controlled-summary.md
+            bluefin-4539-generic-causal-receipt.json
+            bluefin-4539-generic-causal-summary.md
+            bluefin-generic-causal/
           if-no-files-found: error
