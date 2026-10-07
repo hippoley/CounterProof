@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from skill_factory.evolution.cli import cli
@@ -642,6 +643,24 @@ def test_review_note_exposes_minimum_reviewer_evidence(tmp_path):
     assert "does not independently prove every claimed root cause" in note
     assert "[source PR](https://github.com/example/project/pull/42)" in note
     assert "[runner](https://github.com/example/proof/actions/runs/7)" in note
+
+
+def test_review_note_renderer_rejects_tampered_payload(tmp_path):
+    repo = tmp_path / "repo"
+    base = _init_repo(repo, base_value=1)
+    _add_head_test(repo, head_value=2, expected=2)
+    witness = run_regression_witness(
+        repo,
+        base_ref=base,
+        test_command=_pytest_command(),
+        timeout_seconds=30,
+    )
+
+    payload = witness_to_dict(witness)
+    payload["note"] = "tampered after execution"
+
+    with pytest.raises(ValueError, match="invalid witness payload"):
+        render_witness_review_note(payload)
 
 
 def test_review_note_includes_explicit_support_and_integrity_findings(tmp_path):
