@@ -56,6 +56,38 @@ The same QEMU artifacts now feed three evidence layers: the Bluefin-specific con
 
 ---
 
+
+## Flagship boundary: green judge, contradicted product oracle
+
+A second flagship case shows the opposite failure mode: **green submitted evidence can still be wrong about product truth**.
+
+In [anthropics/claude-code#89404](https://github.com/anthropics/claude-code/pull/89404), the submitted validator suite reported 5/5 passing. Reviewer-supplied measurements showed two stronger facts:
+
+```text
+submitted judge       5/5 PASS
+multi-line regression suite stays green after extraction revert
+product oracle        claude plugin validate --json → REJECT
+oracle alignment      CONTRADICTED
+```
+
+CounterProof publishes this as an `ORACLE_CONTRADICTED_BY_PRODUCT` artifact. It is intentionally marked as **reviewer-supplied external-oracle evidence**; CounterProof does not claim it independently executed the Claude Code binary.
+
+This case complements Bluefin:
+
+```text
+Bluefin
+same oracle + controlled intervention + recovery
+→ positive causal witness
+
+Claude #89404
+green submitted judge + rejecting product oracle
+→ negative proof boundary
+```
+
+**[Read the oracle-disagreement artifact →](reality/claude-code-89404/ORACLE_DISAGREEMENT.md)** · **[Read the machine receipt →](examples/claim_matrix/receipts/claude-code-89404-oracle.json)**
+
+---
+
 ## Tested on real agent PRs
 
 CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.

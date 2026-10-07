@@ -598,3 +598,30 @@ def test_scancode_example_binds_db_backed_behavior_receipt():
     assert payload["claims"][0]["oracle_applicability"] == "APPLICABLE"
     assert payload["claims"][0]["oracle_alignment"] == "ALIGNED"
     assert payload["claims"][0]["overall_claim"] == "PROVEN"
+
+
+def test_claude_oracle_disagreement_binds_external_oracle_receipt():
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    manifest = load_claim_matrix(Path("examples/claim_matrix/claude-code-89404.yml"))
+    payload = claim_matrix_to_dict(manifest)
+
+    first = payload["claims"][0]
+    assert first["overall_claim"] == "CONTRADICTED"
+    assert first["oracle_alignment"] == "CONTRADICTED"
+    assert first["receipt_observed_verdict"] == "ORACLE_CONTRADICTED_BY_PRODUCT"
+    assert first["receipt_case"] == "anthropics/claude-code#89404"
+
+    receipt_path = Path(
+        "examples/claim_matrix/receipts/claude-code-89404-oracle.json"
+    )
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["evidence_kind"] == "REVIEWER_SUPPLIED_EXTERNAL_ORACLE"
+    assert receipt["candidate"]["head_sha"] == (
+        "0989f29b0bca412edc58018c462cae7344bb1a2f"
+    )
+    assert receipt["authoritative_oracle"]["command"] == (
+        "claude plugin validate --json"
+    )
+    assert receipt["authoritative_oracle"]["result"] == "REJECT"
+    assert receipt["does_not_claim"]
