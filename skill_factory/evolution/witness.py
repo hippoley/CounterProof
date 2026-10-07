@@ -864,6 +864,19 @@ def render_witness_review_note(
             "invalid witness payload: " + "; ".join(validation_failures)
         )
 
+    if expected_head is not None:
+        receipt_head = payload.get("head_sha")
+        if not isinstance(receipt_head, str) or not receipt_head.strip():
+            raise ValueError(
+                "candidate binding requested but witness payload has no head_sha"
+            )
+        if receipt_head.strip().lower() != expected_head.strip().lower():
+            raise ValueError(
+                "stale witness payload: "
+                f"receipt HEAD {receipt_head} does not match expected candidate "
+                f"{expected_head}"
+            )
+
     status = str(payload.get("status", "unknown"))
     tests = [str(item) for item in payload.get("tests", [])]
     support_files = [
