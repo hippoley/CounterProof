@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -139,4 +140,25 @@ def test_independent_checker_observation_provenance_is_receipt_bound(tmp_path: P
 
     assert len(failures) == 1
     assert failures[0].startswith("observations identity mismatch:")
+
+def _git_blob_sha(path: Path) -> str:
+    payload = path.read_bytes()
+    header = f"blob {len(payload)}\0".encode()
+    return hashlib.sha1(header + payload).hexdigest()
+
+
+def test_frozen_in_toto_statements_match_pinned_git_blob_identities():
+    observations = json.loads(
+        (FIXTURE / "observations-rul1an-rev27.json").read_text(encoding="utf-8")
+    )
+    expected_blobs = observations["verifier"]["vector_git_blobs"]
+    manifest = json.loads((FIXTURE / "manifest.json").read_text(encoding="utf-8"))
+
+    manifest_ids = {item["id"]: item["file"] for item in manifest["vectors"]}
+    assert set(manifest_ids) == set(expected_blobs)
+
+    for vector_id, expected_blob in expected_blobs.items():
+        statement_path = FIXTURE / manifest_ids[vector_id]
+        assert statement_path.is_file(), vector_id
+        assert _git_blob_sha(statement_path) == expected_blob
 
