@@ -117,6 +117,7 @@ claims:
     required_scope: BEHAVIOR
     oracle_alignment: UNVERIFIED
     receipt_file: receipt.json
+    receipt_expected_case: example/repo#1
     receipt_expected_verdicts:
       - WITNESSED_BEHAVIOR
 """.strip()
