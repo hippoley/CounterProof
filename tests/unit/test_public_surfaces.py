@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from skill_factory.evolution.capabilities import capability_report
+
 PUBLIC_SURFACES = (
     Path("README.md"),
     Path("docs/COUNTERPROOF.md"),
@@ -102,3 +104,10 @@ def test_standalone_embedded_data_matches_site_json_sources():
         "__COUNTERPROOF_REALITY__",
         next_name=None,
     ) == json.loads(Path("site/data/reality_cases.json").read_text(encoding="utf-8"))
+
+
+def test_public_capability_json_matches_runtime_truth_table():
+    published = json.loads(
+        Path("site/data/capabilities.json").read_text(encoding="utf-8")
+    )
+    assert published == capability_report()
