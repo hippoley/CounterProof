@@ -382,11 +382,22 @@ def render_claim_matrix_markdown(manifest: ClaimMatrixManifest) -> str:
             if claim.receipt_file:
                 lines.append(f"- Receipt file: `{claim.receipt_file}`")
                 lines.append(
-                    f"- Receipt verdict: "
+                    "- Receipt expected verdict(s): "
+                    + ", ".join(
+                        f"`{item}`" for item in claim.receipt_expected_verdicts
+                    )
+                )
+                lines.append(
+                    f"- Receipt observed verdict: "
                     f"`{claim.receipt_observed_verdict or 'UNBOUND'}`"
                 )
+                lines.append(
+                    f"- Receipt expected case: {_cell(claim.receipt_expected_case)}"
+                )
                 if claim.receipt_case:
-                    lines.append(f"- Receipt case: {_cell(claim.receipt_case)}")
+                    lines.append(
+                        f"- Receipt observed case: {_cell(claim.receipt_case)}"
+                    )
             if claim.note:
                 lines.append(f"- Note: {_cell(claim.note)}")
             if claim.assertion_excerpt:
