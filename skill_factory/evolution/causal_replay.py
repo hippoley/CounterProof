@@ -106,10 +106,13 @@ def build_causal_replay_receipt(manifest_file: Path) -> dict[str, Any]:
             raise TypeError(f"candidate {role} must be an object")
         identity = spec.get("identity")
         evidence_name = spec.get("evidence")
+        source_evidence_name = spec.get("source_evidence")
         if not isinstance(identity, str) or not identity:
             raise ValueError(f"candidate {role} requires a non-empty identity")
         if not isinstance(evidence_name, str) or not evidence_name:
             raise ValueError(f"candidate {role} requires an evidence file")
+        if source_evidence_name is not None and not isinstance(source_evidence_name, str):
+            raise TypeError(f"candidate {role} source_evidence must be a path string")
 
         evidence_path = _resolve_local(
             root,
@@ -151,6 +154,16 @@ def build_causal_replay_receipt(manifest_file: Path) -> dict[str, Any]:
             "path": evidence_path.relative_to(root).as_posix(),
             "sha256": file_sha256(evidence_path),
         }
+        if source_evidence_name:
+            source_evidence_path = _resolve_local(
+                root,
+                root / source_evidence_name,
+                label=f"candidate {role} source evidence",
+            )
+            evidence_meta[role]["source"] = {
+                "path": source_evidence_path.relative_to(root).as_posix(),
+                "sha256": file_sha256(source_evidence_path),
+            }
 
     if len(set(identities.values())) != len(ROLES):
         raise ValueError(

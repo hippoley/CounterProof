@@ -206,3 +206,39 @@ def test_causal_replay_verifier_accepts_deterministic_rebuild(tmp_path: Path):
         receipt,
         manifest_file=manifest,
     ) == []
+
+
+def test_causal_replay_pins_optional_raw_source_evidence(tmp_path: Path):
+    manifest = _write_manifest(tmp_path)
+    raw = tmp_path / "raw-bad.json"
+    raw.write_text('{"runtime":"original-qemu-artifact"}\n', encoding="utf-8")
+    text = manifest.read_text(encoding="utf-8").replace(
+        "    evidence: bad.json",
+        "    evidence: bad.json\n    source_evidence: raw-bad.json",
+    )
+    manifest.write_text(text, encoding="utf-8")
+
+    receipt = build_causal_replay_receipt(manifest)
+
+    source = receipt["candidates"]["BAD"]["evidence"]["source"]
+    assert source["path"] == "raw-bad.json"
+    assert source["sha256"]
+
+
+def test_causal_replay_verifier_rejects_raw_source_tamper(tmp_path: Path):
+    manifest = _write_manifest(tmp_path)
+    raw = tmp_path / "raw-bad.json"
+    raw.write_text('{"runtime":"original"}\n', encoding="utf-8")
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace(
+            "    evidence: bad.json",
+            "    evidence: bad.json\n    source_evidence: raw-bad.json",
+        ),
+        encoding="utf-8",
+    )
+    receipt = build_causal_replay_receipt(manifest)
+
+    raw.write_text('{"runtime":"tampered"}\n', encoding="utf-8")
+    failures = verify_causal_replay_receipt(receipt, manifest_file=manifest)
+
+    assert any("candidate BAD evidence identity" in item for item in failures)

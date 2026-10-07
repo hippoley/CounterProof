@@ -132,8 +132,39 @@ def test_bluefin_diagnostics_can_feed_generic_causal_replay(tmp_path: Path):
         "keyring service lifecycle / portal dependency, not keyring unlock"
     )
     assert receipt["causal_expectation_count"] == 4
+    for role in ("CONTROL", "BAD", "REVERT"):
+        source = receipt["candidates"][role]["evidence"]["source"]
+        assert source["path"].startswith("sources/")
+        assert source["sha256"]
     login_alias = next(
         item for item in receipt["expectations"] if item["path"] == "login_alias"
     )
     assert login_alias["causal_pattern"] is False
     assert login_alias["match"] is True
+
+
+def test_bluefin_generic_replay_preserves_raw_diagnostic_bytes(tmp_path: Path):
+    diagnostics = tmp_path / "diagnostics"
+    diagnostics.mkdir()
+    _write_diag(diagnostics, "control", active=False, dep=False, late=False)
+    _write_diag(diagnostics, "bad", active=True, dep=True, late=True)
+    _write_diag(diagnostics, "revert", active=False, dep=False, late=False)
+
+    original_bad = next(
+        path for path in diagnostics.iterdir()
+        if json.loads(path.read_text(encoding="utf-8"))["image"] == "bad"
+    )
+    manifest = prepare_generic_replay(
+        diagnostics,
+        output_dir=tmp_path / "generic",
+        control_image="control",
+        bad_image="bad",
+        revert_image="revert",
+        oracle_revision="oracle-sha",
+        adapter_revision="counterproof-sha",
+    )
+
+    raw_manifest = json.loads(manifest.read_text(encoding="utf-8"))
+    source_name = raw_manifest["candidates"]["BAD"]["source_evidence"]
+    copied = manifest.parent / source_name
+    assert copied.read_bytes() == original_bad.read_bytes()
