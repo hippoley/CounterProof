@@ -25,6 +25,7 @@ from .claim_matrix import (
 )
 from .conformance_receipt import (
     build_conformance_receipt,
+    validate_external_harness_report,
     verify_conformance_receipt,
 )
 from .discriminate import (
@@ -192,6 +193,28 @@ def verify_conformance_receipt_command(
             f"{len(failures)} conformance receipt verification failure(s)"
         )
     click.echo("Conformance receipt verified")
+
+
+@cli.command("verify-external-harness-report")
+@click.argument("report_file", type=click.Path(exists=True, dir_okay=False))
+def verify_external_harness_report_command(report_file: str) -> None:
+    """Require proof that the named external verifier ran the full corpus."""
+    try:
+        report = json.loads(Path(report_file).read_text(encoding="utf-8"))
+        if not isinstance(report, dict):
+            raise TypeError("harness report must be an object")
+        failures = validate_external_harness_report(report)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if failures:
+        for failure in failures:
+            click.echo(f"FAIL {failure}", err=True)
+        raise click.ClickException(
+            f"{len(failures)} external harness evidence failure(s)"
+        )
+
+    click.echo("External verifier execution verified")
 
 
 @cli.command("causal-replay")
