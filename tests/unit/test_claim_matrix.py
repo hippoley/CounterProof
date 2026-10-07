@@ -607,6 +607,71 @@ claims:
         load_claim_matrix(manifest_path)
 
 
+def test_claim_matrix_rejects_receipt_case_mismatch(tmp_path: Path):
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "case": "other/repo#99",
+                "verdict": "WITNESSED_CONTROLLED_CAUSAL",
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "claims.yml"
+    manifest_path.write_text(
+        """
+schema_version: 1
+title: Receipt case mismatch
+claims:
+  - id: causal-witness
+    claim: intervention changes activation path
+    tests:
+      - reality replay
+    base_result: CONTROL
+    head_result: BAD
+    submitted_test_evidence: WITNESSED
+    oracle_alignment: UNVERIFIED
+    receipt_file: receipt.json
+    receipt_expected_case: ublue-os/bluefin#4539
+    receipt_expected_verdicts:
+      - WITNESSED_CONTROLLED_CAUSAL
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from skill_factory.evolution.claim_matrix import load_claim_matrix
+
+    with pytest.raises(ValueError, match="does not match expected case"):
+        load_claim_matrix(manifest_path)
+
+
+def test_receipt_file_requires_expected_identity_contract():
+    with pytest.raises(
+        ValidationError,
+        match="receipt_file requires at least one receipt_expected_verdict",
+    ):
+        ClaimEvidence(
+            id="receipt",
+            claim="evidence",
+            submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
+            receipt_file="receipt.json",
+        )
+
+    with pytest.raises(
+        ValidationError,
+        match="receipt_file requires a non-empty receipt_expected_case",
+    ):
+        ClaimEvidence(
+            id="receipt",
+            claim="evidence",
+            submitted_test_evidence=SubmittedTestEvidence.UNPROVEN,
+            receipt_file="receipt.json",
+            receipt_expected_verdicts=["WITNESSED"],
+        )
+
+
 def test_claim_matrix_rejects_receipt_without_verdict(tmp_path: Path):
     receipt = tmp_path / "receipt.json"
     receipt.write_text(json.dumps({"case": "example"}), encoding="utf-8")
