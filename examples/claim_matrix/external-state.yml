@@ -43,8 +43,8 @@ observations:
         updated_at: "2026-10-02T17:46:36Z"
       - url: https://github.com/Open-fab-ai/openfab
         kind: repository
-        head_sha: 3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b
+        observed_commit: 3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b
       - url: https://github.com/probityai/agent-evidence-vectors
         kind: repository
-        head_sha: b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a
+        observed_commit: b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a
     note: "Governance dry-run snapshot. Conclusions about which ITE #63 evidence facts are publicly established must be refreshed when this observation expires or when any pinned source materially changes."
