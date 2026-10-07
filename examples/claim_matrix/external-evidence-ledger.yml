@@ -1,0 +1,65 @@
+schema_version: 1
+records:
+  - id: avera-first-consumer
+    status: THIRD_PARTY_NAMED_ROLE
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: first consumer of avera.check/v0
+    external_sources:
+      - repository: mikheil-galoian/avera
+        path: docs/AVERA_CHECK_EVIDENCE_V0.md
+        git_blob_sha: 9b54097e0933363b9a8113fce07821d131825ec3
+        claim: "AVERA's own documentation names CounterProof as the first consumer involved in designing the v0 evidence envelope."
+      - repository: mikheil-galoian/avera
+        issue: 12
+        maintainer_comment_id: 6032468038
+        claim: "The maintainer records that avera.check/v0 shipped and CounterProof's first consumer was merged and green."
+      - repository: mikheil-galoian/avera
+        pull_request: 14
+        merged_at: "2026-10-07T04:26:03Z"
+        head_sha: a6bdb0d005fc5cc72b5814255105fbaad3b62d6d
+        claim: "The producer implementation says it implements the envelope agreed in AVERA #12 and CounterProof #81."
+    local_consumption:
+      pull_request: 134
+      status: merged_green
+    durable_value:
+      external_naming: true
+      producer_owned_artifact: true
+      executable_interop: true
+    non_claims:
+      - AVERA adoption of CounterProof
+      - endorsement
+      - certification
+      - standardization
+
+  - id: execsurface-zero-assistance-trial
+    status: EXTERNAL_EVIDENCE_SUBMITTED_QUALIFICATION_PENDING
+    observed_at: "2026-10-07"
+    subject: CounterProof
+    role: unaffiliated zero-assistance external evaluator
+    external_sources:
+      - repository: AETHERXGLOBAL/execsurface
+        issue: 164
+        claim: "CounterProof submitted a preserved zero-assistance typed-evidence trial under ExecSurface's public evaluator protocol."
+    local_preservation:
+      pull_request: 161
+      workflow_run: 37605277588
+      artifact_id: 11474407770
+      artifact_sha256: cd18dd92a109f8a4108c23f7ed8d0c590b0067344846338a094bb4fe03afa5f9
+      evidence_sha256: 5f9d4a5447d3e258fb60ebc39fe7e23ef081e6a54179df034d9d58fa06f4f09f
+    observed_result:
+      status: TRIAL_CAPTURE_COMPLETE_UNQUALIFIED
+      collection_health: complete
+      consumer_decision: EXPERIMENTAL_TYPED_EVIDENCE_V1_ACCEPTED_BOUNDED
+      typed_effect_count: 68
+      raw_event_count: 1189
+      privacy_friction_reported: true
+    durable_value:
+      externally_owned_intake: true
+      preserved_first_result: true
+      qualification_complete: false
+    non_claims:
+      - ExecSurface validation
+      - adoption
+      - endorsement
+      - qualified external evidence
