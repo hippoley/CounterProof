@@ -553,6 +553,7 @@ claims:
     submitted_test_evidence: WITNESSED
     oracle_alignment: UNVERIFIED
     receipt_file: receipt.json
+    receipt_expected_case: ublue-os/bluefin#4539
     receipt_expected_verdicts:
       - WITNESSED_CONTROLLED_CAUSAL
 """.strip()
@@ -574,7 +575,7 @@ claims:
 def test_claim_matrix_rejects_receipt_verdict_mismatch(tmp_path: Path):
     receipt = tmp_path / "receipt.json"
     receipt.write_text(
-        json.dumps({"verdict": "INCONCLUSIVE_CONTROLLED_CAUSAL"}),
+        json.dumps({"case": "ublue-os/bluefin#4539", "verdict": "INCONCLUSIVE_CONTROLLED_CAUSAL"}),
         encoding="utf-8",
     )
     manifest_path = tmp_path / "claims.yml"
@@ -592,6 +593,7 @@ claims:
     submitted_test_evidence: WITNESSED
     oracle_alignment: UNVERIFIED
     receipt_file: receipt.json
+    receipt_expected_case: ublue-os/bluefin#4539
     receipt_expected_verdicts:
       - WITNESSED_CONTROLLED_CAUSAL
 """.strip()
@@ -618,6 +620,9 @@ claims:
     claim: evidence
     submitted_test_evidence: UNPROVEN
     receipt_file: receipt.json
+    receipt_expected_case: example
+    receipt_expected_verdicts:
+      - WITNESSED
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -631,7 +636,7 @@ claims:
 
 def test_claim_matrix_rejects_receipt_path_escape(tmp_path: Path):
     outside = tmp_path / "outside.json"
-    outside.write_text(json.dumps({"verdict": "WITNESSED"}), encoding="utf-8")
+    outside.write_text(json.dumps({"case": "outside", "verdict": "WITNESSED"}), encoding="utf-8")
     matrix_dir = tmp_path / "matrix"
     matrix_dir.mkdir()
     manifest_path = matrix_dir / "claims.yml"
@@ -644,6 +649,9 @@ claims:
     claim: evidence
     submitted_test_evidence: UNPROVEN
     receipt_file: ../outside.json
+    receipt_expected_case: outside
+    receipt_expected_verdicts:
+      - WITNESSED
 """.strip()
         + "\n",
         encoding="utf-8",
