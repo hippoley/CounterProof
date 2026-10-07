@@ -11,6 +11,24 @@ predicate. The goal is to ask a narrower process question:
 > can a reviewer tell, from public evidence, which parts of the proposed
 > `vetted` criterion are actually established?
 
+## Observation snapshot
+
+This dry run is bound to external-state observation
+`ite63-openfab-604-dry-run` in
+`examples/claim_matrix/external-state.yml`.
+
+The reviewed snapshot is:
+
+- ITE #63 head: `ef11838ea97886f5e3702513983c4bf0af50d3b3`;
+- #604: open, last observed update `2026-10-02T17:46:36Z`;
+- OpenFab repository head observed:
+  `3ce39d1b55e4c54ea1dc5810be13a6f9c885a21b`;
+- agent-evidence-vectors repository head observed:
+  `b8dc472bf42d04fbf52c4a2d7ba8f7ce21980f8a`.
+
+The observation expires after 14 days. Expiry means **refresh the governance
+assessment**; it does not retroactively make the historical note false.
+
 ## Candidate claim
 
 #604 says the Generation predicate has:
