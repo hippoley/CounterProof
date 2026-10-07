@@ -32,3 +32,21 @@ claims:
       claim_id: run-command-input-location-optional
       overall_claim: PROVEN
       receipt_verdict: WITNESSED_BEHAVIOR_DELTA
+
+  - id: avera-reality-lab-interoperability
+    surface: docs/REALITY_LAB.md
+    contains: "bidirectional interoperability maintenance is active"
+    must_also_contain: "still not CounterProof adoption or a merge endorsement"
+    provenance:
+      handoff_file: examples/handoff/avera-check-v0/README.md
+      handoff_contains:
+        - "stable upstream tag: `v0.2.0`"
+        - "348ea426d201596ed79046372098f7cc001e6682"
+        - "pip install \"git+https://github.com/mikheil-galoian/avera@v0.2.0\""
+      envelope_file: examples/handoff/avera-check-v0/envelope.json
+      envelope_git_blob_sha: 1cd7813d17b38d9ad002547baf2166c9f8b0aed0
+      json_expectations:
+        schema_version: avera.check/v0
+        tool.name: avera
+        tool.version: "0.2.0"
+        result.verdict: confirmed_regression
