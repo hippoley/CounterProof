@@ -6,6 +6,9 @@ from hashlib import sha1
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from .claim_matrix import load_claim_matrix
 from .effective_lifecycle import EffectiveLifecycleObservation
 from .reality_contracts import validate_reality_contracts
 
@@ -14,6 +17,90 @@ def git_blob_sha(path: Path) -> str:
     content = path.read_bytes()
     header = f"blob {len(content)}\0".encode()
     return sha1(header + content, usedforsecurity=False).hexdigest()
+
+
+def _resolve_dependency(root: Path, candidate: Path, *, label: str) -> Path:
+    resolved_root = root.resolve()
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError(f"{label} must stay within the Reality Contract suite directory") from exc
+    return resolved
+
+
+def build_recursive_provenance_manifest(suite_file: Path) -> dict[str, Any]:
+    """Freeze every local file transitively consumed by Reality Contract validation.
+
+    The suite is already pinned separately by the lifecycle receipt. This closure
+    makes its indirect claim-matrix and machine-receipt dependencies explicit so
+    reviewers do not have to follow YAML references by hand.
+    """
+    raw = yaml.safe_load(suite_file.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
+        raise ValueError("invalid reality contract suite")
+    contracts = raw.get("contracts")
+    if not isinstance(contracts, list):
+        raise TypeError("reality contract suite requires contracts")
+
+    root = suite_file.parent.resolve()
+    entries: list[dict[str, Any]] = []
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            raise TypeError("reality contract must be an object")
+        contract_id = contract.get("id")
+        manifest_name = contract.get("manifest")
+        if not isinstance(contract_id, str) or not contract_id:
+            raise ValueError("reality contract requires a non-empty id")
+        if not isinstance(manifest_name, str) or not manifest_name:
+            raise ValueError(f"reality contract {contract_id!r} requires manifest")
+
+        manifest_path = _resolve_dependency(
+            root,
+            root / manifest_name,
+            label=f"contract {contract_id!r} manifest",
+        )
+        manifest = load_claim_matrix(manifest_path)
+
+        machine_receipts: list[dict[str, Any]] = []
+        for claim in manifest.claims:
+            if not claim.receipt_file:
+                continue
+            receipt_path = _resolve_dependency(
+                root,
+                manifest_path.parent / claim.receipt_file,
+                label=f"claim {claim.id!r} receipt",
+            )
+            machine_receipts.append(
+                {
+                    "claim_id": claim.id,
+                    "file": receipt_path.relative_to(root).as_posix(),
+                    "git_blob_sha": git_blob_sha(receipt_path),
+                    "verdict": claim.receipt_observed_verdict,
+                    "case": claim.receipt_case,
+                }
+            )
+
+        machine_receipts.sort(key=lambda item: (item["claim_id"], item["file"]))
+        entries.append(
+            {
+                "contract_id": contract_id,
+                "claim_matrix": {
+                    "file": manifest_path.relative_to(root).as_posix(),
+                    "git_blob_sha": git_blob_sha(manifest_path),
+                    "base_sha": manifest.base_sha,
+                    "head_sha": manifest.head_sha,
+                    "evidence_digest": manifest.evidence_digest,
+                },
+                "machine_receipts": machine_receipts,
+            }
+        )
+
+    entries.sort(key=lambda item: item["contract_id"])
+    return {
+        "schema_version": 1,
+        "contracts": entries,
+    }
 
 
 def build_lifecycle_receipt(
@@ -77,6 +164,7 @@ def build_lifecycle_receipt(
             "graph_file": str(graph_file) if graph_file else None,
             "graph_git_blob_sha": git_blob_sha(graph_file) if graph_file else None,
         },
+        "provenance": build_recursive_provenance_manifest(suite_file),
         "execution": execution,
         "observations": items,
     }
@@ -112,6 +200,21 @@ def verify_lifecycle_receipt(
             failures.append(
                 f"Reality Contract invalid: {failure.contract_id}: {failure.message}"
             )
+
+    expected_provenance = receipt.get("provenance")
+    if not isinstance(expected_provenance, dict):
+        failures.append("lifecycle receipt provenance manifest must be an object")
+    else:
+        try:
+            observed_provenance = build_recursive_provenance_manifest(suite_file)
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            failures.append(f"recursive provenance closure could not be rebuilt: {exc}")
+        else:
+            if expected_provenance != observed_provenance:
+                failures.append(
+                    "recursive provenance manifest does not match current "
+                    "claim-matrix / machine-receipt closure"
+                )
 
     expected_graph = inputs.get("graph_git_blob_sha")
     if graph_file is None:
