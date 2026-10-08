@@ -129,19 +129,37 @@ def cli() -> None:
     default=None,
     help="Optional machine-readable JSON output path.",
 )
-def runtime_closure_command(trace_file: str, output_file: str | None) -> None:
+@click.option(
+    "--require-closed",
+    is_flag=True,
+    help="Exit non-zero unless every declared consequential sink is CLOSED.",
+)
+def runtime_closure_command(
+    trace_file: str,
+    output_file: str | None,
+    require_closed: bool,
+) -> None:
     """Evaluate evidence for authority closure at consequential sinks."""
+    trace_path = Path(trace_file)
     try:
-        trace = json.loads(Path(trace_file).read_text(encoding="utf-8"))
+        trace = json.loads(trace_path.read_text(encoding="utf-8"))
         result = evaluate_runtime_closure(trace)
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         raise click.ClickException(str(exc)) from exc
+
+    result = dict(result)
+    result["trace_sha256"] = file_sha256(trace_path)
 
     payload = json.dumps(result, indent=2, sort_keys=True)
     if output_file:
         Path(output_file).write_text(payload + "\n", encoding="utf-8")
 
     click.echo(payload)
+
+    if require_closed and result["verdict"] != "CLOSED":
+        raise click.ClickException(
+            f"runtime closure required, got {result['verdict']}"
+        )
 
 
 @cli.command("conformance-receipt")
