@@ -39,3 +39,18 @@ def test_verified_but_unauthorized_effect_fails():
     out = bridge.evaluate(load("window-verified.json"), policy)
     assert out["verdict"] == "FAIL"
     assert out["reason"] == "effect_not_authorized"
+
+
+def test_machine_readable_vectors_are_executable_contract():
+    manifest = load("../vectors.json") if False else json.loads(
+        (FIXTURES.parent / "vectors.json").read_text()
+    )
+
+    assert manifest["version"] == "counterproof.intent-state-conformance.vectors/v0.1"
+
+    for vector in manifest["vectors"]:
+        witness = json.loads((FIXTURES.parent / vector["witness"]).read_text())
+        policy = json.loads((FIXTURES.parent / vector["policy"]).read_text())
+        out = bridge.evaluate(witness, policy)
+        assert out["verdict"] == vector["expected"]["verdict"], vector["id"]
+        assert out["reason"] == vector["expected"]["reason"], vector["id"]
