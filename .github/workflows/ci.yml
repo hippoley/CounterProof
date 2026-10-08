@@ -39,6 +39,9 @@ jobs:
       - name: Check experimental Outcome Witness truth-boundary vectors
         run: python examples/outcome_witness/check_vectors.py
 
+      - name: Validate cross-process Outcome Witness fixture contract
+        run: python examples/outcome_witness/cross_process_contract.py
+
       - name: Reproduce standalone Outcome Witness consumer
         run: |
           python examples/outcome_witness/consumer.py examples/outcome_witness/v0_1_vectors.json --output /tmp/outcome-consumer.json
