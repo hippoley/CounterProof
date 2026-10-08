@@ -480,3 +480,39 @@ def test_external_execution_receipt_rejects_non_reexecuted(tmp_path: Path):
             fixture / "provenance.json",
         )
 
+
+
+
+def test_external_evidence_ledger_uses_normalized_handoff_lifecycle():
+    ledger = yaml.safe_load(
+        Path("examples/claim_matrix/external-evidence-ledger.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    allowed = {
+        "ARTIFACT_READY",
+        "DELIVERY_ATTEMPTED",
+        "DELIVERY_BLOCKED",
+        "DELIVERED",
+        "RECEIVED",
+        "USEFUL",
+        "CONSUMED",
+        "ADOPTED",
+    }
+    records = ledger["records"]
+    assert records, "external evidence ledger must not be empty"
+
+    for record in records:
+        state = record.get("handoff_state")
+        assert state in allowed, f"{record['id']} has invalid handoff_state={state!r}"
+
+    by_id = {item["id"]: item for item in records}
+    assert by_id["avera-first-consumer"]["handoff_state"] == "CONSUMED"
+    assert by_id["execsurface-zero-assistance-trial"]["handoff_state"] == "DELIVERED"
+    assert by_id["reviewer-claim-matrix-use-intent"]["handoff_state"] == "USEFUL"
+
+    # Handoff consumption must never be silently promoted into CounterProof adoption.
+    for record in records:
+        if record["handoff_state"] == "CONSUMED":
+            non_claims = " ".join(record.get("non_claims", [])).lower()
+            assert "adoption" in non_claims
