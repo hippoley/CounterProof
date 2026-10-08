@@ -198,6 +198,13 @@
       "limitation": "This is not learned causal inference and does not prove a unique root cause."
     },
     {
+      "id": "runtime-closure",
+      "name": "Runtime authority-closure evidence profile",
+      "status": "tested",
+      "evidence": "Counterproof exposes counterproof runtime-closure, unit-tests CLOSED/PARTIAL/UNKNOWN/VIOLATION semantics, and pins evidence boundaries derived from OpenClaw and Open Agent Auth cases.",
+      "limitation": "No external project has adopted this profile yet; current cross-system cases are Counterproof-side evidence mappings, not upstream integrations."
+    },
+    {
       "id": "external-source-ingestion",
       "name": "Live PR / review / CI / framework trace adapters",
       "status": "planned",
@@ -227,7 +234,7 @@
     }
   ],
   "summary": {
-    "tested": 23,
+    "tested": 24,
     "partial": 4,
     "demo": 1,
     "planned": 4
