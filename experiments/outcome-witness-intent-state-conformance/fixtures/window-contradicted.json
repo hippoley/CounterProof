@@ -1,0 +1,27 @@
+{
+  "version": "counterproof.outcome-witness/v0.1",
+  "intent": {
+    "subject": "window.kitchen.1",
+    "predicate": "position",
+    "expected": "closed"
+  },
+  "action_ref": {
+    "type": "otel_span",
+    "id": "span-contradicted"
+  },
+  "observer": {
+    "source": "device-readback",
+    "authority": "window-controller"
+  },
+  "observed_at": "2026-10-08T07:40:00Z",
+  "max_age_ms": 2000,
+  "oracle": {
+    "rule": "position == \"closed\"",
+    "source_ref": "oracle/window-close-v1"
+  },
+  "observation": {
+    "value": "open",
+    "content_sha256": "sha256:contradicted-demo"
+  },
+  "verdict": "CONTRADICTED"
+}
