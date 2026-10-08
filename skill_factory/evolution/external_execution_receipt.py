@@ -45,7 +45,7 @@ def admit_external_execution_receipt(
     if not isinstance(output_sha, str) or not _HEX64.fullmatch(output_sha):
         raise ValueError("output sha256 must be 64 lowercase hex chars")
     if not isinstance(exit_code, int):
-        raise ValueError("exit_code must be an integer")
+        raise TypeError("exit_code must be an integer")
 
     p = provenance.get("producer")
     if not isinstance(p, dict):
