@@ -111,7 +111,7 @@ records:
       - standardization
 
   - id: claimproof-first-class-use-case-invitation
-    status: UPSTREAM_USE_CASE_INVITATION
+    status: CONSUMER_ARTIFACT_IMPLEMENTED_MAINTAINER_CONFIRMATION_PENDING
     observed_at: "2026-10-07"
     subject: CounterProof
     role: candidate-bound consumer use case for durable ClaimBasis evidence
@@ -121,9 +121,15 @@ records:
         third_party_user: Cshearer210
         comment_id: 5862027109
         claim: "claimproof maintainer confirmed the durable-layer gap and invited a first-class candidate-bound export use case for CounterProof."
+    local_consumption:
+      pull_request: 164
+      merge_commit: 799e6519554e61e9ddeecedaacd22b1a7589d105
+      status: merged_green
     durable_value:
       maintainer_gap_confirmation: true
       explicit_upstream_invitation: true
+      consumer_artifact_landed: true
+      maintainer_confirmation_pending: true
       upstream_artifact_landed: false
     non_claims:
       - claimproof adoption
