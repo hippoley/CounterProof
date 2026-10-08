@@ -1,0 +1,106 @@
+name: agent-done-or-not v2 real handoff
+
+on:
+  push:
+    branches:
+      - experiment/agent-done-v2-real-handoff
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  produce-real-v2-receipt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Fetch frozen agent-done-or-not producer
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v0.13.1 \
+            https://github.com/mohamedzhioua/agent-done-or-not.git \
+            "$RUNNER_TEMP/agent-done-or-not"
+          git -C "$RUNNER_TEMP/agent-done-or-not" rev-parse HEAD
+          sha256sum "$RUNNER_TEMP/agent-done-or-not/done-gate.sh"
+          sha256sum "$RUNNER_TEMP/agent-done-or-not/proof.schema.json"
+
+      - name: Produce real execution receipt
+        env:
+          AGENT_DONE_DIR: ${{ runner.temp }}/agent-proof
+          AGENT_DONE_SESSION: counterproof-real-handoff
+          AGENT_DONE_VERIFIER: CounterProof
+        run: |
+          set -euo pipefail
+          bash "$RUNNER_TEMP/agent-done-or-not/done-gate.sh" capture \
+            --label counterproof-unit \
+            -- \
+            python -m pytest -q \
+              tests/unit/test_conformance_receipt.py \
+              tests/unit/test_external_state_freshness.py
+
+      - name: Preserve privacy-minimized receipt
+        run: |
+          set -euo pipefail
+          ledger="$RUNNER_TEMP/agent-proof/counterproof-real-handoff/ledger.jsonl"
+          test -s "$ledger"
+          python - "$ledger" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          source = Path(sys.argv[1])
+          receipt = json.loads(source.read_text(encoding="utf-8").splitlines()[-1])
+          keep = {
+              key: receipt.get(key)
+              for key in (
+                  "label",
+                  "command",
+                  "exit_code",
+                  "sha256",
+                  "at",
+                  "epoch",
+                  "commit",
+                  "tree",
+                  "dirty",
+                  "schema_version",
+                  "ci",
+                  "ref",
+                  "repo",
+                  "subject",
+                  "producer",
+                  "verifier",
+                  "host_os",
+                  "disposition",
+              )
+          }
+          out = Path("/tmp/agent-done-real-v2-receipt.json")
+          out.write_text(json.dumps(keep, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(out.read_text(encoding="utf-8"))
+          PY
+          sha256sum "$ledger" > /tmp/agent-done-ledger.sha256
+
+      - name: Upload first producer receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-done-v2-real-handoff
+          path: |
+            /tmp/agent-done-real-v2-receipt.json
+            /tmp/agent-done-ledger.sha256
+          if-no-files-found: error
+          retention-days: 30
