@@ -32,6 +32,26 @@ The public Proof Lab is an **interactive illustration backed by bundled fixtures
 
 **The proof boundary matters:** a passing CI job, a convincing demo, a maintainer acknowledgement, and production adoption are four different claims. CounterProof does not treat them as interchangeable.
 
+### Runtime authority closure gate
+
+CounterProof can also evaluate whether an authority change is actually closed at consequential runtime sinks:
+
+```bash
+counterproof runtime-closure trace.json --require-closed
+```
+
+The machine result is one of `CLOSED`, `PARTIAL`, `UNKNOWN`, or `VIOLATION`, and includes the SHA-256 of the exact input trace. `--require-closed` exits non-zero unless every declared sink has positive closure evidence.
+
+The profile deliberately separates:
+
+```text
+authority change recorded
+!= authority change effective at a sink
+!= sink closed
+```
+
+Unknown event types and ambiguous ordering are rejected rather than silently ignored. The current cross-system cases are CounterProof-side evidence mappings, not claims that upstream projects have adopted this profile.
+
 ---
 
 ## Flagship proof: one intervention, same oracle, recovery after revert
