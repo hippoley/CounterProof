@@ -109,7 +109,7 @@ jobs:
 
       - name: Run packaged runtime closure profile
         run: |
-          cat > /tmp/runtime-closure-trace.json <<'JSON'
+          cat > /tmp/runtime-closure-unknown.json <<'JSON'
           {
             "sinks": ["resource-server"],
             "events": [
@@ -118,9 +118,28 @@ jobs:
             ]
           }
           JSON
-          /tmp/counterproof-clean/bin/counterproof runtime-closure             /tmp/runtime-closure-trace.json             --output /tmp/RUNTIME_CLOSURE.json
-          grep -q '"schema_version": "counterproof.runtime-closure/v0.1"' /tmp/RUNTIME_CLOSURE.json
-          grep -q '"verdict": "UNKNOWN"' /tmp/RUNTIME_CLOSURE.json
+          /tmp/counterproof-clean/bin/counterproof runtime-closure             /tmp/runtime-closure-unknown.json             --output /tmp/RUNTIME_CLOSURE_UNKNOWN.json
+          grep -q '"schema_version": "counterproof.runtime-closure/v0.1"' /tmp/RUNTIME_CLOSURE_UNKNOWN.json
+          grep -q '"verdict": "UNKNOWN"' /tmp/RUNTIME_CLOSURE_UNKNOWN.json
+          grep -q '"trace_sha256"' /tmp/RUNTIME_CLOSURE_UNKNOWN.json
+          if /tmp/counterproof-clean/bin/counterproof runtime-closure             /tmp/runtime-closure-unknown.json             --require-closed; then
+            echo "Expected UNKNOWN evidence to fail --require-closed"
+            exit 1
+          fi
+
+          cat > /tmp/runtime-closure-closed.json <<'JSON'
+          {
+            "sinks": ["worker"],
+            "events": [
+              {"seq": 1, "type": "authority_change_recorded"},
+              {"seq": 2, "type": "authority_change_effective", "sink": "worker"},
+              {"seq": 3, "type": "sink_closed", "sink": "worker"}
+            ]
+          }
+          JSON
+          /tmp/counterproof-clean/bin/counterproof runtime-closure             /tmp/runtime-closure-closed.json             --require-closed             --output /tmp/RUNTIME_CLOSURE_CLOSED.json
+          grep -q '"verdict": "CLOSED"' /tmp/RUNTIME_CLOSURE_CLOSED.json
+          grep -q '"trace_sha256"' /tmp/RUNTIME_CLOSURE_CLOSED.json
 
       - name: Run packaged Regression Witness
         run: |
