@@ -58,7 +58,7 @@ def from_noa_settlement_result(result: dict[str, Any]) -> dict[str, Any]:
     SAME_SIGNING_KEY, SAME_ADMINISTRATIVE_PARTY, UNKNOWN.
     """
     if not isinstance(result,dict):
-        raise ValueError("NOA settlement result must be an object")
+        raise TypeError("NOA settlement result must be an object")
 
     relationship=result.get("observerRelationship")
     source=result.get("observerRelationshipSource")
@@ -126,13 +126,13 @@ def from_windowpilot_object_observation(artifact: dict[str, Any]) -> dict[str, A
     keeping independence_proven=false. This adapter preserves that ceiling.
     """
     if not isinstance(artifact,dict):
-        raise ValueError("WindowPilot observation must be an object")
+        raise TypeError("WindowPilot observation must be an object")
     if artifact.get("schema_version")!="windowpilot-object-observation/v0.1":
         raise ValueError("unsupported WindowPilot object observation schema")
 
     separation=artifact.get("separation")
     if not isinstance(separation,dict):
-        raise ValueError("WindowPilot observation separation is required")
+        raise TypeError("WindowPilot observation separation is required")
     if separation.get("independence_proven") is not False:
         raise ValueError(
             "WindowPilot v0.1 adapter refuses artifacts that claim proven independence"
