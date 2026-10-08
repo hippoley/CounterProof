@@ -1,0 +1,48 @@
+{
+  "version": "counterproof.intent-state-conformance.vectors/v0.1",
+  "status": "experimental",
+  "vectors": [
+    {
+      "id": "verified-authorized-pass",
+      "witness": "fixtures/window-verified.json",
+      "policy": "fixtures/window-policy.json",
+      "expected": {
+        "verdict": "PASS",
+        "reason": "verified_effect_within_authorized_contract"
+      }
+    },
+    {
+      "id": "contradicted-effect-fail",
+      "witness": "fixtures/window-contradicted.json",
+      "policy": "fixtures/window-policy.json",
+      "expected": {
+        "verdict": "FAIL",
+        "reason": "observed_value_outside_authorized_contract"
+      }
+    },
+    {
+      "id": "inconclusive-indeterminate",
+      "witness": "fixtures/window-inconclusive.json",
+      "policy": "fixtures/window-policy.json",
+      "expected": {
+        "verdict": "INDETERMINATE",
+        "reason": "outcome_witness_inconclusive"
+      }
+    },
+    {
+      "id": "verified-but-unauthorized-fail",
+      "witness": "fixtures/window-verified.json",
+      "policy": "fixtures/window-unauthorized-policy.json",
+      "expected": {
+        "verdict": "FAIL",
+        "reason": "effect_not_authorized"
+      }
+    }
+  ],
+  "boundary": [
+    "Outcome Witness supplies external-outcome evidence.",
+    "Policy supplies task-semantic authorization.",
+    "The bridge does not infer causation from execution success.",
+    "INCONCLUSIVE evidence never upgrades to PASS."
+  ]
+}
