@@ -10,6 +10,9 @@ from skill_factory.evolution.capabilities import capability_report
 from skill_factory.evolution.claimproof_basis_handoff import (
     load_claimproof_basis_handoff,
 )
+from skill_factory.evolution.external_execution_receipt import (
+    admit_external_execution_receipt,
+)
 
 PUBLIC_SURFACES = (
     Path("README.md"),
@@ -430,4 +433,43 @@ def test_claimproof_basis_handoff_requires_candidate_identity(tmp_path: Path):
 
     with pytest.raises(ValueError, match="candidate.identity is required"):
         load_claimproof_basis_handoff(tmp_path / "handoff.json")
+
+def test_real_agent_done_receipt_is_admitted_as_execution_input_only():
+    fixture = Path("examples/interop/agent-done-v2-real")
+    admitted = admit_external_execution_receipt(
+        fixture / "receipt.json",
+        fixture / "provenance.json",
+    )
+
+    assert admitted["receipt_type"] == "EXTERNAL_EXECUTION_EVIDENCE_INPUT"
+    assert admitted["admission"] == "BOUND_EXECUTION_INPUT"
+    assert admitted["producer"]["identity"] == "done-gate.sh@0.13.1"
+    assert admitted["producer"]["resolved_commit"] == (
+        "4a801bf056519af5a845e773260ef23796eea3ff"
+    )
+    assert admitted["candidate"]["commit"] == (
+        "a3e1ed55ba84f2cde64c328d682fff54b2770017"
+    )
+    assert admitted["execution"]["exit_code"] == 0
+    assert admitted["execution"]["output_sha256"] == (
+        "f4a46ed95fa04eca41f7b2bd877f244e2ed1aa01e4528f1866895ed48c0ce9f9"
+    )
+    text = json.dumps(admitted).lower()
+    assert "candidate is correct" in text
+    assert "fixed" in text
+
+
+def test_external_execution_receipt_rejects_non_reexecuted(tmp_path: Path):
+    fixture = Path("examples/interop/agent-done-v2-real")
+    receipt = json.loads((fixture / "receipt.json").read_text(encoding="utf-8"))
+    receipt["disposition"] = "asserted"
+
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="disposition=reexecuted"):
+        admit_external_execution_receipt(
+            receipt_path,
+            fixture / "provenance.json",
+        )
 
