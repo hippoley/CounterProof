@@ -2,7 +2,6 @@ from skill_factory.evolution.windowpilot_physical_observation import (
     assess_windowpilot_physical_observation,
 )
 
-
 HARDWARE_SHA = "a" * 64
 ACK_SHA = "b" * 64
 COMMAND_ID = "11111111-1111-4111-8111-111111111111"
