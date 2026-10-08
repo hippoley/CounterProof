@@ -102,6 +102,6 @@ def test_real_agent_done_receipt_remains_admissible_as_bounded_input():
     assert admitted["producer"]["resolved_commit"] == (
         "4a801bf056519af5a845e773260ef23796eea3ff"
     )
-    assert admitted["candidate"]["repository"] == "hippoley/CounterProof"
+    assert admitted["candidate"]["repository"] == "https://github.com/hippoley/CounterProof"
     assert admitted["execution"]["exit_code"] == 0
     assert "does not establish that the candidate is correct" in admitted["semantic_boundary"]
