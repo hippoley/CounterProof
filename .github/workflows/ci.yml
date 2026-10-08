@@ -107,6 +107,21 @@ jobs:
             exit 1
           fi
 
+      - name: Run packaged runtime closure profile
+        run: |
+          cat > /tmp/runtime-closure-trace.json <<'JSON'
+          {
+            "sinks": ["resource-server"],
+            "events": [
+              {"seq": 1, "type": "authority_change_recorded"},
+              {"seq": 2, "type": "evidence_unavailable", "sink": "resource-server"}
+            ]
+          }
+          JSON
+          /tmp/counterproof-clean/bin/counterproof runtime-closure             /tmp/runtime-closure-trace.json             --output /tmp/RUNTIME_CLOSURE.json
+          grep -q '"schema_version": "counterproof.runtime-closure/v0.1"' /tmp/RUNTIME_CLOSURE.json
+          grep -q '"verdict": "UNKNOWN"' /tmp/RUNTIME_CLOSURE.json
+
       - name: Run packaged Regression Witness
         run: |
           set -euo pipefail
