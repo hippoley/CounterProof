@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f2efe8">
   <meta name="description" content="CounterProof replays candidate-bound evidence, tests explicit oracles, and publishes auditable proof artifacts for AI-assisted pull requests.">
   <title>CounterProof · Proof Lab</title>
   <style>@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap');
@@ -21,6 +23,11 @@
 @media(max-width:800px){.reality-lab{grid-template-columns:38px 1fr;padding-top:55px;margin-top:55px}.reality-heading{display:block}.reality-heading p{margin-top:18px}.reality-case-grid{grid-template-columns:1fr}.reality-card,.reality-card:nth-child(even),.reality-card:nth-child(odd){padding:20px 0;border-right:0}.reality-cta{align-items:flex-start;flex-direction:column}.reality-links{flex-wrap:wrap}}
 
 .reality-change{margin-top:18px;padding:11px 12px;border-left:3px solid var(--ink);background:#ebe7dc;color:var(--ink);text-decoration:none;display:flex;flex-direction:column;gap:4px}.reality-change span{font:8px DM Mono,monospace;letter-spacing:.1em;color:var(--muted)}.reality-change b{font-size:11px;font-weight:500}.reality-card.open .reality-change{border-left-color:var(--muted);background:#efede7}.reality-change:hover{background:#e2ded2}
+
+/* Offline-first and keyboard-friendly: system fonts render when Google Fonts is unreachable. */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+.case-ticket:focus-visible,.lens:focus-visible,.witness-scenario:focus-visible,.splice-button:focus-visible,.proof-button:focus-visible,.compare-button:focus-visible { outline: 3px solid #3f63a8; outline-offset: 3px; }
+@media (max-width: 800px) { .case-reel { scrollbar-width: auto; } .case-reel::-webkit-scrollbar { display: initial; } .case-ticket { min-width: 195px; } }
 </style>
 </head>
 <body>
