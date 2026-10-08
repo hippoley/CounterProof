@@ -7,13 +7,12 @@ authoritative merely because the witness says so.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import jsonschema
-
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "schemas" / "outcome-witness-v0.1.schema.json"
 
