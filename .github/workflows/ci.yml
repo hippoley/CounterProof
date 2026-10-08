@@ -36,6 +36,9 @@ jobs:
       - name: Run tests
         run: pytest --cov=skill_factory --cov-report=term-missing
 
+      - name: Check experimental Outcome Witness truth-boundary vectors
+        run: python examples/outcome_witness/check_vectors.py
+
       - name: Run measured Counterproof replay
         run: |
           counterproof replay examples/replay_suite.json --out /tmp/replay-results.json
