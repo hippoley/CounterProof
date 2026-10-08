@@ -1,0 +1,31 @@
+{
+  "schema_version": "counterproof.external-semantics-pin/v0.1",
+  "upstream": {
+    "repository": "NordenSoft/noa-mandate-core",
+    "commit": "eacb93ce72c7ba00ecd0d5d4477ad2d6f4e4d3c9",
+    "source": "packages/rail-x402/conformance/gen-settlement-evidence-vectors.mjs"
+  },
+  "cases": [
+    {
+      "name": "settlement-observer-same-administrative-party",
+      "observerRelationship": "SAME_ADMINISTRATIVE_PARTY",
+      "observerRelationshipSource": "VERIFIER_DERIVED",
+      "expected_relationship_class": "KNOWN_OVERLAP",
+      "expected_same_credential": "FALSE",
+      "expected_same_administrative_party": "TRUE"
+    },
+    {
+      "name": "settlement-observer-same-signing-key",
+      "observerRelationship": "SAME_SIGNING_KEY",
+      "observerRelationshipSource": "VERIFIER_DERIVED",
+      "expected_relationship_class": "KNOWN_OVERLAP",
+      "expected_same_credential": "TRUE",
+      "expected_same_administrative_party": "UNKNOWN"
+    }
+  ],
+  "claim_boundary": [
+    "This pin records upstream public conformance semantics, not NOA adoption of CounterProof.",
+    "CounterProof does not claim that these cases establish organizational independence.",
+    "The pin must be refreshed deliberately when upstream consumer semantics change."
+  ]
+}
