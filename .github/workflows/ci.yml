@@ -450,6 +450,33 @@ jobs:
           curl -fsS http://127.0.0.1:8877/data/reality_cases.json | grep -q "async-rithmic-53"
           kill "$(cat /tmp/counterproof-demo.pid)"
 
+
+  external-measurement-capsule-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Fetch pinned CSOAI claim-watch capsule batch
+        run: |
+          curl -fsSL --retry 3 --retry-delay 1 \
+            -o /tmp/csoai-claim-watch-capsules.jsonl.gz \
+            https://raw.githubusercontent.com/CSOAI-ORG/councilof-ai/85df6bc2ed76450c171d6982bfd39e94d80982d2/public/measurement-capsules/v0.2/claim_watch/capsules.jsonl.gz
+
+      - name: Independently replay public capsule ids and Merkle root
+        run: |
+          python scripts/interop/replay_csoai_claim_watch.py \
+            /tmp/csoai-claim-watch-capsules.jsonl.gz
+
+
   validate-example-skills:
     runs-on: ubuntu-latest
     steps:
