@@ -86,3 +86,22 @@ def test_external_execution_receipt_rejects_producer_tag_mismatch(tmp_path):
 
     with pytest.raises(ValueError, match="does not match frozen tag"):
         admit_external_execution_receipt(receipt_path, provenance_path)
+
+
+def test_real_agent_done_receipt_remains_admissible_as_bounded_input():
+    root = __import__("pathlib").Path(__file__).resolve().parents[2]
+    fixture = root / "examples" / "interop" / "agent-done-v2-real"
+
+    admitted = admit_external_execution_receipt(
+        fixture / "receipt.json",
+        fixture / "provenance.json",
+    )
+
+    assert admitted["admission"] == "BOUND_EXECUTION_INPUT"
+    assert admitted["producer"]["tag"] == "v0.13.1"
+    assert admitted["producer"]["resolved_commit"] == (
+        "4a801bf056519af5a845e773260ef23796eea3ff"
+    )
+    assert admitted["candidate"]["repository"] == "hippoley/CounterProof"
+    assert admitted["execution"]["exit_code"] == 0
+    assert "does not establish that the candidate is correct" in admitted["semantic_boundary"]
