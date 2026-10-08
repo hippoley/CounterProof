@@ -12,15 +12,25 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY PROOF LAB**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml) · [**⚡ INSTALL**](#30-second-onboarding)
+### [**▶ PLAY PROOF LAB**](https://hippoley.github.io/CounterProof/) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml) · [**⚡ INSTALL**](#30-second-onboarding)
 
-[![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](https://hippoley.github.io/CounterProof/)
 
 **One claim · exact candidates · explicit oracle · one auditable receipt.**
 
 <sub>Not a merge bot. Not another AI reviewer. CounterProof tells you what the submitted evidence establishes — and what it still does not.</sub>
 
 </div>
+
+---
+
+## Start here: inspect a proof, then challenge it
+
+**[▶ Open the live, no-login Proof Lab](https://hippoley.github.io/CounterProof/)** · [Run it yourself](#30-second-onboarding) · [Bring a real PR](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)
+
+The public Proof Lab is an **interactive illustration backed by bundled fixtures**, not proof that CounterProof executed a live third-party repository in your browser. For independently checkable evidence, start with the [Bluefin source run](https://github.com/hippoley/CounterProof/actions/runs/37412091382), [machine receipt](examples/claim_matrix/receipts/bluefin-4539-flagship-causal.json), and [external evidence ledger](docs/EXTERNAL_EVIDENCE_LEDGER.md).
+
+**The proof boundary matters:** a passing CI job, a convincing demo, a maintainer acknowledgement, and production adoption are four different claims. CounterProof does not treat them as interchangeable.
 
 ---
 
@@ -135,7 +145,7 @@ into:
 
 ## See it before you install it
 
-### **[Launch the interactive Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[Launch the interactive Proof Lab →](https://hippoley.github.io/CounterProof/)**
 
 The browser experience lets you play with different evidence situations instead of reading another architecture diagram.
 
@@ -163,7 +173,7 @@ The browser scenarios are fixtures. **Real evidence comes from the CLI / GitHub 
 
 ---
 
-[![CounterProof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![CounterProof proof walkthrough](assets/proof-walkthrough.svg)](https://hippoley.github.io/CounterProof/)
 
 > **Click the walkthrough to open the live Proof Lab.**
 
@@ -697,7 +707,7 @@ http://127.0.0.1:8765
 
 Or just use the public version:
 
-### **[Open Live Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[Open Live Proof Lab →](https://hippoley.github.io/CounterProof/)**
 
 ---
 
@@ -939,6 +949,6 @@ Apache-2.0.
 
 *Claim nothing you can't replay.*
 
-### **[▶ Open the Live Proof Lab](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[▶ Open the Live Proof Lab](https://hippoley.github.io/CounterProof/)**
 
 </div>
