@@ -39,6 +39,15 @@ jobs:
       - name: Check experimental Outcome Witness truth-boundary vectors
         run: python examples/outcome_witness/check_vectors.py
 
+      - name: Reproduce standalone Outcome Witness consumer
+        run: |
+          python examples/outcome_witness/consumer.py examples/outcome_witness/v0_1_vectors.json --output /tmp/outcome-consumer.json
+          python -c 'import json; r=json.load(open("/tmp/outcome-consumer.json")); assert [x["verdict"] for x in r["results"]] == ["CONTRADICTED", "VERIFIED", "INCONCLUSIVE", "INCONCLUSIVE", "INCONCLUSIVE"]'
+          python -c 'import json; d=json.load(open("examples/outcome_witness/v0_1_vectors.json")); d["status"]="live_attestation"; json.dump(d,open("/tmp/outcome-forged.json","w"))'
+          if python examples/outcome_witness/consumer.py /tmp/outcome-forged.json; then
+            echo 'Fixture consumer accepted a live attestation claim'; exit 1
+          fi
+
       - name: Run measured Counterproof replay
         run: |
           counterproof replay examples/replay_suite.json --out /tmp/replay-results.json
