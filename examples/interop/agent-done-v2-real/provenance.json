@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "producer": {
+    "repository": "mohamedzhioua/agent-done-or-not",
+    "tag": "v0.13.1",
+    "tag_object": "34bb41a35e96d544a9a17365d694214b1e75e413",
+    "resolved_commit": "4a801bf056519af5a845e773260ef23796eea3ff",
+    "done_gate_sha256": "6f8a6fd1dad47d806d3be0ba98ca5723be4b7569c08c01e821a3eff63fb4eb2c",
+    "proof_schema_sha256": "865db35fd05cc89de305022427cd9f6e96cdefde9ee2fd112059da323b4091ef"
+  },
+  "source_run": {
+    "repository": "hippoley/CounterProof",
+    "workflow_run": 37711284061,
+    "artifact_id": 11521298222,
+    "artifact_sha256": "487ca437f8f32499ec1f686e11f3cf26069852a48d4e2df2495a4735df9e535c"
+  },
+  "receipt_file": "receipt.json"
+}
