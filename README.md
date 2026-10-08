@@ -12,15 +12,48 @@
 ![No LLM](https://img.shields.io/badge/core%20PR%20proof-no%20LLM-111111.svg)
 ![No API key](https://img.shields.io/badge/API%20key-not%20required-111111.svg)
 
-### [**▶ PLAY PROOF LAB**](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [**? BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml) · [**⚡ INSTALL**](#30-second-onboarding)
+### [**▶ EXPLORE THE PROOF LAB**](site/standalone.html) · [**⚡ INSTALL & RUN**](#30-second-onboarding) · [**BRING A PR**](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)
 
-[![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![Open CounterProof Proof Lab](assets/counterproof-hero.svg)](site/standalone.html)
 
 **One claim · exact candidates · explicit oracle · one auditable receipt.**
+
+<sub>Preview the interface in the repository. For a working interactive session, download the self-contained HTML from the forthcoming Pages release or run the local demo below. We do not rely on a third-party HTML proxy.</sub>
 
 <sub>Not a merge bot. Not another AI reviewer. CounterProof tells you what the submitted evidence establishes — and what it still does not.</sub>
 
 </div>
+
+---
+
+## Start with one question
+
+**Did the agent's new test actually catch the old bug?**
+
+```text
+                   PR HEAD       BASE
+same changed test    PASS         FAIL    → WITNESSED
+same changed test    PASS         PASS    → NOT WITNESSED
+judge / CI changed                          → REVIEW INTEGRITY
+```
+
+**Choose your path:** [Run it on your PR](#30-second-onboarding) · [See the Bluefin controlled replay](#flagship-proof-one-intervention-same-oracle-recovery-after-revert) · [Inspect the Claude oracle counterexample](#flagship-boundary-green-judge-contradicted-product-oracle) · [Review external evidence](docs/EXTERNAL_EVIDENCE_LEDGER.md).
+
+<details>
+<summary><strong>How do I open Proof Lab if a hosted preview is unreachable?</strong></summary>
+
+The recommended reliable path is local:
+
+```bash
+python -m pip install "git+https://github.com/hippoley/CounterProof.git"
+counterproof demo
+```
+
+Then open `http://127.0.0.1:8765`. Alternatively, after the self-contained HTML update lands, download [`site/standalone.html`](site/standalone.html) and open it locally. A GitHub Pages deployment is being prepared; its public URL should only be advertised after a successful deployment.
+
+The browser cases are **illustrative fixtures**. Real proof receipts come from the CLI or GitHub Action.
+
+</details>
 
 ---
 
@@ -90,6 +123,9 @@ green submitted judge + rejecting product oracle
 
 ## Tested on real agent PRs
 
+For third-party-verifiable roles and limitations, see the [external evidence ledger](docs/EXTERNAL_EVIDENCE_LEDGER.md). An upstream mention or interoperability exchange is not automatically adoption or certification.
+
+
 CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.
 
 **[See the Reality Lab →](docs/REALITY_LAB.md)** · **[Bring an agent PR you don't trust →](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)** · **[Choose a contribution path →](CONTRIBUTING.md)**
@@ -135,7 +171,7 @@ into:
 
 ## See it before you install it
 
-### **[Launch the interactive Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[Explore Proof Lab source and interface →](site/standalone.html)**
 
 The browser experience lets you play with different evidence situations instead of reading another architecture diagram.
 
@@ -163,7 +199,7 @@ The browser scenarios are fixtures. **Real evidence comes from the CLI / GitHub 
 
 ---
 
-[![CounterProof proof walkthrough](assets/proof-walkthrough.svg)](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)
+[![CounterProof proof walkthrough](assets/proof-walkthrough.svg)](site/standalone.html)
 
 > **Click the walkthrough to open the live Proof Lab.**
 
@@ -695,9 +731,9 @@ Open:
 http://127.0.0.1:8765
 ```
 
-Or just use the public version:
+Or inspect the self-contained HTML source (a hosted Pages link will be published only after deployment):
 
-### **[Open Live Proof Lab →](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[Explore the Proof Lab interface →](site/standalone.html)**
 
 ---
 
@@ -939,6 +975,6 @@ Apache-2.0.
 
 *Claim nothing you can't replay.*
 
-### **[▶ Open the Live Proof Lab](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html)**
+### **[▶ Explore Proof Lab](site/standalone.html)**
 
 </div>
