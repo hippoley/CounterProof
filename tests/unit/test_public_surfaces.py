@@ -44,10 +44,13 @@ def test_public_surfaces_use_canonical_counterproof_repository():
 
 
 def test_proof_lab_public_surface_is_explicitly_fixture_backed():
-    for path in (Path("site/index.html"), Path("site/standalone.html")):
-        text = path.read_text(encoding="utf-8")
-        assert "interactive fixture" in text
-        assert "PROOF LAB / 001" in text
+    text = Path("site/standalone.html").read_text(encoding="utf-8")
+    assert "interactive fixture" in text
+    assert "PROOF LAB / 001" in text
+
+    redirect = Path("site/index.html").read_text(encoding="utf-8")
+    assert "url=./standalone.html" in redirect
+    assert 'href="./standalone.html"' in redirect
 
 
 def test_readme_install_cta_targets_current_onboarding_section():
@@ -81,10 +84,9 @@ def test_proof_lab_reality_data_surfaces_current_machine_backed_artifacts():
 
 
 def test_proof_lab_public_copy_reflects_candidate_and_oracle_model():
-    for path in (Path("site/index.html"), Path("site/standalone.html")):
-        text = path.read_text(encoding="utf-8")
-        assert "candidate-bound evidence" in text
-        assert "declared oracle" in text
+    text = Path("site/standalone.html").read_text(encoding="utf-8")
+    assert "candidate-bound evidence" in text
+    assert "declared oracle" in text
 
 
 def test_reality_lab_does_not_present_stale_clash_evidence_as_current():
