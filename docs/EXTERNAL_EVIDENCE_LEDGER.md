@@ -62,6 +62,33 @@ unaffiliated external evaluator. It is **not yet** evidence that AETHER X has
 qualified the result. Until they independently classify or act on #164, no
 higher recognition state is recorded here.
 
+## Handoff lifecycle
+
+Each machine-readable record also carries a normalized `handoff_state`. This is deliberately separate from product adoption:
+
+```text
+ARTIFACT_READY
+→ DELIVERY_ATTEMPTED
+→ DELIVERY_BLOCKED or DELIVERED
+→ RECEIVED
+→ USEFUL
+→ CONSUMED
+→ ADOPTED
+```
+
+The states answer a narrow operational question: **what happened to this evidence handoff?**
+
+- `ARTIFACT_READY` — a reviewable artifact exists, but no delivery has been attempted.
+- `DELIVERY_ATTEMPTED` — delivery was attempted, but receipt is not established.
+- `DELIVERY_BLOCKED` — a concrete transport/permission blocker prevented delivery.
+- `DELIVERED` — the artifact reached an externally owned intake or was handed back to the named party.
+- `RECEIVED` — an external person or system explicitly acknowledged receipt.
+- `USEFUL` — the recipient confirmed semantic usefulness or review value.
+- `CONSUMED` — the evidence/contract was actually used in an external implementation or workflow.
+- `ADOPTED` — reserved for evidence that the external project itself depends on CounterProof as a product/service.
+
+A `CONSUMED` evidence handoff is **not** automatically CounterProof adoption. AVERA is the current strongest example: the producer shipped an interoperable envelope and named CounterProof as first consumer, but the ledger still explicitly denies “AVERA adoption of CounterProof”.
+
 ## Why this ledger exists
 
 A 6–12 month credential should not depend on remembering a conversation.
