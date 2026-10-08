@@ -1,0 +1,130 @@
+{
+  "version": "0.1-experimental",
+  "status": "fixture_only_not_external_observation",
+  "purpose": "Prevent executor acknowledgements from being promoted to verified external outcomes",
+  "verdicts": [
+    "VERIFIED",
+    "CONTRADICTED",
+    "INCONCLUSIVE"
+  ],
+  "rules": {
+    "independent_observer_required": true,
+    "expired_observation_is_inconclusive": true,
+    "missing_observation_is_inconclusive": true,
+    "acknowledgement_is_not_outcome": true,
+    "causality_not_implied": true
+  },
+  "vectors": [
+    {
+      "id": "ack-success-but-open",
+      "intent": {
+        "subject": "window.kitchen.1",
+        "predicate": "position",
+        "expected": "closed"
+      },
+      "action": {
+        "acknowledged": true,
+        "execution_ref": "example-span-001"
+      },
+      "observer": {
+        "authority": "window-controller-readback",
+        "independent_of_executor": true
+      },
+      "observation": {
+        "value": "open",
+        "age_ms": 200,
+        "max_age_ms": 2000
+      },
+      "expected_verdict": "CONTRADICTED",
+      "reason": "fresh independent readback contradicts expected terminal position"
+    },
+    {
+      "id": "fresh-closed",
+      "intent": {
+        "subject": "window.kitchen.1",
+        "predicate": "position",
+        "expected": "closed"
+      },
+      "action": {
+        "acknowledged": true,
+        "execution_ref": "example-span-002"
+      },
+      "observer": {
+        "authority": "window-controller-readback",
+        "independent_of_executor": true
+      },
+      "observation": {
+        "value": "closed",
+        "age_ms": 200,
+        "max_age_ms": 2000
+      },
+      "expected_verdict": "VERIFIED",
+      "reason": "fresh independent readback matches frozen predicate; causality remains unproven"
+    },
+    {
+      "id": "stale-closed",
+      "intent": {
+        "subject": "window.kitchen.1",
+        "predicate": "position",
+        "expected": "closed"
+      },
+      "action": {
+        "acknowledged": true,
+        "execution_ref": "example-span-003"
+      },
+      "observer": {
+        "authority": "window-controller-readback",
+        "independent_of_executor": true
+      },
+      "observation": {
+        "value": "closed",
+        "age_ms": 3000,
+        "max_age_ms": 2000
+      },
+      "expected_verdict": "INCONCLUSIVE",
+      "reason": "matching but stale observation cannot verify current state"
+    },
+    {
+      "id": "executor-self-report",
+      "intent": {
+        "subject": "window.kitchen.1",
+        "predicate": "position",
+        "expected": "closed"
+      },
+      "action": {
+        "acknowledged": true,
+        "execution_ref": "example-span-004"
+      },
+      "observer": {
+        "authority": "same-executor",
+        "independent_of_executor": false
+      },
+      "observation": {
+        "value": "closed",
+        "age_ms": 100,
+        "max_age_ms": 2000
+      },
+      "expected_verdict": "INCONCLUSIVE",
+      "reason": "executor self-report is not independent outcome evidence"
+    },
+    {
+      "id": "no-readback",
+      "intent": {
+        "subject": "window.kitchen.1",
+        "predicate": "position",
+        "expected": "closed"
+      },
+      "action": {
+        "acknowledged": true,
+        "execution_ref": "example-span-005"
+      },
+      "observer": {
+        "authority": "window-controller-readback",
+        "independent_of_executor": true
+      },
+      "observation": null,
+      "expected_verdict": "INCONCLUSIVE",
+      "reason": "acknowledgement alone cannot establish outcome"
+    }
+  ]
+}
