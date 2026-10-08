@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "claims": {
+    "tests-pass": {
+      "claim": "the targeted regression suite passes",
+      "recorded": "2026-10-08T00:00:00Z",
+      "evidence": [
+        {
+          "ref": "pytest -q:exit=0",
+          "digest": "3c2365b2b22a284a",
+          "kind": "value"
+        },
+        {
+          "ref": "tests/test_example.py::test_fix",
+          "digest": "8bf3e481bd0a80d6",
+          "kind": "value"
+        }
+      ],
+      "scope": []
+    }
+  }
+}
