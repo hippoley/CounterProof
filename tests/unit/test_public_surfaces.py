@@ -379,9 +379,14 @@ def test_external_evidence_ledger_orders_recognition_without_claim_inflation():
     assert claimproof["durable_value"]["upstream_artifact_landed"] is False
 
     agent_done = records["agent-done-or-not-receipt-input"]
-    assert agent_done["status"] == "MAINTAINER_APPROVED_INPUT_BOUNDARY"
+    assert (
+        agent_done["status"]
+        == "WORKING_INTEROP_IMPLEMENTED_MAINTAINER_CONFIRMATION_PENDING"
+    )
     assert agent_done["durable_value"]["explicit_reuse_permission"] is True
-    assert agent_done["durable_value"]["frozen_payload_landed"] is False
+    assert agent_done["durable_value"]["frozen_payload_landed"] is True
+    assert agent_done["durable_value"]["working_interop"] is True
+    assert agent_done["durable_value"]["maintainer_confirmation_pending"] is True
 
 def test_claimproof_basis_handoff_binds_native_store_to_candidate():
     fixture = Path("examples/interop/claimproof-basis-v0")
