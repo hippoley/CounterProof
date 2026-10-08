@@ -9,5 +9,6 @@
     "repository": "owner/repo",
     "identity": "example-candidate-identity"
   },
-  "claim_basis_file": "claim-basis.json"
+  "claim_basis_file": "claim-basis.json",
+  "claim_basis_git_blob": "a5d81663d84d6643bbb759cf52ac59a5dd14d37e"
 }
