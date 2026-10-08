@@ -65,3 +65,27 @@ def test_executor_ack_is_not_allowed_to_replace_observer_authority():
             payload,
             now=datetime(2026, 10, 8, 3, 30, 1, tzinfo=timezone.utc),
         )
+
+
+def test_action_reference_mismatch_is_rejected():
+    payload = _fixture()
+
+    with pytest.raises(OutcomeWitnessError, match="action_ref"):
+        validate_outcome_witness(
+            payload,
+            now=datetime(2026, 10, 8, 3, 30, 1, tzinfo=timezone.utc),
+            expected_action_ref={
+                "type": "otel_span",
+                "id": "different-action",
+            },
+        )
+
+
+def test_matching_action_reference_is_admitted():
+    payload = _fixture()
+
+    validate_outcome_witness(
+        payload,
+        now=datetime(2026, 10, 8, 3, 30, 1, tzinfo=timezone.utc),
+        expected_action_ref=payload["action_ref"],
+    )
