@@ -42,6 +42,7 @@ def validate_outcome_witness(
     payload: dict[str, Any],
     *,
     now: datetime | None = None,
+    expected_action_ref: dict[str, str] | None = None,
 ) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     try:
@@ -50,6 +51,15 @@ def validate_outcome_witness(
         where = ".".join(str(item) for item in exc.absolute_path)
         prefix = f"{where}: " if where else ""
         raise OutcomeWitnessError(f"{prefix}{exc.message}") from exc
+
+    if expected_action_ref is not None:
+        observed_ref = payload["action_ref"]
+        expected_type = expected_action_ref.get("type")
+        expected_id = expected_action_ref.get("id")
+        if observed_ref.get("type") != expected_type or observed_ref.get("id") != expected_id:
+            raise OutcomeWitnessError(
+                "action_ref does not match the action being evaluated"
+            )
 
     observed_at = _parse_utc(payload["observed_at"])
     current = now or datetime.now(timezone.utc)
