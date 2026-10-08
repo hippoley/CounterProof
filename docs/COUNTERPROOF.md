@@ -1,8 +1,23 @@
-# Counterproof — Falsifiable Change Control for Self-Modifying Agents
+# CounterProof — Advanced Research Track
 
-> **Your agent changed. Show the proof.**
+> **Primary product:** prove what AI-assisted change evidence actually establishes.
+>
+> **This document:** the older/advanced trace → hypothesis → intervention research track.
 
-Counterproof is an experimental change-control layer for falsifiable agent changes.
+The current default user story lives in the repository README:
+
+```text
+agent-assisted change / PR
+→ candidate-bound evidence
+→ replay / oracle / integrity checks
+→ machine receipt
+→ reviewer-facing handoff
+→ external feedback / consumption tracked separately
+```
+
+CounterProof does **not** require self-modifying agents, mutation search, online rollout, or automatic rollback for its core PR-proof workflow.
+
+The material below remains active research for falsifiable agent change-control, but it must not be read as the minimum product path or as a claim that the planned rollout/runtime features are implemented.
 
 The important distinction is:
 
