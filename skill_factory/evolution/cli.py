@@ -58,6 +58,7 @@ from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_
 from .reality_contracts import validate_reality_contracts
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
+from .runtime_closure import evaluate_runtime_closure
 from .report import render_evolution_pr
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
 from .witness import (
@@ -117,6 +118,30 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 @click.group()
 def cli() -> None:
     """Counterproof: falsifiable change control for self-modifying agents."""
+
+
+@cli.command("runtime-closure")
+@click.argument("trace_file", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--output",
+    "output_file",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Optional machine-readable JSON output path.",
+)
+def runtime_closure_command(trace_file: str, output_file: str | None) -> None:
+    """Evaluate evidence for authority closure at consequential sinks."""
+    try:
+        trace = json.loads(Path(trace_file).read_text(encoding="utf-8"))
+        result = evaluate_runtime_closure(trace)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    payload = json.dumps(result, indent=2, sort_keys=True)
+    if output_file:
+        Path(output_file).write_text(payload + "\n", encoding="utf-8")
+
+    click.echo(payload)
 
 
 @cli.command("conformance-receipt")
