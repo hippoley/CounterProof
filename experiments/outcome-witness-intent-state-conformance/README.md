@@ -63,3 +63,27 @@ Graduation criterion:
 > at least one external workflow consumes or reproduces the semantics.
 
 Until then this branch is a public experiment, not adopted infrastructure.
+
+
+## Machine-readable interoperability vectors
+
+`vectors.json` freezes the current experimental contract as data rather than prose.
+
+Each vector names:
+
+- witness fixture;
+- policy fixture;
+- expected verdict;
+- expected reason.
+
+The repository test suite executes every vector. A third-party implementation can therefore
+consume the same file and compare its own results without importing CounterProof internals.
+
+Current vectors cover:
+
+1. verified + authorized → `PASS`;
+2. contradicted value → `FAIL`;
+3. inconclusive witness → `INDETERMINATE`;
+4. verified but unauthorized effect → `FAIL`.
+
+The manifest is experimental and versioned independently from Outcome Witness itself.
