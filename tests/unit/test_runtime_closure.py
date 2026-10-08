@@ -80,3 +80,37 @@ def test_effect_before_sink_effective_is_not_auto_violation():
     )
 
     assert result["verdict"] == "CLOSED"
+
+
+
+def test_openclaw_merged_regression_maps_to_closed():
+    result = evaluate_runtime_closure(
+        {
+            "sinks": ["native-pty-construction"],
+            "events": [
+                {"seq": 1, "type": "authority_change_recorded"},
+                {
+                    "seq": 2,
+                    "type": "authority_change_effective",
+                    "sink": "native-pty-construction",
+                },
+                {"seq": 3, "type": "sink_closed", "sink": "native-pty-construction"},
+            ],
+        }
+    )
+
+    assert result["verdict"] == "CLOSED"
+
+
+def test_open_agent_auth_authority_side_only_stays_unknown():
+    result = evaluate_runtime_closure(
+        {
+            "sinks": ["resource-server"],
+            "events": [
+                {"seq": 1, "type": "authority_change_recorded"},
+                {"seq": 2, "type": "evidence_unavailable", "sink": "resource-server"},
+            ],
+        }
+    )
+
+    assert result["verdict"] == "UNKNOWN"
