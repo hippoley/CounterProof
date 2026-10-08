@@ -31,6 +31,6 @@ jobs:
           python -m py_compile scripts/probe_avera_v0_cross_language_numbers.py
           node --check scripts/probe_avera_v0_cross_language_numbers.cjs
       - name: Generate Python v0 digest vectors
-        run: python scripts/probe_avera_v0_cross_language_numbers.py
+        run: PYTHONPATH=. python scripts/probe_avera_v0_cross_language_numbers.py
       - name: Compare independent Node verifier
         run: node scripts/probe_avera_v0_cross_language_numbers.cjs
