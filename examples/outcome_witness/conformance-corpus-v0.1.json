@@ -1,0 +1,38 @@
+{
+  "schema_version": "counterproof.outcome-witness-corpus/v0.1",
+  "purpose": "Cross-spec external-outcome evidence admission vectors for SCITT/AEB interoperability experiments.",
+  "non_claims": [
+    "This corpus is not an IETF conformance suite.",
+    "Passing these vectors does not imply AEB or SCITT conformance.",
+    "Outcome Witness is an experimental test-vector shape, not a standards proposal."
+  ],
+  "vectors": [
+    {
+      "id": "ack-only-no-observation",
+      "description": "Executor acknowledgement exists but no external observation is supplied.",
+      "expected": "REJECT"
+    },
+    {
+      "id": "fresh-contradiction",
+      "fixture": "window-contradicted.json",
+      "description": "Fresh authoritative readback contradicts the intended terminal state.",
+      "expected": "ADMIT_CONTRADICTED"
+    },
+    {
+      "id": "fresh-positive-control",
+      "description": "Fresh authoritative observation matches the intended terminal state.",
+      "expected": "ADMIT_VERIFIED"
+    },
+    {
+      "id": "stale-positive-looking-observation",
+      "description": "Observation content would satisfy the oracle but exceeds max_age_ms.",
+      "expected": "REJECT_STRONG_VERDICT"
+    },
+    {
+      "id": "action-reference-mismatch",
+      "fixture": "window-contradicted.json",
+      "description": "Evidence is structurally valid but bound to a different action than the one being evaluated.",
+      "expected": "REJECT"
+    }
+  ]
+}
