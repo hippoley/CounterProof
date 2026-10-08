@@ -18,9 +18,32 @@
 
 **One claim · exact candidates · explicit oracle · one auditable receipt.**
 
+**Start here:** [Try the interactive scenarios](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) · [Install & run locally](#30-second-onboarding) · [Inspect real evidence](#flagship-proof-one-intervention-same-oracle-recovery-after-revert)
+
+<sub>The browser lab uses illustrative fixtures; the CLI and GitHub Action produce actual repository evidence.</sub>
+
 <sub>Not a merge bot. Not another AI reviewer. CounterProof tells you what the submitted evidence establishes — and what it still does not.</sub>
 
 </div>
+
+---
+
+## Find your path
+
+| I want to… | Start here |
+|---|---|
+| Understand the verdict in a minute | [Play Proof Lab](https://raw.githack.com/hippoley/CounterProof/main/site/standalone.html) — illustrative scenarios, no installation |
+| Verify my own PR | [30-second onboarding](#30-second-onboarding) — install, `counterproof check`, then optional CI |
+| Check the strongest real-world evidence | [Bluefin controlled replay](#flagship-proof-one-intervention-same-oracle-recovery-after-revert) and [Claude oracle disagreement](#flagship-boundary-green-judge-contradicted-product-oracle) |
+| Evaluate external interoperability | [External evidence ledger](docs/EXTERNAL_EVIDENCE_LEDGER.md) — third-party roles, links and explicit non-claims |
+| Explore advanced proof semantics | [Claim matrix](#when-one-pr-contains-multiple-review-claims) and [deeper runtime](#the-deeper-runtime) |
+
+<details>
+<summary><strong>What CounterProof does — and does not — establish</strong></summary>
+
+A green CI check is not proof that the submitted test would have caught the old bug. CounterProof replays the **same evidence** against the old and new candidates and checks whether the judging machinery changed. A witnessed regression is scoped to that test and those candidates; it is **not** a general correctness certificate, product-oracle endorsement, or merge recommendation.
+
+</details>
 
 ---
 
@@ -89,6 +112,9 @@ green submitted judge + rejecting product oracle
 ---
 
 ## Tested on real agent PRs
+
+For independently checkable interoperability roles and their limits, see the **[external evidence ledger](docs/EXTERNAL_EVIDENCE_LEDGER.md)**. AVERA names CounterProof as an experimental evidence-envelope first consumer; this is **not** an endorsement or certification.
+
 
 CounterProof is not developed only against fixtures. New proof semantics are tested against public AI-assisted pull requests where a reviewer has a concrete reason not to trust a green check.
 
