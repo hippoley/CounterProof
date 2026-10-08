@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -8,7 +8,6 @@ from skill_factory.evolution.outcome_witness import (
     OutcomeWitnessError,
     validate_outcome_witness,
 )
-
 
 FIXTURE = Path("examples/outcome_witness/window-contradicted.json")
 
