@@ -128,14 +128,22 @@ exists and has been handed back to the maintainer for judgment.
 It still remains below AVERA's credential strength because claimproof has not
 yet confirmed the implemented shape or shipped a producer-side export.
 
-### agent-done-or-not — receipt reuse boundary
+### agent-done-or-not — working execution-receipt interop
 
 The maintainer explicitly agreed that `review-pr` receipts may be reused as
 input to a CounterProof BASE→HEAD check while CounterProof remains responsible
 for deciding whether the evidence demonstrates a fix.
 
-No frozen producer payload or adapter has landed yet, so this remains a
-confirmed interoperability boundary rather than an implementation credential.
+That boundary is now implemented against a real producer-generated v2 execution
+receipt. `agent-done-or-not@v0.13.1` re-executed fourteen CounterProof tests,
+bound the run to repo/commit/tree/output digest, and emitted
+`disposition=reexecuted`. CounterProof PR #167 consumes that exact receipt only
+as `BOUND_EXECUTION_INPUT`.
+
+This is now a working interoperability credential, but it still remains below
+AVERA's producer-named role: the agent-done-or-not maintainer has not yet
+confirmed the concrete consumer implementation or recorded CounterProof in the
+producer repository.
 
 ## Credential strength
 
