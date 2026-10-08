@@ -140,6 +140,20 @@ bound the run to repo/commit/tree/output digest, and emitted
 `disposition=reexecuted`. CounterProof PR #167 consumes that exact receipt only
 as `BOUND_EXECUTION_INPUT`.
 
+CounterProof PR #174 then promoted that frozen producer artifact into a
+dedicated admission regression contract. The first real-artifact run exposed a
+consumer-side identity assumption: the test expected the candidate repository
+as `owner/repo`, while the producer had bound the canonical GitHub URL. The
+consumer test was corrected to preserve the producer-bound identifier verbatim
+rather than silently normalizing it. The corrected head passed CI and was
+merged as `71cfce1594f0207cbab4636a97823ab192f0b683`.
+
+This is useful evidence for an emerging interoperability question: evidence,
+identity binding and appraisal are separate concerns, and a consumer must not
+invent identifier equivalence that the producer/profile did not establish.
+That is a reproducible implementation finding, not a claim that CounterProof
+has defined a general identity standard.
+
 This is now a working interoperability credential, but it still remains below
 AVERA's producer-named role: the agent-done-or-not maintainer has not yet
 confirmed the concrete consumer implementation or recorded CounterProof in the
