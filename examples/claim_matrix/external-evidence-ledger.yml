@@ -137,7 +137,7 @@ records:
       - dependency
 
   - id: agent-done-or-not-receipt-input
-    status: MAINTAINER_APPROVED_INPUT_BOUNDARY
+    status: WORKING_INTEROP_IMPLEMENTED_MAINTAINER_CONFIRMATION_PENDING
     observed_at: "2026-10-07"
     subject: CounterProof
     role: potential consumer of review-pr receipts for BASE-to-HEAD verification
@@ -147,10 +147,18 @@ records:
         third_party_user: mohamedzhioua
         comment_id: 5909900493
         claim: "Maintainer explicitly agreed review-pr receipts may be reused as input while CounterProof owns whether the evidence demonstrates a fix."
+    local_consumption:
+      preservation_pull_request: 166
+      consumer_pull_request: 167
+      merge_commit: 747eb6139681c0d5e9c27f2e931b0e3198cc2e13
+      producer_workflow_run: 37711284061
+      producer_artifact_id: 11521298222
     durable_value:
       maintainer_boundary_confirmation: true
       explicit_reuse_permission: true
-      frozen_payload_landed: false
+      frozen_payload_landed: true
+      working_interop: true
+      maintainer_confirmation_pending: true
     non_claims:
       - agent-done-or-not adoption of CounterProof
       - implemented adapter
