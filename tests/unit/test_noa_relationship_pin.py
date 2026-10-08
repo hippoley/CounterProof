@@ -1,10 +1,7 @@
 import json
 from pathlib import Path
 
-from skill_factory.evolution.evidence_relationship import (
-    from_noa_settlement_result,
-)
-
+from skill_factory.evolution.evidence_relationship import from_noa_settlement_result
 
 PIN=Path("examples/interop/noa-observer-relationship-pin-v0.1.json")
 
