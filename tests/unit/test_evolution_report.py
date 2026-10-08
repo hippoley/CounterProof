@@ -221,7 +221,7 @@ def test_committed_capability_json_matches_runtime_manifest():
 
 
 def test_frontend_contract_contains_required_interaction_targets():
-    html = Path("site/index.html").read_text(encoding="utf-8")
+    html = Path("site/standalone.html").read_text(encoding="utf-8")
     js = Path("site/app.js").read_text(encoding="utf-8")
 
     for element_id in (
