@@ -516,3 +516,11 @@ def test_external_evidence_ledger_uses_normalized_handoff_lifecycle():
         if record["handoff_state"] == "CONSUMED":
             non_claims = " ".join(record.get("non_claims", [])).lower()
             assert "adoption" in non_claims
+
+
+
+def test_readme_distinguishes_mutable_main_from_durable_action_pins():
+    text = Path("README.md").read_text(encoding="utf-8")
+    assert "--action-ref <release-tag-or-exact-commit>" in text
+    assert "@main` is convenient for evaluation" in text
+    assert "release tag or exact commit is the reproducible choice" in text
