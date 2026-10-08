@@ -7,11 +7,11 @@ preserving provenance and assurance ceilings.
 No adapter is allowed to upgrade a weaker upstream statement into a stronger
 cross-system claim.
 """
+
 from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any
-
 
 _SCHEMA="counterproof.evidence-relationship/v0.1"
 _TRI={"TRUE","FALSE","UNKNOWN"}
