@@ -4,8 +4,6 @@ No ExecSurface binary, secrets, network, or private paths are used. This verifie
 Python subprocess inheritance and a safe containment mechanism, not the
 upstream harness end-to-end.
 """
-import contextlib
-import io
 import subprocess
 import sys
 import unittest
