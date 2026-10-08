@@ -42,9 +42,7 @@ def test_verified_but_unauthorized_effect_fails():
 
 
 def test_machine_readable_vectors_are_executable_contract():
-    manifest = load("../vectors.json") if False else json.loads(
-        (FIXTURES.parent / "vectors.json").read_text()
-    )
+    manifest = json.loads((FIXTURES.parent / "vectors.json").read_text())
 
     assert manifest["version"] == "counterproof.intent-state-conformance.vectors/v0.1"
 
