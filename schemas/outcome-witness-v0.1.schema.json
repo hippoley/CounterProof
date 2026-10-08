@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hippoley/CounterProof/blob/main/schemas/outcome-witness-v0.1.schema.json",
+  "title": "CounterProof Outcome Witness v0.1",
+  "type": "object",
+  "required": ["schema_version", "intent", "action_ref", "observer", "observed_at", "max_age_ms", "oracle", "observation", "verdict", "recovery"],
+  "properties": {
+    "schema_version": { "const": "counterproof.outcome-witness/v0.1" },
+    "intent": {
+      "type": "object",
+      "required": ["subject", "predicate", "expected"],
+      "properties": {
+        "subject": { "type": "string", "minLength": 1 },
+        "predicate": { "type": "string", "minLength": 1 },
+        "expected": {}
+      },
+      "additionalProperties": true
+    },
+    "action_ref": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "observer": {
+      "type": "object",
+      "required": ["source", "authority"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string", "minLength": 1 },
+        "independent_of_executor": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "max_age_ms": { "type": "integer", "minimum": 0 },
+    "oracle": {
+      "type": "object",
+      "required": ["rule", "source_ref"],
+      "properties": {
+        "rule": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "observation": {
+      "type": "object",
+      "required": ["content_sha256"],
+      "properties": {
+        "content_sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "media_type": { "type": "string" },
+        "source_ref": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["VERIFIED", "CONTRADICTED", "INCONCLUSIVE"]
+    },
+    "recovery": {
+      "type": "object",
+      "required": ["on_contradicted", "on_inconclusive"],
+      "properties": {
+        "on_contradicted": { "type": "string", "minLength": 1 },
+        "on_inconclusive": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

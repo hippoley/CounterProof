@@ -1,0 +1,33 @@
+{
+  "schema_version": "counterproof.outcome-witness/v0.1",
+  "intent": {
+    "subject": "window.kitchen.1",
+    "predicate": "position",
+    "expected": "closed"
+  },
+  "action_ref": {
+    "type": "otel_span",
+    "id": "7d2-example-execute-tool-span"
+  },
+  "observer": {
+    "source": "device-readback",
+    "authority": "window-controller",
+    "independent_of_executor": true
+  },
+  "observed_at": "2026-10-08T03:30:00Z",
+  "max_age_ms": 2000,
+  "oracle": {
+    "rule": "position == 'closed' && obstruction == false",
+    "source_ref": "examples/outcome_witness/window-oracle-v0.1"
+  },
+  "observation": {
+    "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "media_type": "application/json",
+    "source_ref": "device-readback://window.kitchen.1/terminal-state"
+  },
+  "verdict": "CONTRADICTED",
+  "recovery": {
+    "on_contradicted": "STOP_AND_ESCALATE",
+    "on_inconclusive": "RETRY_READBACK_ONCE"
+  }
+}
