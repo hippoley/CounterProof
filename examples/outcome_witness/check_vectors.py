@@ -12,6 +12,10 @@ def evaluate(vector):
     observer = vector.get("observer") or {}
     if not isinstance(observer, dict) or observer.get("independent_of_executor") is not True:
         return "INCONCLUSIVE"
+    # A self-asserted independence flag is not identity attestation; at minimum,
+    # require a non-empty named observer authority before illustrative verification.
+    if not isinstance(observer.get("authority"), str) or not observer["authority"].strip():
+        return "INCONCLUSIVE"
     age = observation.get("age_ms")
     limit = observation.get("max_age_ms")
     if (not isinstance(age, (int, float)) or isinstance(age, bool)
@@ -47,6 +51,10 @@ def main():
         bad = copy.deepcopy(good)
         bad["action"].pop(field)
         assert evaluate(bad) == "INCONCLUSIVE", field
+    for authority in (None, "", "   ", 42):
+        bad = copy.deepcopy(good)
+        bad["observer"]["authority"] = authority
+        assert evaluate(bad) == "INCONCLUSIVE", authority
     for bad_observation in ([], "closed", {"value": "closed"}):
         bad = copy.deepcopy(good)
         bad["observation"] = bad_observation
