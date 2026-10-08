@@ -366,8 +366,13 @@ def test_external_evidence_ledger_orders_recognition_without_claim_inflation():
     assert prove["durable_value"]["upstream_adoption"] is False
 
     claimproof = records["claimproof-first-class-use-case-invitation"]
-    assert claimproof["status"] == "UPSTREAM_USE_CASE_INVITATION"
+    assert (
+        claimproof["status"]
+        == "CONSUMER_ARTIFACT_IMPLEMENTED_MAINTAINER_CONFIRMATION_PENDING"
+    )
     assert claimproof["durable_value"]["explicit_upstream_invitation"] is True
+    assert claimproof["durable_value"]["consumer_artifact_landed"] is True
+    assert claimproof["durable_value"]["maintainer_confirmation_pending"] is True
     assert claimproof["durable_value"]["upstream_artifact_landed"] is False
 
     agent_done = records["agent-done-or-not-receipt-input"]
