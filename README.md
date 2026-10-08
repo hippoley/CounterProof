@@ -279,6 +279,14 @@ Only after you have watched it behave correctly on real pull requests, turn on t
 counterproof init --force --strict
 ```
 
+For durable CI, pin the Action implementation you reviewed instead of relying on mutable `main`:
+
+```bash
+counterproof init --force --strict --action-ref <release-tag-or-exact-commit>
+```
+
+`@main` is convenient for evaluation and follows current development. A release tag or exact commit is the reproducible choice for a long-lived gate. CounterProof does not assume a particular stable tag exists; use a ref you have actually verified.
+
 Strict mode requires:
 
 ```text
