@@ -1,0 +1,36 @@
+name: AVERA v0 Cross-Language Numeric Probe
+
+on:
+  push:
+    branches: [probe/avera-v0-cross-language-numbers]
+    paths:
+      - "scripts/probe_avera_v0_cross_language_numbers.py"
+      - "scripts/probe_avera_v0_cross_language_numbers.cjs"
+      - ".github/workflows/avera-v0-cross-language-numeric-probe.yml"
+  pull_request:
+    paths:
+      - "scripts/probe_avera_v0_cross_language_numbers.py"
+      - "scripts/probe_avera_v0_cross_language_numbers.cjs"
+      - ".github/workflows/avera-v0-cross-language-numeric-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  numeric-canonicalization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax preflight
+        run: |
+          python -m py_compile scripts/probe_avera_v0_cross_language_numbers.py
+          node --check scripts/probe_avera_v0_cross_language_numbers.cjs
+      - name: Generate Python v0 digest vectors
+        run: python scripts/probe_avera_v0_cross_language_numbers.py
+      - name: Compare independent Node verifier
+        run: node scripts/probe_avera_v0_cross_language_numbers.cjs
