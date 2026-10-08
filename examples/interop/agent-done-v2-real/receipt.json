@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-08T01:07:17Z",
+  "ci": true,
+  "command": "python -m pytest -q tests/unit/test_conformance_receipt.py tests/unit/test_external_state_freshness.py",
+  "commit": "a3e1ed55ba84f2cde64c328d682fff54b2770017",
+  "dirty": false,
+  "disposition": "reexecuted",
+  "epoch": 1791421637,
+  "exit_code": 0,
+  "host_os": "linux",
+  "label": "counterproof-unit",
+  "producer": "done-gate.sh@0.13.1",
+  "ref": "refs/pull/166/merge",
+  "repo": "https://github.com/hippoley/CounterProof",
+  "schema_version": 2,
+  "sha256": "f4a46ed95fa04eca41f7b2bd877f244e2ed1aa01e4528f1866895ed48c0ce9f9",
+  "subject": "Merge a39dceb90bbf63ea7e8bcd6f8e03bbf4d9294899 into 9ddc1f65deb1035c9834684f4593fde1e7afe321",
+  "tree": "3d57261469e3dcaa7df865740ece9b6aa8412ffc",
+  "verifier": "CounterProof"
+}
