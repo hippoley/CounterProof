@@ -237,3 +237,55 @@ def test_runtime_closure_cli_require_closed_accepts_closed_and_binds_trace(tmp_p
     payload = json.loads(result.output)
     assert payload["verdict"] == "CLOSED"
     assert len(payload["trace_sha256"]) == 64
+
+
+
+def test_runtime_closure_rejects_unknown_event_type():
+    try:
+        evaluate_runtime_closure(
+            {
+                "sinks": ["worker"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {"seq": 2, "type": "mystery_event", "sink": "worker"},
+                ],
+            }
+        )
+    except ValueError as exc:
+        assert "unsupported runtime closure event type" in str(exc)
+    else:
+        raise AssertionError("unknown event type should be rejected")
+
+
+def test_runtime_closure_rejects_duplicate_sequence_numbers():
+    try:
+        evaluate_runtime_closure(
+            {
+                "sinks": ["worker"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {"seq": 1, "type": "evidence_unavailable", "sink": "worker"},
+                ],
+            }
+        )
+    except ValueError as exc:
+        assert "duplicate event seq" in str(exc)
+    else:
+        raise AssertionError("duplicate sequence should be rejected")
+
+
+def test_runtime_closure_rejects_closed_before_effective():
+    try:
+        evaluate_runtime_closure(
+            {
+                "sinks": ["worker"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {"seq": 2, "type": "sink_closed", "sink": "worker"},
+                ],
+            }
+        )
+    except ValueError as exc:
+        assert "must follow authority_change_effective" in str(exc)
+    else:
+        raise AssertionError("closure without sink-effective evidence should be rejected")
