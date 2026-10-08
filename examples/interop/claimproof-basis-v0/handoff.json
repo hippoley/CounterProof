@@ -1,0 +1,13 @@
+{
+  "schema_version": "counterproof.claimproof-basis-handoff/v0",
+  "producer": {
+    "name": "claimproof",
+    "repository": "Cshearer210/claimproof",
+    "basis_source_blob": "f22f599d8b77077bfabbc95d031f12f68a088e0a"
+  },
+  "candidate": {
+    "repository": "owner/repo",
+    "identity": "example-candidate-identity"
+  },
+  "claim_basis_file": "claim-basis.json"
+}
