@@ -111,14 +111,22 @@ without owning PROVE's final decision.
 
 It does not establish a PROVE dependency or adoption.
 
-### claimproof — first-class use-case invitation
+### claimproof — consumer artifact implemented, producer confirmation pending
 
 The claimproof maintainer confirmed that CounterProof found a real gap at the
 durable `ClaimBasis` layer and invited a first-class candidate-bound export use
 case.
 
-That is stronger than discussion but weaker than a shipped producer artifact.
-Until such an export lands, the record stays an invitation/gap confirmation.
+CounterProof has now merged PR #164: a frozen native `ClaimBasis` v1 store
+plus an outer opaque candidate identity, with exact producer-source and store
+blob identities. The consumer deliberately emits only `BOUND_INPUT` and does
+not take ownership of claimproof's lifecycle semantics.
+
+That moves this record beyond an invitation: a concrete consumer artifact now
+exists and has been handed back to the maintainer for judgment.
+
+It still remains below AVERA's credential strength because claimproof has not
+yet confirmed the implemented shape or shipped a producer-side export.
 
 ### agent-done-or-not — receipt reuse boundary
 
