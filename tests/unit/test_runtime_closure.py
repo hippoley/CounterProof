@@ -1,3 +1,8 @@
+import json
+
+from click.testing import CliRunner
+
+from skill_factory.evolution.cli import cli
 from skill_factory.evolution.runtime_closure import evaluate_runtime_closure
 
 
@@ -114,3 +119,60 @@ def test_open_agent_auth_authority_side_only_stays_unknown():
     )
 
     assert result["verdict"] == "UNKNOWN"
+
+
+
+def test_runtime_closure_cli_emits_machine_json_and_output_file(tmp_path):
+    trace = tmp_path / "trace.json"
+    output = tmp_path / "closure.json"
+    trace.write_text(
+        json.dumps(
+            {
+                "sinks": ["resource-server"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {
+                        "seq": 2,
+                        "type": "evidence_unavailable",
+                        "sink": "resource-server",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        cli,
+        ["runtime-closure", str(trace), "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == "counterproof.runtime-closure/v0.1"
+    assert payload["verdict"] == "UNKNOWN"
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+
+
+def test_runtime_closure_cli_rejects_undeclared_sink(tmp_path):
+    trace = tmp_path / "invalid.json"
+    trace.write_text(
+        json.dumps(
+            {
+                "sinks": ["worker"],
+                "events": [
+                    {
+                        "seq": 1,
+                        "type": "sink_closed",
+                        "sink": "other",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(cli, ["runtime-closure", str(trace)])
+
+    assert result.exit_code != 0
+    assert "undeclared sink" in result.output
