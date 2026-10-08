@@ -176,3 +176,64 @@ def test_runtime_closure_cli_rejects_undeclared_sink(tmp_path):
 
     assert result.exit_code != 0
     assert "undeclared sink" in result.output
+
+
+
+def test_runtime_closure_cli_require_closed_blocks_unknown(tmp_path):
+    trace = tmp_path / "trace.json"
+    trace.write_text(
+        json.dumps(
+            {
+                "sinks": ["resource-server"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {
+                        "seq": 2,
+                        "type": "evidence_unavailable",
+                        "sink": "resource-server",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        cli,
+        ["runtime-closure", str(trace), "--require-closed"],
+    )
+
+    assert result.exit_code != 0
+    assert '"verdict": "UNKNOWN"' in result.output
+    assert "runtime closure required, got UNKNOWN" in result.output
+
+
+def test_runtime_closure_cli_require_closed_accepts_closed_and_binds_trace(tmp_path):
+    trace = tmp_path / "trace.json"
+    trace.write_text(
+        json.dumps(
+            {
+                "sinks": ["worker"],
+                "events": [
+                    {"seq": 1, "type": "authority_change_recorded"},
+                    {
+                        "seq": 2,
+                        "type": "authority_change_effective",
+                        "sink": "worker",
+                    },
+                    {"seq": 3, "type": "sink_closed", "sink": "worker"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        cli,
+        ["runtime-closure", str(trace), "--require-closed"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["verdict"] == "CLOSED"
+    assert len(payload["trace_sha256"]) == 64
