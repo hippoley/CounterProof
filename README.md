@@ -824,16 +824,25 @@ clean wheel installation
 browser interaction smoke tests
 ```
 
-And it still has clear research gaps:
+And it still has clear product gaps:
 
 ```text
-live agent-framework trace adapters
-automatic trustworthy domain-test synthesis
-arbitrary world snapshot / restore
-generic live mutation executors
-shadow / canary rollout
-automatic mutation rollback
+generic non-GitHub agent-framework / observability ingestion
+stable externally verified distribution identity
+recurring external CounterProof dependency
+external consumer for experimental runtime-closure
 ```
+
+The following remain **advanced research optionality**, not blockers for the core product:
+
+```text
+arbitrary world snapshot / restore
+automatic mutation search
+merge / revert automation
+shadow / canary rollout
+```
+
+The machine-readable user-story boundary and investment stop rules live in [`examples/product_contract.yml`](examples/product_contract.yml).
 
 That distinction is intentional.
 
