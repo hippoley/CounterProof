@@ -17,6 +17,7 @@ from typing import Any
 
 BLOCK_KEY = "org.agentactioncapsule.otel"
 _SEMCONV_SOURCE_PREFIX = "open-telemetry/semantic-conventions-genai@"
+_CACHE_INPUT_TOKENS = re.compile(r"^gen_ai\.usage\.cache_[A-Za-z0-9_.-]+\.input_tokens$")
 
 _HEX = {
     "trace_id": re.compile(r"^[0-9a-f]{32}$"),
@@ -148,6 +149,10 @@ def _extract_block(capsule: dict[str, Any]) -> tuple[dict[str, Any] | None, str]
     return None, "absent"
 
 
+def _semconv_name_allowed(name: str) -> bool:
+    return name in _SEMCONV_EXACT_ALLOWED or bool(_CACHE_INPUT_TOKENS.fullmatch(name))
+
+
 def _validate_semconv(semconv: Any, reasons: list[str]) -> None:
     if semconv is None:
         return
@@ -156,11 +161,16 @@ def _validate_semconv(semconv: Any, reasons: list[str]) -> None:
         return
 
     source = semconv.get("source")
-    if not isinstance(source, str) or not source.startswith(_SEMCONV_SOURCE_PREFIX):
+    source_suffix = (
+        source[len(_SEMCONV_SOURCE_PREFIX):]
+        if isinstance(source, str) and source.startswith(_SEMCONV_SOURCE_PREFIX)
+        else ""
+    )
+    if not source_suffix.strip():
         reasons.append("semconv-source-missing-or-unpinned")
 
     for name in semconv:
-        if name in _SEMCONV_EXACT_ALLOWED:
+        if _semconv_name_allowed(name):
             continue
         if any(name.startswith(prefix) for prefix in _NEVER_ENTER_PREFIXES):
             reasons.append(f"semconv-never-enters:{name}")
