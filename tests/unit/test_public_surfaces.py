@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 import yaml
+from click.testing import CliRunner
 
 from skill_factory.evolution.capabilities import capability_report
+from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.claimproof_basis_handoff import (
     load_claimproof_basis_handoff,
 )
