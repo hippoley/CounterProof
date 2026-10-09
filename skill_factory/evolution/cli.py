@@ -117,7 +117,7 @@ def _attach_measured_replay(packet: EvolutionPacket, replay_manifest: str) -> Ev
 
 @click.group()
 def cli() -> None:
-    """Counterproof: falsifiable change control for self-modifying agents."""
+    """CounterProof: evidence-bound verification for AI-assisted changes."""
 
 
 @cli.command("runtime-closure")
