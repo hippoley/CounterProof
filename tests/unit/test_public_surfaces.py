@@ -524,3 +524,44 @@ def test_readme_distinguishes_mutable_main_from_durable_action_pins():
     assert "--action-ref <release-tag-or-exact-commit>" in text
     assert "@main` is convenient for evaluation" in text
     assert "release tag or exact commit is the reproducible choice" in text
+
+
+
+def test_product_contract_keeps_user_story_scope_auditable():
+    contract = yaml.safe_load(
+        Path("examples/product_contract.yml").read_text(encoding="utf-8")
+    )
+    assert contract["schema_version"] == 1
+    assert contract["north_star"] == "Claim cannot outrun evidence."
+
+    allowed = {"CLOSED", "PARTIAL", "OPEN"}
+    by_id = {item["id"]: item for item in contract["user_stories"]}
+    assert len(by_id) == len(contract["user_stories"])
+
+    for story in contract["user_stories"]:
+        assert story["status"] in allowed
+        assert story["promise"].strip()
+        assert story["evidence"], f"{story['id']} must cite evidence"
+        for evidence in story["evidence"]:
+            assert Path(evidence).exists(), f"{story['id']} evidence missing: {evidence}"
+        if story["status"] != "CLOSED":
+            assert story.get("gap", "").strip(), f"{story['id']} must state its gap"
+
+    assert by_id["local-evidence-readout"]["status"] == "CLOSED"
+    assert by_id["external-handoff-lifecycle"]["status"] == "CLOSED"
+    assert by_id["generic-runtime-ingress"]["status"] == "PARTIAL"
+    assert by_id["runtime-closure-external-consumer"]["status"] == "OPEN"
+
+    out_of_scope = {item["id"] for item in contract["out_of_scope"]}
+    assert {
+        "automatic-merge-revert",
+        "online-canary-rollout",
+        "arbitrary-world-fork",
+    } <= out_of_scope
+
+
+def test_cli_identity_matches_current_product_contract():
+    result = CliRunner().invoke(evo_cli, ["--help"])
+    assert result.exit_code == 0
+    assert "evidence-bound verification for AI-assisted changes" in result.output
+    assert "self-modifying agents" not in result.output
