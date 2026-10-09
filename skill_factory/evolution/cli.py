@@ -58,8 +58,8 @@ from .probe_planner import build_probe_scaffold, plan_next_probes, render_probe_
 from .reality_contracts import validate_reality_contracts
 from .receipt import build_proof_receipt, file_sha256, verify_proof_receipt, write_receipt
 from .replay import run_replay_manifest, serialize_replays
-from .runtime_closure import evaluate_runtime_closure
 from .report import render_evolution_pr
+from .runtime_closure import evaluate_runtime_closure
 from .trace import compile_trace, load_trace, packet_to_dict, select_candidate
 from .witness import (
     render_witness_markdown,
