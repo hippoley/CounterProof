@@ -124,3 +124,34 @@ def test_device_identifying_resource_is_not_clear_safe():
 
     assert verdict.status=="INFORMATIONAL_ONLY"
     assert "resource-not-clear-safe:host.id" in verdict.reasons
+
+
+
+def test_empty_semconv_source_suffix_is_not_pinned():
+    block=dict(POSITIVE_BLOCK["org.agentactioncapsule.otel"])
+    block["semconv"]={
+        "source":"open-telemetry/semantic-conventions-genai@",
+        "gen_ai.operation.name":"execute_tool",
+    }
+
+    verdict=validate_aac_otel_extension(
+        {"org.agentactioncapsule.otel":block}
+    )
+
+    assert verdict.status=="INFORMATIONAL_ONLY"
+    assert "semconv-source-missing-or-unpinned" in verdict.reasons
+
+
+def test_cache_input_token_family_is_admitted_by_draft_pattern():
+    block=dict(POSITIVE_BLOCK["org.agentactioncapsule.otel"])
+    block["semconv"]={
+        "source":"open-telemetry/semantic-conventions-genai@8c1b98a",
+        "gen_ai.usage.cache_read.input_tokens":17,
+    }
+
+    verdict=validate_aac_otel_extension(
+        {"org.agentactioncapsule.otel":block}
+    )
+
+    assert verdict.status=="ACCEPTED"
+    assert verdict.reasons==()
