@@ -1,4 +1,6 @@
-from skill_factory.evolution.aac_otel_extension import validate_aac_otel_extension
+from skill_factory.evolution.aac_otel_extension import (
+    validate_aac_otel_extension,
+)
 
 
 POSITIVE_BLOCK={
