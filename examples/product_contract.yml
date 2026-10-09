@@ -1,0 +1,115 @@
+schema_version: 1
+product: CounterProof
+north_star: "Claim cannot outrun evidence."
+primary_user: "Reviewer or maintainer evaluating an AI-assisted software change"
+
+user_stories:
+  - id: local-evidence-readout
+    status: CLOSED
+    promise: "From a feature branch, produce a conservative local evidence readout without changing repository configuration."
+    evidence:
+      - skill_factory/evolution/local_check.py
+      - tests/unit/test_local_check.py
+      - README.md
+
+  - id: exact-regression-witness
+    status: CLOSED
+    promise: "Replay the same selected evidence on HEAD and BASE and distinguish precise witness from weaker suite delta."
+    evidence:
+      - skill_factory/evolution/witness.py
+      - tests/unit/test_witness.py
+      - action.yml
+
+  - id: changed-judge-detection
+    status: CLOSED
+    promise: "Surface changes to tests and CI that can weaken the independence of green evidence."
+    evidence:
+      - skill_factory/evolution/integrity.py
+      - tests/unit/test_integrity.py
+      - action.yml
+
+  - id: reviewer-handoff
+    status: CLOSED
+    promise: "Compress machine evidence into a candidate-bound reviewer-facing artifact without expanding claim scope."
+    evidence:
+      - README.md
+      - examples/handoff/codex-prove.md
+
+  - id: evidence-lifecycle
+    status: CLOSED
+    promise: "Do not present stale, superseded, or conflicting historical evidence as current proof."
+    evidence:
+      - skill_factory/evolution/evidence_lifecycle.py
+      - examples/claim_matrix/reality-contracts.yml
+      - tests/unit/test_public_surfaces.py
+
+  - id: external-handoff-lifecycle
+    status: CLOSED
+    promise: "Track what happened after evidence left CounterProof without collapsing delivery, usefulness, consumption, and adoption."
+    evidence:
+      - examples/claim_matrix/external-evidence-ledger.yml
+      - docs/EXTERNAL_EVIDENCE_LEDGER.md
+      - tests/unit/test_public_surfaces.py
+
+  - id: live-github-ingress
+    status: CLOSED
+    promise: "Consume live pull-request checkout/event context through the GitHub Action."
+    evidence:
+      - action.yml
+      - skill_factory/evolution/onboarding.py
+      - tests/unit/test_onboarding.py
+
+  - id: generic-runtime-ingress
+    status: PARTIAL
+    promise: "Consume evidence from arbitrary agent frameworks and observability systems without project-specific glue."
+    evidence:
+      - skill_factory/evolution/capabilities.py
+    gap: "Generic framework and telemetry adapters are not implemented."
+
+  - id: durable-distribution-identity
+    status: PARTIAL
+    promise: "Let long-lived CI pin a reviewed immutable CounterProof distribution."
+    evidence:
+      - .github/workflows/release.yml
+      - docs/RELEASING.md
+      - README.md
+    gap: "Release workflow exists, but this contract does not claim that a stable public release/tag has been independently verified."
+
+  - id: external-product-dependency
+    status: PARTIAL
+    promise: "An external project uses CounterProof itself as a recurring decision/evidence dependency."
+    evidence:
+      - examples/claim_matrix/external-evidence-ledger.yml
+      - docs/EXTERNAL_EVIDENCE_LEDGER.md
+    gap: "External evidence interoperability and consumption exist; broad recurring CounterProof product dependency is not yet established."
+
+  - id: runtime-closure-external-consumer
+    status: OPEN
+    promise: "An external runtime emits authority/effect evidence and consumes counterproof runtime-closure as its verifier or CI gate."
+    evidence:
+      - skill_factory/evolution/runtime_closure.py
+      - tests/unit/test_runtime_closure.py
+    gap: "Profile is internally tested only; no external adopter is claimed."
+
+out_of_scope:
+  - id: automatic-merge-revert
+    reason: "CounterProof intentionally stops at evidence and reviewer handoff; merge authority is a separate concern."
+  - id: online-canary-rollout
+    reason: "Traffic control is not required for the core evidence-verification product."
+  - id: arbitrary-world-fork
+    reason: "Useful research optionality, but not required for the core PR-proof user story."
+  - id: automatic-mutation-search
+    reason: "Advanced research track; not required to prove submitted change claims."
+
+resource_rule:
+  continue_investment_if_any:
+    - "external project submits a native evidence payload"
+    - "external reviewer consumes a machine result"
+    - "producer changes a contract to support interoperability"
+    - "standards author requests a vector, verifier, or conformance case"
+    - "external CI invokes CounterProof"
+  stop_or_freeze_if_only:
+    - "self-authored schema growth"
+    - "self-authored synthetic fixtures"
+    - "new terminology without external demand"
+    - "another experimental profile without an external consumer"
