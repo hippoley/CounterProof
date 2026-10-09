@@ -1,0 +1,17 @@
+{
+  "source_repository": "CSOAI-ORG/councilof-ai",
+  "source_commit": "85df6bc2ed76450c171d6982bfd39e94d80982d2",
+  "source_path": "public/measurement-capsules/v0.2/claim_watch/leaves.json",
+  "batch": "claim_watch",
+  "kind": "measurement.claim_watch",
+  "n": 1,
+  "leaves": [
+    "007b0e5ccbb3f86ac587d645dd8df74c689765267eadc09736eb58bf8be95314"
+  ],
+  "expected_merkle_root": "5e6440b6f9fbccdc2dca66aff3c79c02f649ccb56cd795d0f043b651dd50c32e",
+  "claim_boundary": [
+    "This fixture pins public CSOAI leaf/root data.",
+    "Matching this root does not prove the capsule_id was independently recomputed from capsule bytes.",
+    "Full draft experiment success still requires replay of the published capsule bytes."
+  ]
+}
