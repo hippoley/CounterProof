@@ -206,37 +206,37 @@
     },
     {
       "id": "external-source-ingestion",
-      "name": "Live PR / review / CI / framework trace adapters",
-      "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "Current ingestion starts from exported JSON or JSONL traces."
+      "name": "Live external evidence ingestion",
+      "status": "partial",
+      "evidence": "The root GitHub Action already consumes live pull-request checkout/event context and emits Regression Witness plus Proof Integrity artifacts; generic agent-framework and observability trace adapters are not implemented.",
+      "limitation": "Live GitHub PR evidence is supported, but framework/telemetry ingestion still starts from exported JSON/JSONL or project-specific adapters."
     },
     {
       "id": "world-fork",
       "name": "Captured counterfactual world forks",
       "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "Command replay can compare executions, but does not snapshot and restore arbitrary worlds."
+      "evidence": "Advanced research track only; not part of the current product roadmap.",
+      "limitation": "Command replay can compare executions, but arbitrary world snapshot/restore remains unimplemented and should not block the core evidence-verification product."
     },
     {
       "id": "github-change-control",
       "name": "Automatic Evolution PR open / merge / revert",
       "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "No GitHub automation is wired into the Counterproof runtime yet."
+      "evidence": "Advanced research track only; not part of the current product roadmap.",
+      "limitation": "CounterProof intentionally stops at evidence and reviewer handoff today; automatic merge/revert authority remains out of scope."
     },
     {
       "id": "online-rollout",
       "name": "Shadow / canary / automatic rollback",
       "status": "planned",
-      "evidence": "Roadmap only.",
-      "limitation": "No online traffic router is implemented."
+      "evidence": "Advanced research track only; not part of the current product roadmap.",
+      "limitation": "No online traffic router is implemented, and rollout control is not required for the core evidence-verification user story."
     }
   ],
   "summary": {
     "tested": 24,
-    "partial": 4,
+    "partial": 5,
     "demo": 1,
-    "planned": 4
+    "planned": 3
   }
 }
