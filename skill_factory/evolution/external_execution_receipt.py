@@ -90,6 +90,14 @@ def admit_external_execution_receipt(
             "ci": receipt.get("ci"),
             "ref": receipt.get("ref"),
         },
+        "evidence_limits": {
+            "receipt_kind": "capture_execution_not_pr_review",
+            "authenticity": "unsigned_self_report; CI run provenance must be verified independently",
+            "verifier_and_ci": "producer_supplied_labels_not_attestations",
+            "commit_semantics": "receipt_commit_may_be_synthetic_merge_preview; do_not_assume_pr_head",
+            "output_integrity": "digest_shape_checked_only; original_log_bytes_not_verified",
+            "claim_scope": "no_base_head_fix_or_merge_claim",
+        },
         "semantic_boundary": (
             "This admits externally produced execution evidence only. It does not "
             "establish that the candidate is correct, fixed, mergeable, or that the "
