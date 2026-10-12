@@ -56,6 +56,11 @@ def test_external_execution_receipt_is_admitted_only_as_bounded_input(tmp_path):
         "dirty": False,
     }
     assert admitted["execution"]["exit_code"] == 0
+    limits = admitted["evidence_limits"]
+    assert limits["receipt_kind"] == "capture_execution_not_pr_review"
+    assert "not_attestations" in limits["verifier_and_ci"]
+    assert "not_verified" in limits["output_integrity"]
+    assert limits["claim_scope"] == "no_base_head_fix_or_merge_claim"
     assert "does not establish that the candidate is correct" in admitted["semantic_boundary"]
 
 
