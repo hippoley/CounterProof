@@ -1,0 +1,23 @@
+name: Pipeline REA smoke
+on:
+  pull_request:
+    paths:
+      - 'tools/pipeline_rea.py'
+      - 'tools/test_pipeline_rea.py'
+      - 'docs/pipeline-rea-playground.html'
+      - '.github/workflows/pipeline-rea-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Pipeline REA unit tests
+        run: python -m unittest discover -s tools -p 'test_pipeline_rea.py' -v
+      - name: Compile probe
+        run: python -m py_compile tools/pipeline_rea.py

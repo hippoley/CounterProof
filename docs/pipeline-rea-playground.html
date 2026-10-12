@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pipeline REA · Local Playground</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#eaf1ff;background:#0c1320}
+body{max-width:1080px;margin:0 auto;padding:38px 20px}
+h1{font-size:clamp(30px,5vw,52px);margin-bottom:8px}p{color:#a6b4ca}
+button,select,textarea{font:inherit;border-radius:9px}
+button{background:#bbf7d0;color:#092d19;border:0;padding:11px 16px;cursor:pointer;font-weight:650}
+select{background:#1b2738;color:white;padding:10px;border:1px solid #334155}
+textarea{width:100%;box-sizing:border-box;min-height:245px;padding:16px;border:1px solid #354b64;background:#121d2c;color:#dbeafe;resize:vertical}
+section{border:1px solid #344256;border-radius:14px;padding:20px;background:#131e2c;margin:20px 0}
+.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.output{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.output article{padding:16px;background:#1b2a3d;border-radius:10px}
+small{color:#a6b4ca}ul{padding-left:20px}li{padding:4px 0;overflow-wrap:anywhere}
+.warning{color:#fecaca} .safe{color:#a7f3d0}
+</style>
+<h1>Pipeline REA</h1>
+<p>Paste a Jenkinsfile, GitLab CI or GitHub Actions workflow. See its jobs, credential-reference names and possible inline secret assignments, instantly. This is a <strong>local, read-only prototype</strong>; it does not execute your pipeline or send the input to a server.</p>
+<section>
+<div class="flex"><label for="platform">Platform:</label>
+<select id="platform"><option value="jenkins">Jenkins</option><option value="gitlab">GitLab CI</option><option value="github">GitHub Actions</option></select>
+<button id="sample" type="button">Load safe example</button><button id="analyze" type="button">Analyze locally →</button></div>
+<p><small>Do not paste production credentials. Use redacted or synthetic samples. All detected names may still be sensitive; don't publicly share reports without reviewing them.</small></p>
+<label for="source">Pipeline source</label><textarea id="source" spellcheck="false" aria-label="Pipeline source"></textarea>
+</section>
+<section aria-live="polite"><h2>Analysis</h2><div id="summary">Choose a sample, then analyze.</div><div class="output"><article><h3>Stages / jobs</h3><ul id="stages"></ul></article><article><h3>Credential references</h3><ul id="refs"></ul></article><article><h3>Potential risks</h3><ul id="findings"></ul></article></div><p><small>Heuristic inspection only: no includes, conditions, shared libraries or runtime resolution. This does not establish security or deployment correctness.</small></p></section>
+<script>
+"use strict";
+const examples={
+jenkins:"pipeline {\n  agent any\n  stages {\n    stage('Build') { steps { echo 'build' } }\n    stage('Deploy') { steps { withCredentials([string(credentialsId: 'deploy-token', variable: 'DEPLOY_TOKEN')]) { sh 'deploy' } } }\n  }\n}",
+gitlab:"stages:\n  - test\n  - deploy\ntest:\n  stage: test\n  script: echo OK\ndeploy:\n  stage: deploy\n  script: echo ${DEPLOY_TOKEN}\n",
+github:"name: CI\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo tests\n  deploy:\n    needs: test\n    runs-on: ubuntu-latest\n    steps:\n      - env:\n          AUTH: ${{ secrets.DEPLOY_TOKEN }}\n        run: echo ready\n"
+};
+const $=id=>document.getElementById(id);
+function renderList(id,items) {
+ const el=$(id);el.replaceChildren();
+ if (!items.length) {const li=document.createElement("li");li.textContent="None detected";el.append(li);return;}
+ for(const item of items){const li=document.createElement("li");li.textContent=item;el.append(li);}
+}
+function inspect(text,platform){
+ const stages=[],refs=[],findings=[],lines=text.split(/\r?\n/);
+ const add=(arr,item)=>{if(!arr.includes(item))arr.push(item)};
+ if(platform==="jenkins"){
+  for(const m of text.matchAll(/\bstage\s*\(\s*['"]([^'"]+)['"]/g))add(stages,m[1]);
+  for(const m of text.matchAll(/credentialsId\s*:\s*['"]([^'"]+)['"]/g))add(refs,m[1]);
+ } else if(platform==="github"){
+  let inJobs=false;
+  for(const line of lines){
+   if(/^jobs:\s*$/.test(line)) {inJobs=true;continue;}
+   if(inJobs && /^\S/.test(line))inJobs=false;
+   if(inJobs){const m=line.match(/^  ([\w-]+):\s*$/);if(m)add(stages,m[1]);}
+  }
+  for(const m of text.matchAll(/\$\{\{\s*secrets\.([A-Za-z_][\w-]*)\s*\}\}/g))add(refs,m[1]);
+ }else{
+  let inStages=false;
+  for(const line of lines){
+   if(/^stages:\s*$/.test(line)){inStages=true;continue;}
+   if(inStages && /^\S/.test(line))inStages=false;
+   if(inStages){const m=line.match(/^\s+-\s*([\w-]+)\s*$/);if(m)add(stages,m[1]);}
+  }
+  for(const m of text.matchAll(/\$\{?([A-Z_][A-Z0-9_]*(?:TOKEN|KEY|PASSWORD|SECRET))\}?/g))add(refs,m[1]);
+ }
+ lines.forEach((line,i)=>{
+  const m=line.match(/^\s*(?:export\s+)?([A-Z_]*(?:PASSWORD|TOKEN|API_KEY|SECRET_KEY))\s*[:=]\s*["']?([A-Za-z0-9_/+.-]{12,})["']?\s*$/i);
+  if(m && !/\$|\{\{|vault|credentials\(/i.test(m[2]))findings.push("Line "+(i+1)+": possible inline secret assigned to "+m[1]);
+ });
+ return {stages,refs,findings};
+}
+$("sample").addEventListener("click",()=>{$("source").value=examples[$("platform").value];$("analyze").click()});
+$("analyze").addEventListener("click",()=>{
+ const result=inspect($("source").value,$("platform").value);
+ renderList("stages",result.stages);renderList("refs",result.refs);renderList("findings",result.findings);
+ $("summary").textContent=result.stages.length+" stages/jobs · "+result.refs.length+" credential-reference names · "+result.findings.length+" suspected inline secrets";
+});
+$("sample").click();
+</script></html>
