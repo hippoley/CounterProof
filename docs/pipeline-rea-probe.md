@@ -28,3 +28,14 @@ Output schema: `pipeline-rea.report.v0`. A finding marks a line and key name **o
 5. Verify against at least two independent real pipelines and document false positives.
 
 This probe is not the same as Agent REA or Physical REA; those products remain separate user experiences.
+
+
+## Interactive local playground
+
+The standalone [Pipeline REA playground](pipeline-rea-playground.html) ships as a single HTML file. Download it from GitHub's **Raw** view and open it locally in a browser, or clone the repository and open `docs/pipeline-rea-playground.html`.
+
+It includes three synthetic examples for Jenkins, GitLab CI, and GitHub Actions. Click **Load safe example**, then **Analyze locally** to inspect stage/job names, references to credential *names*, and suspicious inline assignments without executing any deployment.
+
+**Safety:** Do not paste actual production credentials. The browser does not send source to a server, but browser extensions and local device software may access page contents. Do not share reports without reviewing potentially sensitive names. This is not an authoritative security audit.
+
+The interactive JavaScript and CLI prototype intentionally share a report concept, not a production parser; their output parity still needs formal contract tests.
