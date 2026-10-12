@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-ASSIGN = re.compile(r"(?im)^\\s*(?:export\\s+)?([A-Z_]*(?:PASSWORD|TOKEN|API_KEY|SECRET_KEY))\\s*[:=]\\s*[\"']?([A-Za-z0-9_/+.-]{12,})[\"']?\\s*$")
+ASSIGN = re.compile(r"(?im)^\s*(?:export\s+)?([A-Z_]*(?:PASSWORD|TOKEN|API_KEY|SECRET_KEY))\s*[:=]\s*[\"']?([A-Za-z0-9_/+.-]{12,})[\"']?\s*$")
 
 def analyze(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -17,18 +17,18 @@ def analyze(path: Path) -> dict:
     if platform == "unknown":
         raise ValueError("Expected Jenkinsfile, .gitlab-ci.yml or .github/workflows/*.yml")
     if platform == "jenkins":
-        stages = re.findall(r"\\bstage\\s*\\(\\s*[\"']([^\"']+)[\"']", text)
-        refs = re.findall(r"credentialsId\\s*:\\s*[\"']([^\"']+)[\"']", text)
+        stages = re.findall(r"\bstage\s*\(\s*[\"']([^\"']+)[\"']", text)
+        refs = re.findall(r"credentialsId\s*:\s*[\"']([^\"']+)[\"']", text)
     elif platform == "gitlab":
-        stages = re.findall(r"^\\s{0,4}-\\s*([\\w-]+)\\s*$", text, re.M) if re.search(r"^stages:\\s*$", text, re.M) else []
-        refs = re.findall(r"\\$\\{?([A-Z_][A-Z0-9_]*(?:TOKEN|KEY|PASSWORD|SECRET))\\}?", text)
+        stages = re.findall(r"^\s{0,4}-\s*([\w-]+)\s*$", text, re.M) if re.search(r"^stages:\s*$", text, re.M) else []
+        refs = re.findall(r"\$\{?([A-Z_][A-Z0-9_]*(?:TOKEN|KEY|PASSWORD|SECRET))\}?", text)
     else:
-        stages = re.findall(r"^\\s{2}([\\w-]+):\\s*$", text, re.M)
-        refs = re.findall(r"\\$\\{\\{\\s*secrets\\.([A-Za-z_][\\w-]*)\\s*\\}\\}", text)
+        stages = re.findall(r"^\s{2}([\w-]+):\s*$", text, re.M)
+        refs = re.findall(r"\$\{\{\s*secrets\.([A-Za-z_][\w-]*)\s*\}\}", text)
     findings = []
     for number, line in enumerate(text.splitlines(), 1):
         match = ASSIGN.search(line)
-        if match and not re.search(r"\\$|\\{\\{|vault|credentials\\(", match.group(2), re.I):
+        if match and not re.search(r"\$|\{\{|vault|credentials\(", match.group(2), re.I):
             findings.append({"line": number, "rule": "possible-inline-secret",
                              "key": match.group(1), "severity": "high"})
     return {"schema": "pipeline-rea.report.v0", "platform": platform,
