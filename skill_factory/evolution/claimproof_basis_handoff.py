@@ -139,3 +139,64 @@ def load_claimproof_basis_handoff(
             "the candidate-bound input for later claim-scope evaluation"
         ),
     }
+
+
+def load_claimproof_native_export(export_path: Path) -> dict[str, Any]:
+    """Admit the producer's claimproof.basis/v0 export, not a reconstructed store.
+
+    An export reports a producer-side remeasurement, not independent proof that
+    a claim holds. Candidate identity is opaque, including dirty worktrees.
+    """
+    payload = json.loads(export_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError("claimproof export must be an object")
+    if payload.get("schema_version") != "claimproof.basis/v0":
+        raise ValueError("unsupported native claimproof export schema")
+    producer = payload.get("producer")
+    if not isinstance(producer, dict) or producer.get("name") != "claimproof" or producer.get("component") != "basis":
+        raise ValueError("native export must identify claimproof basis producer")
+    candidate = payload.get("candidate")
+    if not isinstance(candidate, dict):
+        raise TypeError("native export candidate must be an object")
+    for key in ("repository", "identity"):
+        if not isinstance(candidate.get(key), str) or not candidate[key].strip():
+            raise ValueError(f"candidate.{key} is required")
+    kind = candidate.get("identity_kind", "opaque")
+    if not isinstance(kind, str) or not kind.strip():
+        raise ValueError("candidate.identity_kind must be a non-empty string")
+    claim = payload.get("claim")
+    if not isinstance(claim, dict):
+        raise TypeError("native export claim must be an object")
+    if not isinstance(claim.get("id"), str) or not claim["id"].strip():
+        raise ValueError("claim.id is required")
+    state = claim.get("state")
+    if state not in ("HOLDS", "REOPENED", "UNKNOWN", "RETIRED"):
+        raise ValueError("unsupported claim.state; cannot assume HOLDS")
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, list) or not evidence:
+        raise ValueError("native export requires nonempty evidence")
+    normalized = []
+    for item in evidence:
+        if not isinstance(item, dict):
+            raise TypeError("native export evidence entry must be an object")
+        if not isinstance(item.get("ref"), str) or not item["ref"].strip():
+            raise ValueError("evidence.ref is required")
+        digest = item.get("digest")
+        if not isinstance(digest, str) or not (_HEX16.fullmatch(digest) or digest == "<absent>"):
+            raise ValueError("evidence.digest must be a producer fingerprint or <absent>")
+        if item.get("kind") not in ("file", "value"):
+            raise ValueError("unsupported evidence.kind")
+        normalized.append({"ref": item["ref"], "digest": digest, "kind": item["kind"]})
+    return {
+        "receipt_type": "CLAIMPROOF_NATIVE_BASIS_INPUT",
+        "schema_version": payload["schema_version"],
+        "producer": producer,
+        "candidate": {**candidate, "identity_kind": kind},
+        "claim": claim,
+        "evidence": normalized,
+        "admission": "BOUND_INPUT",
+        "semantic_boundary": (
+            "Producer-remeasured claim state is not independent verification, "
+            "BASE-to-HEAD proof, or a merge recommendation."
+        ),
+    }
