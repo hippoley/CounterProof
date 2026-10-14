@@ -1,0 +1,10 @@
+{
+  "authorized_effects": {
+    "window.kitchen.1.position": {
+      "allowed_values": [
+        "closed"
+      ],
+      "max_occurrences": 1
+    }
+  }
+}
