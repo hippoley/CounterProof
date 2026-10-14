@@ -6,6 +6,8 @@ from pathlib import Path
 VECTORS = Path(__file__).with_name("v0_1_vectors.json")
 
 def evaluate(vector):
+    if not isinstance(vector, dict):
+        return "INCONCLUSIVE"
     observation = vector.get("observation")
     if not isinstance(observation, dict):
         return "INCONCLUSIVE"
@@ -20,6 +22,9 @@ def evaluate(vector):
     limit = observation.get("max_age_ms")
     if (not isinstance(age, (int, float)) or isinstance(age, bool)
             or not isinstance(limit, (int, float)) or isinstance(limit, bool)
+            or age != age or limit != limit
+            or age == float("inf") or limit == float("inf")
+            or age == float("-inf") or limit == float("-inf")
             or age < 0 or limit < 0 or age > limit):
         return "INCONCLUSIVE"
     intent = vector.get("intent") or {}
@@ -29,7 +34,7 @@ def evaluate(vector):
         return "INCONCLUSIVE"
     if not isinstance(intent.get("subject"), str) or not intent.get("subject"):
         return "INCONCLUSIVE"
-    if not isinstance(vector.get("action"), dict) or not vector["action"].get("execution_ref"):
+    if not isinstance(vector.get("action"), dict) or not isinstance(vector["action"].get("execution_ref"), str) or not vector["action"]["execution_ref"].strip():
         return "INCONCLUSIVE"
     if intent.get("predicate") != "position":
         return "INCONCLUSIVE"
@@ -55,6 +60,10 @@ def main():
         bad = copy.deepcopy(good)
         bad["observer"]["authority"] = authority
         assert evaluate(bad) == "INCONCLUSIVE", authority
+    for bad_age in (float("nan"), float("inf"), float("-inf")):
+        bad = copy.deepcopy(good)
+        bad["observation"]["age_ms"] = bad_age
+        assert evaluate(bad) == "INCONCLUSIVE", bad_age
     for bad_observation in ([], "closed", {"value": "closed"}):
         bad = copy.deepcopy(good)
         bad["observation"] = bad_observation
