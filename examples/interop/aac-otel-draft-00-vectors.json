@@ -1,0 +1,51 @@
+{
+  "draft": "draft-palanisamy-scitt-aac-otel-00",
+  "published": "2026-10-02",
+  "positive": {
+    "org.agentactioncapsule.otel": {
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "span_id": "00f067aa0ba902b7",
+      "trace_flags": "01",
+      "resource": {"service.name": "support-agent"},
+      "semconv": {
+        "source": "open-telemetry/semantic-conventions-genai@8c1b98a",
+        "gen_ai.provider.name": "local",
+        "gen_ai.operation.name": "execute_tool"
+      }
+    }
+  },
+  "must_fail": [
+    {
+      "name": "malformed-trace-id",
+      "org.agentactioncapsule.otel": {
+        "trace_id": "4BF92F3577b34da6a3ce929d0e0e473",
+        "span_id": "00f067aa0ba902b7"
+      }
+    },
+    {
+      "name": "clear-tracestate",
+      "org.agentactioncapsule.otel": {
+        "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "span_id": "00f067aa0ba902b7",
+        "tracestate": "congo=t61rcWkgMzE"
+      }
+    },
+    {
+      "name": "non-allowlisted-content",
+      "org.agentactioncapsule.otel": {
+        "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "span_id": "00f067aa0ba902b7",
+        "semconv": {
+          "gen_ai.input.messages": [
+            {"role": "user", "content": "…"}
+          ]
+        }
+      }
+    }
+  ],
+  "claim_boundary": [
+    "This fixture transcribes the draft's published tier-2 vectors for independent consumption.",
+    "Passing these vectors is not IETF endorsement and does not change Agent Action Capsule base verification.",
+    "A correlated span remains same-producer telemetry and is not independent corroboration."
+  ]
+}
