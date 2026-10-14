@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hippoley/CounterProof/experiments/behavior_witness/contract.schema.json",
+  "title": "Black-box Behavior Witness Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "operation",
+    "probe",
+    "reference_observation",
+    "comparator",
+    "evidence",
+    "scope"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "subject": {
+      "type": "object",
+      "required": ["name", "identity"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "identity": {"type": "string", "minLength": 1},
+        "kind": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "operation": {"type": "string", "minLength": 1},
+    "probe": {
+      "type": "object",
+      "required": ["id", "input"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "input": {},
+        "environment": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "reference_observation": {
+      "type": "object",
+      "required": ["output"],
+      "properties": {
+        "output": {},
+        "state_delta": {},
+        "exit_code": {"type": ["integer", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "comparator": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "enum": ["exact-json", "exact-text", "casefold-text"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["kind", "source"],
+      "properties": {
+        "kind": {
+          "enum": ["runtime-observation", "recorded-fixture", "external-observation"]
+        },
+        "source": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string"},
+        "captured_at": {"type": "string"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "scope": {
+      "type": "object",
+      "required": ["establishes", "does_not_establish"],
+      "properties": {
+        "establishes": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        },
+        "does_not_establish": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

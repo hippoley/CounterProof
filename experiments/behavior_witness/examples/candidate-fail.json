@@ -1,0 +1,7 @@
+{
+  "probe_id": "normalize-query-001",
+  "observation": {
+    "output": "Hello",
+    "exit_code": 0
+  }
+}
