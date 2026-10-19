@@ -201,12 +201,19 @@ def evaluate(
     runner_fingerprint = _sha_file(runner)
     manager_fingerprint = _sha_file(manager)
     cases = []
-    for case in suite["cases"]:
+    for case_index, case in enumerate(suite["cases"]):
+        # Counterbalance run order across adjacent cases. Always running
+        # baseline first systematically confounds warm-up/caching effects.
+        arm_order = (
+            ("baseline", "skill") if case_index % 2 == 0
+            else ("skill", "baseline")
+        )
         result = {
             "id": case["id"],
             "expected_sha256": _sha_bytes(case["expected_output"].strip().encode()),
+            "execution_order": list(arm_order),
         }
-        for arm in ("baseline", "skill"):
+        for arm in arm_order:
             payload = {
                 "schema_version": "counterproof.skill-runner/v0.1",
                 "case_id": case["id"], "prompt": case["prompt"], "arm": arm,
