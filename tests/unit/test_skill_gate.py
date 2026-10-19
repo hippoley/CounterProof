@@ -303,3 +303,43 @@ def test_cli_runs_explicit_eval_and_preflight(rig):
     assert next_result.exit_code == 0, next_result.output
     assert "PREFLIGHT_ONLY" in next_result.output
     assert not (rig["tmp"] / "targets").exists()
+
+
+def test_changed_manager_binary_blocks_promotion(rig):
+    receipt = _receipt(rig)
+    binary = Path(rig["manager"])
+    binary.write_text(binary.read_text() + "\n# Upgraded behind our back\n")
+    with pytest.raises(GateError, match="Manager binary changed"):
+        promote(
+            rig["manager"], "demo-skill", _write(rig, receipt), ("codex",),
+            key_file=rig["key"], suite_path=rig["suite"],
+        )
+
+
+def test_attestation_key_must_not_be_deployable_skill_file(rig):
+    key_in_skill = create_key(rig["skill"] / "signing-secret")
+    with pytest.raises(GateError, match="outside the managed Skill"):
+        evaluate(
+            rig["manager"], "demo-skill", rig["suite"], rig["runner"],
+            key_file=key_in_skill,
+        )
+
+
+def test_external_suite_must_not_live_in_skill_dir(rig):
+    internal = rig["skill"] / "leaked-holdout.json"
+    internal.write_bytes(rig["suite"].read_bytes())
+    with pytest.raises(GateError, match="outside managed Skill"):
+        evaluate(
+            rig["manager"], "demo-skill", internal, rig["runner"],
+            key_file=rig["key"],
+        )
+
+
+def test_wrong_signing_key_cannot_promote(rig):
+    receipt = _receipt(rig)
+    other_key = create_key(rig["tmp"] / "other-attestation")
+    with pytest.raises(GateError, match="attestation failed"):
+        promote(
+            rig["manager"], "demo-skill", _write(rig, receipt), ("codex",),
+            key_file=other_key, suite_path=rig["suite"],
+        )
