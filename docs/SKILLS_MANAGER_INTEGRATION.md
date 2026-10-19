@@ -144,7 +144,9 @@ counterproof skill evaluate my-skill \
 The gate requires at least four unique externally located cases, one
 measured gain, zero per-case regressions, a stable manager/runner binary,
 unchanged external suite and the same managed Skill source tree throughout
-the evaluation. The result is only a **scoped paired observation**; path
+the evaluation. A/B arm order alternates baseline-first and skill-first
+across cases, avoiding one obvious systematic warm-up-order confound.
+This is not a statistically powered proof of generalization. The result is only a **scoped paired observation**; path
 separation does not independently establish data author independence,
 oracle validity or generalization.
 
@@ -172,9 +174,12 @@ unchanged suite/runner/manager/Skill fingerprints, exact user-named
 agents and upstream CLI dry-run. Only with `--apply` does it request
 deployment. It then checks upstream status and hashes each target Skill
 tree; a missing/mismatched target is a **partial deployment failure**,
-not a successful result. This version does **not** implement atomic
-cross-agent rollback. If a partial deployment occurs, inspect and
-recover it manually; do not claim all-or-nothing transactional semantics.
+not a successful result. New-only deployment protects already verified
+installations. On a partial failure, CounterProof attempts to compensate
+**only newly added target pairs** using Skills Manager's conflict-preserving
+`undeploy` and reports `rollback_new_pairs=CONFIRMED` or `INCOMPLETE`.
+It never claims an atomic multi-agent transaction. A preserved, changed
+target file makes compensation incomplete and requires manual inspection.
 
 The receipt is an **evidence gate for file deployment**, not a portable
 certification of model behavior on every target Agent.
@@ -182,7 +187,7 @@ certification of model behavior on every target Agent.
 ### Offline regression checks
 
 ```bash
-python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py tests/unit/test_local_ollama_runner.py
+python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py tests/unit/test_local_ollama_runner.py tests/unit/test_skill_deploy_tx.py
 ```
 
 The suite contains simulated-manager tests for forged self-hashes, a
