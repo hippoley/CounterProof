@@ -132,7 +132,7 @@ def keygen(key_file: Path) -> None:
     from skill_factory.skill_gate import GateError, create_key
 
     try:
-        new_path = create_key(key_file)
+        new_path = create_key(key_file.expanduser())
     except (GateError, OSError) as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"Created local attestation key: {new_path}")
@@ -164,7 +164,7 @@ def evaluate_skill(
     try:
         receipt = evaluate(
             manager_binary, reference, suite_path, runner_binary,
-            key_file=key_file, min_gain=min_gain,
+            key_file=key_file.expanduser(), min_gain=min_gain,
         )
         with out_path.open("x", encoding="utf-8") as stream:
             json.dump(receipt, stream, indent=2, sort_keys=True)
@@ -206,7 +206,7 @@ def promote_skill(
     try:
         result = promote(
             manager_binary, reference, receipt_path, agents,
-            key_file=key_file, suite_path=suite_path,
+            key_file=key_file.expanduser(), suite_path=suite_path,
             apply=apply, confirm_sha256=confirm_sha256,
         )
     except (GateError, OSError, ValueError, TypeError, KeyError) as exc:
