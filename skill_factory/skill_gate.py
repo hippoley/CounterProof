@@ -378,34 +378,31 @@ def promote(
         raise GateError("evaluation runner changed after preflight")
     if _sha_file(binary) != receipt["manager_sha256"]:
         raise GateError("Skills Manager binary changed after preflight")
-    deployment = _manager(binary, "deploy", reference, *flags)
-    if (
-        deployment.get("ok") is not True
-        or set(deployment.get("agents", [])) != set(agents)
-    ):
-        raise GateError(
-            "upstream deploy did not confirm all targets; inspect state manually"
+    # Only mutate previously absent target pairs. A partial upstream write
+    # triggers best-effort compensation of those new pairs, never an automatic
+    # removal of existing verified deployments.
+    from skill_factory.skill_deploy_tx import (
+        DeploymentTransactionError, deploy_new_only,
+    )
+
+    def source_unchanged() -> bool:
+        return (
+            _source(binary, reference) == source
+            and _sha_file(suite_path.resolve()) == receipt["suite_sha256"]
+            and _sha_file(runner_path) == receipt["runner_sha256"]
+            and _sha_file(binary) == receipt["manager_sha256"]
         )
-    status = _manager(binary, "status", reference)
-    current_agents = {row["key"]: row for row in status.get("agents", [])}
-    for agent in agents:
-        item = current_agents.get(agent)
-        if (
-            not isinstance(item, dict) or item.get("deployed") is not True
-            or not item.get("target_path")
-        ):
-            raise GateError(f"PARTIAL_DEPLOYMENT: missing target {agent}")
-        if (
-            _snapshot(Path(item["target_path"]), allow_root_link=True)
-            != source["tree_sha256"]
-        ):
-            raise GateError(
-                f"PARTIAL_DEPLOYMENT: target content differs for {agent}"
-            )
-    if _source(binary, reference) != source:
-        raise GateError("PARTIAL_DEPLOYMENT: source changed during deployment")
+
+    try:
+        transaction = deploy_new_only(
+            call=_manager, binary=binary, reference=reference, agents=agents,
+            digest=source["tree_sha256"], snapshot=_snapshot,
+            source_unchanged=source_unchanged,
+        )
+    except DeploymentTransactionError as exc:
+        raise GateError(str(exc)) from exc
     return {
-        "status": "VERIFIED_TARGET_BYTES", "agents": list(agents),
+        **transaction,
         "skill_tree_sha256": source["tree_sha256"], "deployed": True,
         "scope": "FILES_AND_MANAGER_STATUS_ONLY;AGENT_BEHAVIOR_UNVERIFIED",
     }
