@@ -8,6 +8,7 @@ reconstruction code and never equates trace presence with enforcement or effects
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import defaultdict
@@ -19,6 +20,8 @@ OUTCOME = "gen_ai.tool.call.decision.outcome"
 CALL = "gen_ai.tool.call.id"
 EXECUTION = "gen_ai.agent.execution.id"
 TOOL = "gen_ai.tool.name"
+APPROVAL = "foreman.approval.id"
+SOURCE_BLOB_SHA = "2541dc0f58d34bc113ad2064da9510e444b24504"
 
 
 def _attrs(xs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -40,7 +43,11 @@ def project_otlp(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Lossy projection: only tool decisions and execute_tool spans, plus identity."""
     rows: list[dict[str, Any]] = []
     for document in documents:
+        if not isinstance(document, dict):
+            raise ValueError("OTLP envelope must be a JSON object")
         payload = document.get("body", document)
+        if not isinstance(payload, dict) or not isinstance(payload.get("resourceSpans"), list):
+            raise ValueError("OTLP envelope missing resourceSpans array")
         for rs in payload.get("resourceSpans", []):
             service = _attrs(rs.get("resource", {}).get("attributes", [])).get("service.name")
             for ss in rs.get("scopeSpans", []):
@@ -50,14 +57,20 @@ def project_otlp(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     for event in span.get("events", []):
                         if event.get("name") != DECISION:
                             continue
+                        raw_attrs = _attrs(event.get("attributes", []))
+                        # This is an explicitly lossy, privacy-limited projection.
+                        # Preserve only fields needed for the documented relationship.
+                        relevant = (EXECUTION, CALL, TOOL, OUTCOME, APPROVAL)
                         decisions.append({"t": event.get("timeUnixNano"),
-                                          "name": DECISION, "attrs": _attrs(event.get("attributes", []))})
+                                          "name": DECISION,
+                                          "attrs": {k: raw_attrs[k] for k in relevant if k in raw_attrs}})
                     if decisions or a.get("gen_ai.operation.name") == "execute_tool":
                         rows.append({"service": service, "trace": span.get("traceId"),
                                      "span": span.get("spanId"), "name": span.get("name"),
                                      "operation": a.get("gen_ai.operation.name"),
                                      "execution": a.get(EXECUTION), "call": a.get(CALL),
                                      "simulated": a.get("foreman.run.simulated"),
+                                     "start_ns": span.get("startTimeUnixNano"),
                                      "events": decisions})
     return rows
 
@@ -70,7 +83,7 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
         doc = json.loads(contents)
         if isinstance(doc, dict) and "projection" in doc:
             rows = doc["projection"]
-        elif isinstance(doc, dict) and "resourceSpans" in doc:
+        elif isinstance(doc, dict) and ("resourceSpans" in doc or "body" in doc):
             rows = project_otlp([doc])
         else:
             raise ValueError("input must contain projection or resourceSpans")
@@ -131,13 +144,17 @@ def inspect(rows: list[dict[str, Any]]) -> dict[str, Any]:
             if outcome not in {"require_approval", "allow", "deny"}:
                 invalid.append(f"unsupported decision outcome: {outcome!r}")
                 continue
-            event_sig = (service, trace, span, str(event.get("t")), str(outcome))
+            # An equal timestamp/outcome does not make two distinct proposed
+            # tool calls identical. Include all retained attributes in the key.
+            event_sig = (service, trace, span, str(event.get("t")),
+                         json.dumps(a, sort_keys=True, separators=(",", ":")))
             if event_sig in seen_events:
                 continue
             seen_events.add(event_sig)
             decisions[event_identity].append({"outcome": outcome, "service": service,
                                               "trace": trace, "span": span,
-                                              "tool": a.get(TOOL), "t": event.get("t")})
+                                              "tool": a.get(TOOL), "approval_id": a.get(APPROVAL),
+                                              "t": event.get("t")})
 
     answers = []
     for execution, call in sorted(decisions.keys() | executed.keys()):
@@ -153,6 +170,20 @@ def inspect(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 name_values.add(s["name"].removeprefix("execute_tool "))
         if len(name_values) > 1:
             bad.append("tool name disagreement")
+        # Foreman-specific mapping: the approval ID links worker pause and web
+        # response. A shared tool-call ID with two different approval IDs is
+        # not proof that the proposed action was authorized.
+        approval_ids = {e["approval_id"] for e in events if e["approval_id"]}
+        if len(approval_ids) > 1:
+            bad.append("approval id disagreement")
+        if any(not isinstance(e["approval_id"], str) or not e["approval_id"]
+               for e in events):
+            bad.append("approval id missing")
+        if any(not isinstance(e["tool"], str) or not e["tool"] for e in events):
+            bad.append("decision tool name missing")
+        if any(s.get("name") != f"execute_tool {next(iter(name_values), None)}"
+               for s in spans if name_values):
+            bad.append("execute span tool name missing or inconsistent")
         if "allow" in states and "deny" in states:
             bad.append("contradictory terminal decisions")
         if "deny" in states and spans:
@@ -165,11 +196,36 @@ def inspect(rows: list[dict[str, Any]]) -> dict[str, Any]:
             bad.append("allow was not exported by Foreman web process")
         if any(e["outcome"] == "deny" and e["service"] != "foreman-web" for e in events):
             bad.append("deny was not exported by Foreman web process")
+        # Cross-process timestamps are a *diagnostic*, not trusted causality:
+        # hosts can have skewed clocks and there is no authenticated global clock.
+        # Inversion therefore downgrades correlation to UNKNOWN instead of
+        # presenting causal order as established or declaring a protocol breach.
+        time_uncertain = False
+        def nanos(value):
+            try:
+                if value is None or not str(value).isdigit():
+                    return None
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+        pending = [nanos(e["t"]) for e in events if e["outcome"] == "require_approval"]
+        terminals = [nanos(e["t"]) for e in events if e["outcome"] in {"allow", "deny"}]
+        starts = [nanos(s.get("start_ns")) for s in spans]
+        comparable = bool(pending and terminals and
+                          None not in (pending[0], terminals[0]))
+        if comparable and terminals[0] < pending[0]:
+            time_uncertain = True
+        if "allow" in states and starts:
+            comparable = comparable and starts[0] is not None
+            if comparable and starts[0] < terminals[0]:
+                time_uncertain = True
+        clock_status = ("OBSERVED_INVERSION" if time_uncertain else
+                        "OBSERVED_CONSISTENT" if comparable else "NOT_COMPARABLE")
         if bad:
             verdict = "CONTRADICTED"
-        elif states.count("require_approval") == 1 and states.count("allow") == 1 and len(spans) == 1:
+        elif not time_uncertain and states.count("require_approval") == 1 and states.count("allow") == 1 and len(spans) == 1:
             verdict = "CORRELATED_ALLOW_EXECUTION"
-        elif states.count("require_approval") == 1 and states.count("deny") == 1 and not spans:
+        elif not time_uncertain and states.count("require_approval") == 1 and states.count("deny") == 1 and not spans:
             verdict = "CORRELATED_DENY_NO_OBSERVED_EXECUTION"
         else:
             verdict = "UNCONFIRMED"
@@ -179,6 +235,8 @@ def inspect(rows: list[dict[str, Any]]) -> dict[str, Any]:
                         "observed_execution_spans": len(spans), "observed_services": sorted({e["service"] for e in events} | {s["service"] for s in spans}),
                         "observed_trace_ids": sorted({e["trace"] for e in events} | {s["trace"] for s in spans}),
                         "verdict": verdict, "reasons": bad,
+                        "clock_order_uncertain": time_uncertain,
+                        "clock_order_status": clock_status,
                         "enforcement_proven": False, "physical_effect": "UNKNOWN"})
     return {"schema": "counterproof.aaif-approval-observer.v0.1",
             "evidence_boundary": "Correlates exported simulated Foreman spans and decisions only; cannot prove gate enforcement, real tool side effects, provider behavior or independent producers.",
@@ -190,8 +248,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Foreman raw OTLP/HTTP .ndjson or checked projection .json")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--verify-foreman-blob", action="store_true",
+                        help="require the exact pinned upstream raw NDJSON Git blob SHA")
     opts = parser.parse_args(argv)
     try:
+        if opts.verify_foreman_blob:
+            if opts.input.suffix != ".ndjson":
+                raise ValueError("source SHA check requires raw NDJSON, not a projection")
+            content = opts.input.read_bytes()
+            digest = hashlib.sha1(b"blob " + str(len(content)).encode("ascii") + b"\0" + content).hexdigest()
+            if digest != SOURCE_BLOB_SHA:
+                raise ValueError(f"Foreman source blob changed: {digest}")
         result = inspect(load_rows(opts.input))
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         print(f"Input error: {exc}", file=sys.stderr)
@@ -201,7 +268,8 @@ def main(argv: list[str] | None = None) -> int:
         opts.output.write_text(encoded, encoding="utf-8")
     else:
         print(encoded, end="")
-    return 1 if result["invalid_inputs"] or any(r["verdict"] == "CONTRADICTED" for r in result["results"]) else 0
+    return 1 if result["invalid_inputs"] or any(r["verdict"] in {"CONTRADICTED", "UNCONFIRMED"}
+                                          and r["decisions"] for r in result["results"]) else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
