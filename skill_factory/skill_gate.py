@@ -6,8 +6,11 @@ No skill scripts are run by this module.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
+import secrets
+import stat
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,6 +22,42 @@ SUITE_SCHEMA = "counterproof.skill-suite/v0.1"
 
 class GateError(ValueError):
     """Fail-closed Skill gate error."""
+
+
+def create_key(path: Path) -> Path:
+    """Make a new local attestation key, refusing overwrite and weak permissions."""
+    path = path.absolute()
+    if path.parent.is_symlink():
+        raise GateError("attestation key directory must not be a symlink")
+    key = secrets.token_bytes(32)
+    try:
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except OSError as exc:
+        raise GateError(f"cannot create key: {exc}") from exc
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(key)
+    except OSError:
+        path.unlink(missing_ok=True)
+        raise
+    return path
+
+
+def _read_key(path: Path) -> bytes:
+    """Require a separate 256-bit local trust anchor, never carried in receipts."""
+    if path.is_symlink() or not path.is_file():
+        raise GateError("attestation key must be a regular file, not a symlink")
+    if os.name != "nt" and stat.S_IMODE(path.stat().st_mode) & 0o077:
+        raise GateError("attestation key must not be accessible by group/others")
+    key = path.read_bytes()
+    if len(key) != 32:
+        raise GateError("attestation key must contain exactly 32 bytes")
+    return key
+
+
+def _mac(payload: dict, key: bytes) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hmac.new(key, data, hashlib.sha256).hexdigest()
 
 
 def _sha_bytes(value: bytes) -> str:
@@ -136,15 +175,19 @@ def evaluate(
     suite_path: Path,
     runner_binary: str,
     *,
+    key_file: Path,
     min_gain: int = 1,
 ) -> dict:
     """Execute paired external runner evaluations, binding measured results to content."""
     if min_gain < 1:
         raise GateError("min_gain must be positive")
+    key = _read_key(key_file)
     manager = _binary(manager_binary)
     runner = _binary(runner_binary)
     source = _source(manager, reference)
     suite = _suite(suite_path, Path(source["path"]))
+    suite_fingerprint = _sha_file(suite_path.resolve())
+    runner_fingerprint = _sha_file(runner)
     cases = []
     for case in suite["cases"]:
         result = {
@@ -186,15 +229,21 @@ def evaluate(
                 "output_sha256": _sha_bytes(output.encode()),
             }
         cases.append(result)
+        if _source(manager, reference) != source:
+            raise GateError("managed Skill mutated during paired evaluation")
     if _source(manager, reference) != source:
         raise GateError("managed Skill mutated during paired evaluation")
+    if _sha_file(runner) != _sha_file(_binary(runner_binary)):
+        raise GateError("runner executable was replaced during evaluation")
+    if _sha_file(suite_path.resolve()) != suite_fingerprint:
+        raise GateError("external suite changed during evaluation")
     gain = sum(row["skill"]["pass"] and not row["baseline"]["pass"] for row in cases)
     regressions = sum(row["baseline"]["pass"] and not row["skill"]["pass"] for row in cases)
     receipt = {
         "schema_version": SCHEMA, "source": source,
-        "suite_sha256": _sha_file(suite_path.resolve()),
+        "suite_sha256": suite_fingerprint,
         "suite_id": suite.get("suite_id", "unnamed"),
-        "runner_sha256": _sha_file(runner),
+        "runner_sha256": runner_fingerprint,
         "runner_path": str(runner),
         "case_count": len(cases), "cases": cases,
         "gain_cases": gain, "regression_cases": regressions,
@@ -207,18 +256,28 @@ def evaluate(
         "production_effect": "UNVERIFIED",
     }
     receipt["receipt_sha256"] = _digest(receipt)
+    receipt["attestation_hmac_sha256"] = _mac(receipt, key)
     return receipt
 
 
-def _checked_receipt(path: Path) -> dict:
+def _checked_receipt(path: Path, key_file: Path) -> dict:
+    key = _read_key(key_file)
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("schema_version") != SCHEMA:
         raise GateError("invalid gate receipt schema")
-    claimed_digest = data.get("receipt_sha256")
+    claimed_mac = data.get("attestation_hmac_sha256")
+    unsigned = {
+        k: v for k, v in data.items() if k != "attestation_hmac_sha256"
+    }
+    if not isinstance(claimed_mac, str) or not hmac.compare_digest(
+        claimed_mac, _mac(unsigned, key)
+    ):
+        raise GateError("gate receipt attestation failed")
+    claimed_digest = unsigned.get("receipt_sha256")
     if (
         not isinstance(claimed_digest, str)
         or claimed_digest != _digest({
-            k: v for k, v in data.items() if k != "receipt_sha256"
+            k: v for k, v in unsigned.items() if k != "receipt_sha256"
         })
     ):
         raise GateError("gate receipt digest mismatch")
@@ -254,11 +313,17 @@ def _checked_receipt(path: Path) -> dict:
 
 def promote(
     manager_binary: str, reference: str, receipt_path: Path,
-    agents: tuple[str, ...], *, apply: bool = False,
+    agents: tuple[str, ...], *, key_file: Path,
+    suite_path: Path, apply: bool = False,
     confirm_sha256: str | None = None,
 ) -> dict:
     """Preflight by default; explicit apply must match evaluated content bytes."""
-    receipt = _checked_receipt(receipt_path)
+    receipt = _checked_receipt(receipt_path, key_file)
+    if _sha_file(suite_path.resolve(strict=True)) != receipt.get("suite_sha256"):
+        raise GateError("external evaluation suite changed since evaluation")
+    runner_path = Path(receipt.get("runner_path") or "")
+    if not runner_path.is_file() or _sha_file(runner_path) != receipt.get("runner_sha256"):
+        raise GateError("evaluation runner changed since evaluation")
     if (
         not agents or len(set(agents)) != len(agents)
         or not all(agent and agent.strip() == agent for agent in agents)
@@ -288,6 +353,10 @@ def promote(
         }
     if _source(binary, reference) != source:
         raise GateError("Skill source changed after preflight")
+    if _sha_file(suite_path.resolve()) != receipt["suite_sha256"]:
+        raise GateError("external suite changed after preflight")
+    if _sha_file(runner_path) != receipt["runner_sha256"]:
+        raise GateError("evaluation runner changed after preflight")
     deployment = _manager(binary, "deploy", reference, *flags)
     if (
         deployment.get("ok") is not True
