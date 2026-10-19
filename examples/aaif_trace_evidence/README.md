@@ -2,7 +2,7 @@
 
 **Status:** local evidence adapter; not an accepted AAIF contract, official conformance suite, OTel semantic convention or physical-effect verifier.
 
-This CounterProof experimental module reads [Foreman's public cross-process OTLP/HTTP capture](https://github.com/karank2512/Foreman/blob/2541dc0f58d34bc113ad2064da9510e444b24504/docs/otel-evidence/web-worker-receipt.ndjson). It never imports Foreman/AAIF interpretation code. Rather than building a new trace SDK or competing with [AAIF #42 test-kit PR #57](https://github.com/aaif/wg-observability-and-traceability/pull/57), it audits the missing *approval / execution* part of [AAIF #44](https://github.com/aaif/wg-observability-and-traceability/issues/44), and produces narrow, falsifiable answers.
+This CounterProof experimental module reads [Foreman's public cross-process OTLP/HTTP capture](https://github.com/karank2512/Foreman/blob/18d05390340ad17777708f20383b9d62fa1349a2/docs/otel-evidence/web-worker-receipt.ndjson). It never imports Foreman/AAIF interpretation code. Rather than building a new trace SDK or competing with [AAIF #42 test-kit PR #57](https://github.com/aaif/wg-observability-and-traceability/pull/57), it audits the missing *approval / execution* part of [AAIF #44](https://github.com/aaif/wg-observability-and-traceability/issues/44), and produces narrow, falsifiable answers.
 
 ## Offline reproducibility (Python >= 3.10, stdlib only)
 
@@ -36,7 +36,9 @@ claim we have run the exact raw Python test in an offline environment without th
 
 ## Fixed evidence and expected results
 
-Pinned Foreman Git blob: `2541dc0f58d34bc113ad2064da9510e444b24504`
+Pinned Foreman **commit**: `18d05390340ad17777708f20383b9d62fa1349a2`
+
+Pinned Foreman **file/blob**: `2541dc0f58d34bc113ad2064da9510e444b24504`
 
 Original capture: **6 receiver envelopes, 9 spans, 4 tool-decision events**. The checked-in loss-reduced projection includes 7 relevant span records (including two unrelated `read_dataset` execution spans). These counts were cross-checked against the published file with an independent source-side read.
 
