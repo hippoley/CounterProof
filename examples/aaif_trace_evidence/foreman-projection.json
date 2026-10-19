@@ -1,15 +1,144 @@
 {
   "source": "https://github.com/karank2512/Foreman/blob/2541dc0f58d34bc113ad2064da9510e444b24504/docs/otel-evidence/web-worker-receipt.ndjson",
   "git_blob_sha": "2541dc0f58d34bc113ad2064da9510e444b24504",
-  "projection_policy": "Lossy: only spans with gen_ai.tool.call.decision events or gen_ai.operation.name=execute_tool, ignores checkpoints/agent spans without a decision; attributes reduced for this question.",
-  "source_counts": {"otlp_http_envelopes": 6, "spans": 9, "decision_events": 4},
+  "projection_policy": "Lossy projection of source spans with tool decisions or execute_tool, preserves stable identities, observed timestamps, tool/approval id; does NOT establish trustworthy cross-host clock synchronization.",
+  "source_counts": {
+    "otlp_http_envelopes": 6,
+    "spans": 9,
+    "decision_events": 4
+  },
   "projection": [
-    {"service":"foreman-worker","trace":"1a7ea2a1f4d4640f3c6ddfbc24498e38","span":"dfc1426e2dabbd18","name":"execute_tool read_dataset","operation":"execute_tool","execution":"cmv9u71ja0003rwb93om5453t","call":"cmv9u71zq000brwb8xts065rw","simulated":true,"events":[]},
-    {"service":"foreman-worker","trace":"1a7ea2a1f4d4640f3c6ddfbc24498e38","span":"864cd6842db81373","name":"invoke_agent","operation":"invoke_agent","execution":"cmv9u71ja0003rwb93om5453t","call":null,"simulated":true,"events":[{"t":"1792086777434000000","name":"gen_ai.tool.call.decision","attrs":{"gen_ai.agent.execution.id":"cmv9u71ja0003rwb93om5453t","gen_ai.tool.name":"send_notification","gen_ai.tool.call.id":"cmv9u739a001hrwb8gpcsdcpl","gen_ai.tool.call.decision.outcome":"require_approval"}}]},
-    {"service":"foreman-web","trace":"b5385e199f0a8e4c1f92c08cff3224fe","span":"3bda04c1fc9c0799","name":"tool_call_decision","operation":null,"execution":"cmv9u71ja0003rwb93om5453t","call":"cmv9u739a001hrwb8gpcsdcpl","simulated":null,"events":[{"t":"1792086999459000000","name":"gen_ai.tool.call.decision","attrs":{"gen_ai.agent.execution.id":"cmv9u71ja0003rwb93om5453t","gen_ai.tool.name":"send_notification","gen_ai.tool.call.id":"cmv9u739a001hrwb8gpcsdcpl","gen_ai.tool.call.decision.outcome":"allow"}}]},
-    {"service":"foreman-worker","trace":"2d85c7a455f4a30429c6de055f2c1129","span":"0ddaedd0e0d14263","name":"execute_tool send_notification","operation":"execute_tool","execution":"cmv9u71ja0003rwb93om5453t","call":"cmv9u739a001hrwb8gpcsdcpl","simulated":true,"events":[]},
-    {"service":"foreman-worker","trace":"35cb11301f83f58ac81798c560b40770","span":"5918df7c76fdcf02","name":"execute_tool read_dataset","operation":"execute_tool","execution":"cmv9udyfy0009rwb9ztdfknlt","call":"cmv9udz8l002nrwb8ukqq95wx","simulated":true,"events":[]},
-    {"service":"foreman-worker","trace":"35cb11301f83f58ac81798c560b40770","span":"b783e5b755931afe","name":"invoke_agent","operation":"invoke_agent","execution":"cmv9udyfy0009rwb9ztdfknlt","call":null,"simulated":true,"events":[{"t":"1792087100426000000","name":"gen_ai.tool.call.decision","attrs":{"gen_ai.agent.execution.id":"cmv9udyfy0009rwb9ztdfknlt","gen_ai.tool.name":"send_notification","gen_ai.tool.call.id":"cmv9ue0hc003trwb8chth24zm","gen_ai.tool.call.decision.outcome":"require_approval"}}]},
-    {"service":"foreman-web","trace":"facab0716ba5a9673192778d74ae0a61","span":"d461cfe502a9c03a","name":"tool_call_decision","operation":null,"execution":"cmv9udyfy0009rwb9ztdfknlt","call":"cmv9ue0hc003trwb8chth24zm","simulated":null,"events":[{"t":"1792087269118000000","name":"gen_ai.tool.call.decision","attrs":{"gen_ai.agent.execution.id":"cmv9udyfy0009rwb9ztdfknlt","gen_ai.tool.name":"send_notification","gen_ai.tool.call.id":"cmv9ue0hc003trwb8chth24zm","gen_ai.tool.call.decision.outcome":"deny"}}]}
+    {
+      "service": "foreman-worker",
+      "trace": "1a7ea2a1f4d4640f3c6ddfbc24498e38",
+      "span": "dfc1426e2dabbd18",
+      "name": "execute_tool read_dataset",
+      "operation": "execute_tool",
+      "execution": "cmv9u71ja0003rwb93om5453t",
+      "call": "cmv9u71zq000brwb8xts065rw",
+      "simulated": true,
+      "events": [],
+      "start_ns": "1792086775773000000"
+    },
+    {
+      "service": "foreman-worker",
+      "trace": "1a7ea2a1f4d4640f3c6ddfbc24498e38",
+      "span": "864cd6842db81373",
+      "name": "invoke_agent",
+      "operation": "invoke_agent",
+      "execution": "cmv9u71ja0003rwb93om5453t",
+      "call": null,
+      "simulated": true,
+      "events": [
+        {
+          "t": "1792086777434000000",
+          "name": "gen_ai.tool.call.decision",
+          "attrs": {
+            "gen_ai.agent.execution.id": "cmv9u71ja0003rwb93om5453t",
+            "gen_ai.tool.name": "send_notification",
+            "gen_ai.tool.call.id": "cmv9u739a001hrwb8gpcsdcpl",
+            "gen_ai.tool.call.decision.outcome": "require_approval",
+            "foreman.approval.id": "cmv9u739t001jrwb8a9pyajq3"
+          }
+        }
+      ],
+      "start_ns": "1792086775397000000"
+    },
+    {
+      "service": "foreman-web",
+      "trace": "b5385e199f0a8e4c1f92c08cff3224fe",
+      "span": "3bda04c1fc9c0799",
+      "name": "tool_call_decision",
+      "operation": null,
+      "execution": "cmv9u71ja0003rwb93om5453t",
+      "call": "cmv9u739a001hrwb8gpcsdcpl",
+      "simulated": null,
+      "events": [
+        {
+          "t": "1792086999459000000",
+          "name": "gen_ai.tool.call.decision",
+          "attrs": {
+            "gen_ai.agent.execution.id": "cmv9u71ja0003rwb93om5453t",
+            "gen_ai.tool.name": "send_notification",
+            "gen_ai.tool.call.id": "cmv9u739a001hrwb8gpcsdcpl",
+            "gen_ai.tool.call.decision.outcome": "allow",
+            "foreman.approval.id": "cmv9u739t001jrwb8a9pyajq3"
+          }
+        }
+      ],
+      "start_ns": "1792086999459000000"
+    },
+    {
+      "service": "foreman-worker",
+      "trace": "2d85c7a455f4a30429c6de055f2c1129",
+      "span": "0ddaedd0e0d14263",
+      "name": "execute_tool send_notification",
+      "operation": "execute_tool",
+      "execution": "cmv9u71ja0003rwb93om5453t",
+      "call": "cmv9u739a001hrwb8gpcsdcpl",
+      "simulated": true,
+      "events": [],
+      "start_ns": "1792086999765000000"
+    },
+    {
+      "service": "foreman-worker",
+      "trace": "35cb11301f83f58ac81798c560b40770",
+      "span": "5918df7c76fdcf02",
+      "name": "execute_tool read_dataset",
+      "operation": "execute_tool",
+      "execution": "cmv9udyfy0009rwb9ztdfknlt",
+      "call": "cmv9udz8l002nrwb8ukqq95wx",
+      "simulated": true,
+      "events": [],
+      "start_ns": "1792087098793000000"
+    },
+    {
+      "service": "foreman-worker",
+      "trace": "35cb11301f83f58ac81798c560b40770",
+      "span": "b783e5b755931afe",
+      "name": "invoke_agent",
+      "operation": "invoke_agent",
+      "execution": "cmv9udyfy0009rwb9ztdfknlt",
+      "call": null,
+      "simulated": true,
+      "events": [
+        {
+          "t": "1792087100426000000",
+          "name": "gen_ai.tool.call.decision",
+          "attrs": {
+            "gen_ai.agent.execution.id": "cmv9udyfy0009rwb9ztdfknlt",
+            "gen_ai.tool.name": "send_notification",
+            "gen_ai.tool.call.id": "cmv9ue0hc003trwb8chth24zm",
+            "gen_ai.tool.call.decision.outcome": "require_approval",
+            "foreman.approval.id": "cmv9ue0hu003vrwb87no8qkx1"
+          }
+        }
+      ],
+      "start_ns": "1792087098459000000"
+    },
+    {
+      "service": "foreman-web",
+      "trace": "facab0716ba5a9673192778d74ae0a61",
+      "span": "d461cfe502a9c03a",
+      "name": "tool_call_decision",
+      "operation": null,
+      "execution": "cmv9udyfy0009rwb9ztdfknlt",
+      "call": "cmv9ue0hc003trwb8chth24zm",
+      "simulated": null,
+      "events": [
+        {
+          "t": "1792087269118000000",
+          "name": "gen_ai.tool.call.decision",
+          "attrs": {
+            "gen_ai.agent.execution.id": "cmv9udyfy0009rwb9ztdfknlt",
+            "gen_ai.tool.name": "send_notification",
+            "gen_ai.tool.call.id": "cmv9ue0hc003trwb8chth24zm",
+            "gen_ai.tool.call.decision.outcome": "deny",
+            "foreman.approval.id": "cmv9ue0hu003vrwb87no8qkx1"
+          }
+        }
+      ],
+      "start_ns": "1792087269118000000"
+    }
   ]
 }
