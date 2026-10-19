@@ -92,3 +92,12 @@ def test_manager_preserves_arguments_without_shell(tmp_path):
     assert json.loads(output.read_text()) == [
         "skills", "status", "a;echo UNWANTED"
     ]
+
+def test_counterproof_cli_registers_skill_mode():
+    from skill_factory.evolution.cli import cli
+
+    result = CliRunner().invoke(cli, ["skill", "--help"])
+    assert result.exit_code == 0, result.output
+    assert "inspect" in result.output
+    assert "manager" in result.output
+    assert "evolve" in result.output
