@@ -361,3 +361,31 @@ def test_manager_claims_deployed_but_target_bytes_differ(rig, monkeypatch):
             suite_path=rig["suite"], apply=True,
             confirm_sha256=receipt["source"]["tree_sha256"],
         )
+
+
+def test_skill_mutation_during_model_run_fails_closed(rig):
+    runner = Path(rig["runner"])
+    code = runner.read_text()
+    anchor = 'print(json.dumps({"output": output}))'
+    assert anchor in code
+    runner.write_text(code.replace(
+        anchor,
+        'if payload["arm"] == "skill":\n'
+        '    from pathlib import Path\n'
+        '    doc = Path(payload["skill_path"]) / "SKILL.md"\n'
+        '    doc.write_text(doc.read_text() + "\\nmodel mutated skill")\n'
+        + anchor,
+    ), encoding="utf-8")
+    with pytest.raises(GateError, match="mutated during paired evaluation"):
+        _receipt(rig)
+
+
+def test_invalid_runner_output_is_not_a_passing_eval(rig):
+    runner = Path(rig["runner"])
+    code = runner.read_text()
+    runner.write_text(code.replace(
+        'print(json.dumps({"output": output}))',
+        'print(json.dumps({"unexpected": True}))',
+    ), encoding="utf-8")
+    with pytest.raises(GateError, match="must contain a string output"):
+        _receipt(rig)
