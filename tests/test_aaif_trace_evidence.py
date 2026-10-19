@@ -5,6 +5,7 @@ import copy
 import contextlib
 import io
 import importlib.util
+import hashlib
 import json
 import random
 import sys
@@ -15,6 +16,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parents[1]
 SCRIPT = HERE / "examples" / "aaif_trace_evidence" / "reader.py"
 FIXTURE = SCRIPT.with_name("foreman-projection.json")
+RAW = SCRIPT.with_name("foreman-web-worker-raw.ndjson")
 spec = importlib.util.spec_from_file_location("aaif_evidence_reader", SCRIPT)
 mod = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = mod
@@ -168,6 +170,128 @@ class TraceEvidenceTests(unittest.TestCase):
         projected = mod.project_otlp([{"body":doc}])
         self.assertEqual(projected[0]["events"][0]["attrs"][mod.OUTCOME], "allow")
         self.assertEqual(projected[0]["call"], p["call"])
+
+
+    def test_approval_identity_mismatch_cannot_claim_correlation(self):
+        source = rows()
+        source[2]["events"][0]["attrs"][mod.APPROVAL] = "different-approval"
+        answer = mod.inspect(source)
+        contradicted = result_by_verdict(answer, "CONTRADICTED")
+        self.assertEqual(len(contradicted), 1)
+        self.assertIn("approval id disagreement", contradicted[0]["reasons"])
+
+    def test_absent_approval_id_is_not_treated_as_verified_correlation(self):
+        source = rows()
+        del source[2]["events"][0]["attrs"][mod.APPROVAL]
+        answer = mod.inspect(source)
+        self.assertFalse(result_by_verdict(answer, "CORRELATED_ALLOW_EXECUTION"))
+        self.assertIn("approval id missing", result_by_verdict(answer, "CONTRADICTED")[0]["reasons"])
+
+    def test_missing_decision_tool_is_not_silently_accepted(self):
+        source = rows()
+        del source[2]["events"][0]["attrs"][mod.TOOL]
+        answer = mod.inspect(source)
+        self.assertFalse(result_by_verdict(answer, "CORRELATED_ALLOW_EXECUTION"))
+        self.assertIn("decision tool name missing", result_by_verdict(answer, "CONTRADICTED")[0]["reasons"])
+
+    def test_clock_inversion_downgrades_instead_of_proving_enforcement(self):
+        source = rows()
+        source[3]["start_ns"] = str(int(source[2]["events"][0]["t"]) - 1)
+        answer = mod.inspect(source)
+        self.assertFalse(result_by_verdict(answer, "CORRELATED_ALLOW_EXECUTION"))
+        uncertain = [r for r in answer["results"] if r["clock_order_uncertain"]]
+        self.assertEqual(len(uncertain), 1)
+        self.assertEqual(uncertain[0]["verdict"], "UNCONFIRMED")
+        self.assertFalse(uncertain[0]["enforcement_proven"])
+
+    def test_late_pending_event_downgrades_not_a_protocol_violation(self):
+        source = rows()
+        source[1]["events"][0]["t"] = str(int(source[2]["events"][0]["t"]) + 1)
+        result = mod.inspect(source)
+        self.assertEqual(len([r for r in result["results"] if r["clock_order_uncertain"]]), 1)
+        self.assertFalse(result_by_verdict(result, "CORRELATED_ALLOW_EXECUTION"))
+
+    def test_same_timestamp_same_outcome_different_call_is_not_deduped(self):
+        source = rows()
+        extra = copy.deepcopy(source[1]["events"][0])
+        extra["attrs"][mod.CALL] = "another-proposed-call"
+        extra["attrs"][mod.APPROVAL] = "another-approval-id"
+        source[1]["events"].append(extra)
+        r = mod.inspect(source)
+        self.assertEqual(len(r["results"]), 5)
+        self.assertEqual(len(result_by_verdict(r, "CORRELATED_ALLOW_EXECUTION")), 1)
+        self.assertEqual(len(result_by_verdict(r, "UNCONFIRMED")), 3)
+
+    def test_same_timestamp_same_outcome_changed_approval_is_contradicted(self):
+        source = rows()
+        extra = copy.deepcopy(source[1]["events"][0])
+        extra["attrs"][mod.APPROVAL] = "wrong-approval-id"
+        source[1]["events"].append(extra)
+        # Distinct event with same parent and timestamp is never silently dropped.
+        r = mod.inspect(source)
+        bad = result_by_verdict(r, "CONTRADICTED")
+        self.assertEqual(len(bad), 1)
+        self.assertIn("approval id disagreement", bad[0]["reasons"])
+
+    def test_raw_otlp_envelope_from_projection_is_replayable(self):
+        # Synthetic shape test; it does NOT stand in for the original captured NDJSON.
+        def arr(d):
+            return [{"key": key, "value": {"stringValue": str(v)}}
+                    for key, v in d.items() if v is not None]
+        docs = []
+        for row in rows():
+            attrs = {mod.EXECUTION: row["execution"], mod.CALL: row["call"],
+                     "gen_ai.operation.name": row["operation"]}
+            raw = {"body": {"resourceSpans": [{
+                "resource": {"attributes": arr({"service.name": row["service"]})},
+                "scopeSpans": [{"spans": [{
+                    "name": row["name"], "traceId": row["trace"],
+                    "spanId": row["span"], "startTimeUnixNano": row["start_ns"],
+                    "attributes": arr(attrs),
+                    "events": [{"name": ev["name"], "timeUnixNano": ev["t"],
+                                "attributes": arr(ev["attrs"])} for ev in row["events"]]
+                }]}]}]}}
+            docs.append(raw)
+        self.assertEqual(mod.inspect(mod.project_otlp(docs))["results"], mod.inspect(rows())["results"])
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "sample.ndjson"
+            src.write_text("\n".join(json.dumps(doc) for doc in docs) + "\n")
+            self.assertEqual(mod.inspect(mod.load_rows(src))["results"], mod.inspect(rows())["results"])
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(mod.main([str(src), "--verify-foreman-blob"]), 2)
+
+    def test_malformed_raw_envelope_is_not_silently_dropped(self):
+        with self.assertRaisesRegex(ValueError, "missing resourceSpans"):
+            mod.project_otlp([{"body": {"unrelated": []}}])
+
+    def test_incomplete_approval_emits_nonzero_exit_for_review(self):
+        source = rows()
+        source = [row for row in source if not (row["events"] and outcome(row) == "allow")]
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "incomplete.json"
+            src.write_text(json.dumps({"projection": source}), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(mod.main([str(src)]), 1)
+
+    def test_git_blob_digest_matches_git_hash_contract(self):
+        data = b"sample raw source\n"
+        digest = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        self.assertNotEqual(digest, mod.SOURCE_BLOB_SHA)
+        self.assertEqual(mod.SOURCE_BLOB_SHA, json.loads(FIXTURE.read_text())["git_blob_sha"])
+
+    @unittest.skipUnless(RAW.exists(), "raw upstream capture unavailable locally (pinned file committed to GitHub branch)")
+    def test_exact_raw_capture_replay_and_source_digest(self):
+        contents = RAW.read_bytes()
+        self.assertEqual(hashlib.sha1(b"blob " + str(len(contents)).encode() + b"\0" + contents).hexdigest(), mod.SOURCE_BLOB_SHA)
+        docs = [json.loads(line) for line in contents.decode().splitlines() if line.strip()]
+        self.assertEqual(len(docs), 6)
+        self.assertEqual(mod.project_otlp(docs), rows())
+        result = mod.inspect(mod.load_rows(RAW))
+        self.assertFalse(result["invalid_inputs"])
+        self.assertEqual(len(result_by_verdict(result, "CORRELATED_ALLOW_EXECUTION")), 1)
+        self.assertEqual(len(result_by_verdict(result, "CORRELATED_DENY_NO_OBSERVED_EXECUTION")), 1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(mod.main([str(RAW), "--verify-foreman-blob"]), 0)
 
     def test_cli_exit_codes(self):
         with contextlib.redirect_stdout(io.StringIO()):
