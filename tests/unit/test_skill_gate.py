@@ -155,6 +155,12 @@ def test_evaluate_has_measured_paired_cases(rig):
     assert receipt["gain_cases"] == 1
     assert receipt["regression_cases"] == 0
     assert len(receipt["cases"]) == 4
+    assert [case["execution_order"] for case in receipt["cases"]] == [
+        ["baseline", "skill"],
+        ["skill", "baseline"],
+        ["baseline", "skill"],
+        ["skill", "baseline"],
+    ]
     assert receipt["independence"] == "PATH_SEPARATED_ONLY_AUTHORSHIP_NOT_VERIFIED"
     assert _checked_receipt(_write(rig, receipt), rig["key"]) == receipt
 
