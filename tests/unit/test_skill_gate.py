@@ -46,7 +46,13 @@ elif command == "deploy":
             target.parent.mkdir(parents=True, exist_ok=True)
             if target.is_symlink():
                 target.unlink()
-            target.symlink_to(root, target_is_directory=True)
+            if os.environ.get("SIM_DEPLOY_MODE") == "stale":
+                stale = target_root / "stale-target"
+                stale.mkdir(parents=True, exist_ok=True)
+                (stale / "SKILL.md").write_text("this is not the evaluated Skill")
+                target.symlink_to(stale, target_is_directory=True)
+            else:
+                target.symlink_to(root, target_is_directory=True)
     print(json.dumps({
         "ok": True, "action": "deploy", "dry_run": preview,
         "agents": agent_names, "changed_pairs": len(agent_names),
@@ -342,4 +348,16 @@ def test_wrong_signing_key_cannot_promote(rig):
         promote(
             rig["manager"], "demo-skill", _write(rig, receipt), ("codex",),
             key_file=other_key, suite_path=rig["suite"],
+        )
+
+
+def test_manager_claims_deployed_but_target_bytes_differ(rig, monkeypatch):
+    receipt = _receipt(rig)
+    monkeypatch.setenv("SIM_DEPLOY_MODE", "stale")
+    with pytest.raises(GateError, match="PARTIAL_DEPLOYMENT"):
+        promote(
+            rig["manager"], "demo-skill", _write(rig, receipt),
+            ("codex", "claude_code"), key_file=rig["key"],
+            suite_path=rig["suite"], apply=True,
+            confirm_sha256=receipt["source"]["tree_sha256"],
         )
