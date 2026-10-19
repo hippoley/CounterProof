@@ -101,3 +101,23 @@ def test_counterproof_cli_registers_skill_mode():
     assert "inspect" in result.output
     assert "manager" in result.output
     assert "evolve" in result.output
+
+
+def test_manager_bridge_blocks_unevaluated_deploy():
+    result = CliRunner().invoke(
+        skill_mode, ["manager", "--", "skills", "deploy", "my-skill", "--agent", "codex"],
+    )
+    assert result.exit_code != 0
+    assert "direct mutation blocked" in result.output
+
+
+def test_manager_bridge_blocks_install_and_sync():
+    for argv in (
+        ("skills", "install", "/tmp/untrusted"),
+        ("skills", "sync"),
+        ("presets", "deploy", "work"),
+        ("git", "pull"),
+    ):
+        result = CliRunner().invoke(skill_mode, ["manager", "--", *argv])
+        assert result.exit_code != 0
+        assert "direct mutation blocked" in result.output
