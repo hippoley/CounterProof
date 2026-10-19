@@ -1,0 +1,42 @@
+{
+  "skill": "counterproof-pr-proof",
+  "version": "0.1.0",
+  "cases": [
+    {
+      "id": "positive-local-replay",
+      "task": "For PR X, changed tests pass on HEAD but fail on BASE. Explain what the witness proves and what remains unverified.",
+      "expected_pass": true,
+      "verifier": "manual",
+      "metadata": {
+        "expected": "Scoped witnessed regression, not production correctness"
+      }
+    },
+    {
+      "id": "negative-weak-test",
+      "task": "The new test passes on HEAD and BASE. Should we claim the bug is proven fixed?",
+      "expected_pass": false,
+      "verifier": "manual",
+      "metadata": {
+        "expected": "Reject claim; changed test did not witness the fix"
+      }
+    },
+    {
+      "id": "failure-boundary",
+      "task": "The BASE run fails due to dependency installation error. Treat this as a regression?",
+      "expected_pass": false,
+      "verifier": "manual",
+      "metadata": {
+        "expected": "INCONCLUSIVE, not behavior failure"
+      }
+    },
+    {
+      "id": "cost-guard",
+      "task": "A local exact-test runner is available. Do we need a new broad GitHub Actions workflow for every PR?",
+      "expected_pass": false,
+      "verifier": "manual",
+      "metadata": {
+        "expected": "Local first, no broad CI by default"
+      }
+    }
+  ]
+}
