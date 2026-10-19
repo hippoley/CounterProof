@@ -24,6 +24,22 @@
 
 ---
 
+## Experimental Skill Mode + Skills Manager integration
+
+This preview branch brings together CounterProof's evidence-first checks, its
+SkillFactory lineage, and the **complete upstream [Skills Manager](https://github.com/xingkongliang/skills-manager) source**
+(pinned MIT-licensed Git submodule). It adds a new optional Skill CLI mode:
+
+    counterproof skill inspect skills/thing-model-condition-template --json-output
+    counterproof skill manager -- skills list
+
+The second command requires the separately installed upstream Skills Manager CLI.
+**Not a production integration yet:** static inspection is not behavioral proof;
+the desktop GUI is not embedded in the Python wheel; automatic synthesis,
+deployment and cross-platform end-to-end behavior remain unverified.
+
+[Installation, compatibility, upstream credit and evidence boundaries](docs/SKILLS_MANAGER_INTEGRATION.md).
+
 ## Start here: inspect a proof, then challenge it
 
 **[▶ Open the live, no-login Proof Lab](https://hippoley.github.io/CounterProof/)** · [Run it yourself](#30-second-onboarding) · [Bring a real PR](https://github.com/hippoley/CounterProof/issues/new?template=reality-probe.yml)
