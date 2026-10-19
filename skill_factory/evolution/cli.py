@@ -1559,5 +1559,11 @@ def demo(host: str, port: int) -> None:
         server.server_close()
 
 
+# Experimental Skill mode is explicit; default proof commands remain unchanged.
+from skill_factory.skills_mode import skill_mode
+
+cli.add_command(skill_mode)
+
+
 if __name__ == "__main__":
     cli()
