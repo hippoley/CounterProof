@@ -118,6 +118,7 @@ def deploy_new_only(
                 undone.get("ok") is True
                 and undone.get("dry_run") is False
                 and set(undone.get("agents", [])) == set(wanted)
+                and not undone.get("preserved")
                 and all(
                     after.get(agent, {}).get("deployed") is not True
                     for agent in wanted
