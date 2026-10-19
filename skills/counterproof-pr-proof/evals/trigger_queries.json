@@ -1,0 +1,18 @@
+{
+  "skill": "counterproof-pr-proof",
+  "should_trigger": [
+    "Our coding agent says PR fixes the regression; can you prove the tests fail before the fix?",
+    "The CI is green. Validate whether the new regression test actually catches the old bug.",
+    "Verify an AI-assisted PR change with a BASE versus HEAD witness and exact oracle.",
+    "Check why changed test passes on both parent and patched code.",
+    "Can you provide a reproducible, scoped receipt for a bug-fix claim?"
+  ],
+  "should_not_trigger": [
+    "Create a new SVG logo for my project.",
+    "Synchronize Skills across three coding tools.",
+    "Run all GitHub Actions right now to deploy the app.",
+    "What does an embedding model do?",
+    "Generate a home automation schedule.",
+    "Explain what the GitHub marketplace does."
+  ]
+}
