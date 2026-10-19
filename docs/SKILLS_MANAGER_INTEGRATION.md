@@ -38,9 +38,130 @@ With the pinned Skills Manager CLI, import the skill from the preview branch, th
 
     counterproof skill manager -- skills install https://github.com/hippoley/CounterProof/tree/feat/skills-manager-skill-mode-20261019/skills/counterproof-pr-proof
     counterproof skill manager -- skills status counterproof-pr-proof
-    counterproof skill manager -- skills deploy counterproof-pr-proof --agent codex --dry-run
+    counterproof skill manager -- skills status counterproof-pr-proof
+
+For deployment, use the evidence-gated `counterproof skill evaluate` followed
+by `counterproof skill promote` below; direct deployment is intentionally blocked.
 
 Confirm agent identifiers and CLI flags against the installed upstream version before live deployment. The commands above are integration examples, **not claims of successful execution**.
+## Proof-gated A/B evaluation and deployment — experimental
+
+The new **fail-closed** path is implemented in
+[skill_factory/skill_gate.py](../skill_factory/skill_gate.py) and exposed by
+\`counterproof skill evaluate\` and \`counterproof skill promote\`.
+
+The unrestricted \`counterproof skill manager -- ...\` bridge has been
+**restricted to read-only status/list/show calls**. It rejects install/sync/
+deploy calls instead of creating an accidental bypass. The upstream desktop
+app and upstream native CLI remain independently usable; this guard applies
+only to the CounterProof bridge, not to third-party software.
+
+### Create a local signing key (never commit it)
+
+\`\`\`bash
+counterproof skill keygen ~/.counterproof-skill-gate.key
+\`\`\`
+
+The 32-byte key is created without overwrite and with restricted file
+permissions. Keep it OUTSIDE the managed Skill tree, Git repositories and
+synchronized/backup folders. A local HMAC protects the receipt from
+unintentional edits or replacement by a party without the secret; it is
+**not** an independent third-party attestation and does not defend against
+a malicious evaluator that can access the same user's key.
+
+### Prepare an external holdout suite and real runner
+
+Example \`holdout.json\` (store OUTSIDE the managed Skill tree):
+
+\`\`\`json
+{
+  "schema_version": "counterproof.skill-suite/v0.1",
+  "suite_id": "reviewer-owned-2026-10",
+  "cases": [
+    {"id": "s1", "prompt": "Case one prompt", "expected_output": "expected one"},
+    {"id": "s2", "prompt": "Case two prompt", "expected_output": "expected two"},
+    {"id": "s3", "prompt": "Case three prompt", "expected_output": "expected three"},
+    {"id": "s4", "prompt": "Case four prompt", "expected_output": "expected four"}
+  ]
+}
+\`\`\`
+
+Runner contract: an independently selected **executable** reads one JSON
+request from stdin and emits \`{"output":"..."}\` on stdout, exit status 0.
+Request fields are
+\`schema_version = counterproof.skill-runner/v0.1\`,
+\`case_id\`, \`prompt\`, \`arm\` (baseline/skill), and \`skill_path\` (null
+for baseline). A nonzero exit or invalid JSON blocks evaluation. This
+minimal exact-match oracle is intentionally strict and not suitable for
+open-ended natural-language scoring without an externally fixed grader.
+
+No hidden cases or real model implementation are bundled with this preview.
+The provided repository tests use a SIMULATED manager and runner to exercise
+gate logic, not to prove actual agent improvement.
+
+### Run actual paired evaluation
+
+\`\`\`bash
+counterproof skill evaluate my-skill \
+  --suite /external/holdout.json \
+  --runner-binary /absolute/path/to/trusted-evaluation-runner \
+  --manager-binary /absolute/path/to/skills-manager-cli \
+  --key ~/.counterproof-skill-gate.key \
+  --min-gain 1 \
+  --out /external/SKILL_GATE_RECEIPT.json
+\`\`\`
+
+The gate requires at least four unique externally located cases, one
+measured gain, zero per-case regressions, a stable manager/runner binary,
+unchanged external suite and the same managed Skill source tree throughout
+the evaluation. The result is only a **scoped paired observation**; path
+separation does not independently establish data author independence,
+oracle validity or generalization.
+
+### Preflight and explicitly apply to multiple agents
+
+\`\`\`bash
+# Does not write agent skill directories:
+counterproof skill promote my-skill \
+  --receipt /external/SKILL_GATE_RECEIPT.json \
+  --suite /external/holdout.json \
+  --key ~/.counterproof-skill-gate.key \
+  --agent codex --agent claude_code
+
+# After reviewing the dry-run output, explicitly authorize live deployment:
+counterproof skill promote my-skill \
+  --receipt /external/SKILL_GATE_RECEIPT.json \
+  --suite /external/holdout.json \
+  --key ~/.counterproof-skill-gate.key \
+  --agent codex --agent claude_code \
+  --apply --confirm-sha256 <EXACT_EVALUATED_SKILL_TREE_SHA256>
+\`\`\`
+
+Promotion checks the local HMAC, honest case-count/verdict arithmetic,
+unchanged suite/runner/manager/Skill fingerprints, exact user-named
+agents and upstream CLI dry-run. Only with \`--apply\` does it request
+deployment. It then checks upstream status and hashes each target Skill
+tree; a missing/mismatched target is a **partial deployment failure**,
+not a successful result. This version does **not** implement atomic
+cross-agent rollback. If a partial deployment occurs, inspect and
+recover it manually; do not claim all-or-nothing transactional semantics.
+
+The receipt is an **evidence gate for file deployment**, not a portable
+certification of model behavior on every target Agent.
+
+### Offline regression checks
+
+\`\`\`bash
+python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py
+\`\`\`
+
+The suite contains simulated-manager tests for forged self-hashes, a
+different signing key, source/suite/runner/manager drift, missing gains,
+case regression, duplicate agent names, strict preflight, and partial
+target deployment. **Written tests are not passing test evidence until
+the above exact command is executed and its result recorded.**
+
+
 ## Honest feature boundaries
 
 | Capability | Preview branch status |
@@ -51,7 +172,7 @@ Confirm agent identifiers and CLI flags against the installed upstream version b
 | CLI command forwarding | IMPLEMENTED locally in Python |
 | Static SKILL.md inspection | IMPLEMENTED; heuristic; no execution |
 | Skill candidate proposals | WRAPPED around existing trace pipeline |
-| Skill behavioral improvement proof | NOT YET integrated end-to-end |
+| Skill behavioral improvement proof | PAIRED EVALUATION GATE IMPLEMENTED; REAL MODEL PROOF NOT YET RUN |
 | Shared Rust/Python state/database | NOT IMPLEMENTED |
 | Embedded desktop window | NOT IMPLEMENTED |
 | Cross-platform full E2E verification | NOT YET RUN |
