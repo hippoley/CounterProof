@@ -1,0 +1,26 @@
+{
+  "schema_version": "counterproof.skill-suite/v0.1",
+  "suite_id": "illustrative-pr-evidence-classification-not-independent-gold",
+  "cases": [
+    {
+      "id": "setup-failure",
+      "prompt": "A PR adds a test. On HEAD it passes; on BASE the environment cannot install dependencies, so the test never runs. Respond with exactly one word: WITNESSED, NOT_WITNESSED, or INCONCLUSIVE.",
+      "expected_output": "INCONCLUSIVE"
+    },
+    {
+      "id": "weak-test",
+      "prompt": "An unchanged oracle reports the same new regression test PASS on both BASE and HEAD. Respond with exactly one word: WITNESSED, NOT_WITNESSED, or INCONCLUSIVE.",
+      "expected_output": "NOT_WITNESSED"
+    },
+    {
+      "id": "scoped-regression",
+      "prompt": "The same precise changed regression test FAILS due to an application assertion on BASE but PASSES on HEAD with the judge unchanged. Respond with exactly one word: WITNESSED, NOT_WITNESSED, or INCONCLUSIVE.",
+      "expected_output": "WITNESSED"
+    },
+    {
+      "id": "green-ci-only",
+      "prompt": "A PR has green CI but there was no BASE replay of the changed test. Is the exact bug fix regression already witnessed? Respond with exactly one word: WITNESSED, NOT_WITNESSED, or INCONCLUSIVE.",
+      "expected_output": "NOT_WITNESSED"
+    }
+  ]
+}
