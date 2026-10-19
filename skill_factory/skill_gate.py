@@ -60,6 +60,14 @@ def _mac(payload: dict, key: bytes) -> str:
     return hmac.new(key, data, hashlib.sha256).hexdigest()
 
 
+def _guard_key_location(key_file: Path, source_path: str) -> None:
+    """Do not accidentally package the attestation secret as part of a Skill."""
+    key = key_file.resolve(strict=True)
+    source = Path(source_path).resolve(strict=True)
+    if key == source or source in key.parents:
+        raise GateError("attestation key must be outside the managed Skill tree")
+
+
 def _sha_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -185,6 +193,7 @@ def evaluate(
     manager = _binary(manager_binary)
     runner = _binary(runner_binary)
     source = _source(manager, reference)
+    _guard_key_location(key_file, source["path"])
     suite = _suite(suite_path, Path(source["path"]))
     suite_fingerprint = _sha_file(suite_path.resolve())
     runner_fingerprint = _sha_file(runner)
@@ -338,6 +347,7 @@ def promote(
     if str(binary) != receipt.get("manager_path") or _sha_file(binary) != receipt.get("manager_sha256"):
         raise GateError("Skills Manager binary changed since evaluation")
     source = _source(binary, reference)
+    _guard_key_location(key_file, source["path"])
     if source != receipt.get("source"):
         raise GateError("Skill path, identity or contents changed since evaluation")
     if apply and confirm_sha256 != source["tree_sha256"]:
