@@ -20,7 +20,8 @@ To use the Skills Manager CLI, install the upstream binary from its matching rel
 
     counterproof skill manager -- skills list
     counterproof skill manager -- skills status my-skill
-    counterproof skill manager -- skills deploy my-skill --agent codex --dry-run
+    # Mutating deployments are intentionally blocked in the CounterProof manager bridge.
+    # Use "counterproof skill promote" only after independent paired evaluation.
 
 Use --binary /absolute/path/to/skills-manager-cli to select an executable. The manager commands have their own flags; dry-run is not universally supported. No agent deployment happens without an explicit upstream command.
 
@@ -34,23 +35,26 @@ An evolution packet is a hypothesis/proposal, not a validated new Skill or an au
 
 A native Agent Skill is now included at [skills/counterproof-pr-proof/SKILL.md](../skills/counterproof-pr-proof/SKILL.md). It teaches coding agents to request narrow local BASE/HEAD evidence and not overstate green CI. Its evals/ folder contains **proposed test fixtures**, not measured trigger accuracy.
 
-With the pinned Skills Manager CLI, import the skill from the preview branch, then explicitly deploy to the desired agent:
+Install/import using the separately installed upstream Skills Manager GUI or
+native CLI (after reviewing the third-party Skill). The CounterProof bridge
+does not perform installations:
 
-    counterproof skill manager -- skills install https://github.com/hippoley/CounterProof/tree/feat/skills-manager-skill-mode-20261019/skills/counterproof-pr-proof
-    counterproof skill manager -- skills status counterproof-pr-proof
+    skills-manager-cli skills install https://github.com/hippoley/CounterProof/tree/feat/skills-manager-skill-mode-20261019/skills/counterproof-pr-proof
     counterproof skill manager -- skills status counterproof-pr-proof
 
-For deployment, use the evidence-gated `counterproof skill evaluate` followed
-by `counterproof skill promote` below; direct deployment is intentionally blocked.
+The install command is an example, not verified against a real upstream binary.
+For actual deployment, use the evidence-gated `counterproof skill evaluate`
+followed by `counterproof skill promote`; direct deployment through our bridge
+is intentionally blocked.
 
 Confirm agent identifiers and CLI flags against the installed upstream version before live deployment. The commands above are integration examples, **not claims of successful execution**.
 ## Proof-gated A/B evaluation and deployment — experimental
 
 The new **fail-closed** path is implemented in
 [skill_factory/skill_gate.py](../skill_factory/skill_gate.py) and exposed by
-\`counterproof skill evaluate\` and \`counterproof skill promote\`.
+`counterproof skill evaluate` and `counterproof skill promote`.
 
-The unrestricted \`counterproof skill manager -- ...\` bridge has been
+The unrestricted `counterproof skill manager -- ...` bridge has been
 **restricted to read-only status/list/show calls**. It rejects install/sync/
 deploy calls instead of creating an accidental bypass. The upstream desktop
 app and upstream native CLI remain independently usable; this guard applies
@@ -58,9 +62,9 @@ only to the CounterProof bridge, not to third-party software.
 
 ### Create a local signing key (never commit it)
 
-\`\`\`bash
+```bash
 counterproof skill keygen ~/.counterproof-skill-gate.key
-\`\`\`
+```
 
 The 32-byte key is created without overwrite and with restricted file
 permissions. Keep it OUTSIDE the managed Skill tree, Git repositories and
@@ -71,9 +75,9 @@ a malicious evaluator that can access the same user's key.
 
 ### Prepare an external holdout suite and real runner
 
-Example \`holdout.json\` (store OUTSIDE the managed Skill tree):
+Example `holdout.json` (store OUTSIDE the managed Skill tree):
 
-\`\`\`json
+```json
 {
   "schema_version": "counterproof.skill-suite/v0.1",
   "suite_id": "reviewer-owned-2026-10",
@@ -84,13 +88,13 @@ Example \`holdout.json\` (store OUTSIDE the managed Skill tree):
     {"id": "s4", "prompt": "Case four prompt", "expected_output": "expected four"}
   ]
 }
-\`\`\`
+```
 
 Runner contract: an independently selected **executable** reads one JSON
-request from stdin and emits \`{"output":"..."}\` on stdout, exit status 0.
+request from stdin and emits `{"output":"..."}` on stdout, exit status 0.
 Request fields are
-\`schema_version = counterproof.skill-runner/v0.1\`,
-\`case_id\`, \`prompt\`, \`arm\` (baseline/skill), and \`skill_path\` (null
+`schema_version = counterproof.skill-runner/v0.1`,
+`case_id`, `prompt`, `arm` (baseline/skill), and `skill_path` (null
 for baseline). A nonzero exit or invalid JSON blocks evaluation. This
 minimal exact-match oracle is intentionally strict and not suitable for
 open-ended natural-language scoring without an externally fixed grader.
@@ -101,7 +105,7 @@ gate logic, not to prove actual agent improvement.
 
 ### Run actual paired evaluation
 
-\`\`\`bash
+```bash
 counterproof skill evaluate my-skill \
   --suite /external/holdout.json \
   --runner-binary /absolute/path/to/trusted-evaluation-runner \
@@ -109,7 +113,7 @@ counterproof skill evaluate my-skill \
   --key ~/.counterproof-skill-gate.key \
   --min-gain 1 \
   --out /external/SKILL_GATE_RECEIPT.json
-\`\`\`
+```
 
 The gate requires at least four unique externally located cases, one
 measured gain, zero per-case regressions, a stable manager/runner binary,
@@ -120,7 +124,7 @@ oracle validity or generalization.
 
 ### Preflight and explicitly apply to multiple agents
 
-\`\`\`bash
+```bash
 # Does not write agent skill directories:
 counterproof skill promote my-skill \
   --receipt /external/SKILL_GATE_RECEIPT.json \
@@ -135,11 +139,11 @@ counterproof skill promote my-skill \
   --key ~/.counterproof-skill-gate.key \
   --agent codex --agent claude_code \
   --apply --confirm-sha256 <EXACT_EVALUATED_SKILL_TREE_SHA256>
-\`\`\`
+```
 
 Promotion checks the local HMAC, honest case-count/verdict arithmetic,
 unchanged suite/runner/manager/Skill fingerprints, exact user-named
-agents and upstream CLI dry-run. Only with \`--apply\` does it request
+agents and upstream CLI dry-run. Only with `--apply` does it request
 deployment. It then checks upstream status and hashes each target Skill
 tree; a missing/mismatched target is a **partial deployment failure**,
 not a successful result. This version does **not** implement atomic
@@ -151,9 +155,9 @@ certification of model behavior on every target Agent.
 
 ### Offline regression checks
 
-\`\`\`bash
+```bash
 python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py
-\`\`\`
+```
 
 The suite contains simulated-manager tests for forged self-hashes, a
 different signing key, source/suite/runner/manager drift, missing gains,
