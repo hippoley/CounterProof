@@ -5,7 +5,6 @@ agent behavior. Never count them as production or independent quality evidence.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 from pathlib import Path
