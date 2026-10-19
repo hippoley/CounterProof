@@ -34,9 +34,21 @@ SkillFactory lineage, and the **complete upstream [Skills Manager](https://githu
     counterproof skill manager -- skills list
 
 The second command requires the separately installed upstream Skills Manager CLI.
-**Not a production integration yet:** static inspection is not behavioral proof;
-the desktop GUI is not embedded in the Python wheel; automatic synthesis,
-deployment and cross-platform end-to-end behavior remain unverified.
+
+The evidence-gated release path is explicit: `counterproof skill keygen` creates
+a private local key, `counterproof skill evaluate` tests an installed Skill
+against an external held-out suite with an A/B runner, then
+`counterproof skill promote` **preflights by default** and requires both
+`--apply` and a matching `--confirm-sha256` for deployment. Partial
+deployments trigger best-effort rollback of **new** agent targets; existing
+verified installations are preserved. Direct install/deploy through the
+CounterProof manager bridge is blocked.
+
+**Not a production integration yet:** written repo tests are not live
+cross-platform evidence. Static inspection is not behavioral proof, a locally
+signed receipt is not independent third-party attestation, and the desktop
+GUI is not embedded in the Python wheel. Real Skills Manager + model/Agent
+end-to-end deployment still needs verification.
 
 [Installation, compatibility, upstream credit and evidence boundaries](docs/SKILLS_MANAGER_INTEGRATION.md).
 
