@@ -39,6 +39,7 @@ class TraceEvidenceTests(unittest.TestCase):
     def test_pinned_source_counts_and_projection(self):
         data = json.loads(FIXTURE.read_text())
         self.assertEqual(data["git_blob_sha"], "2541dc0f58d34bc113ad2064da9510e444b24504")
+        self.assertEqual(data["source_commit_sha"], "18d05390340ad17777708f20383b9d62fa1349a2")
         self.assertEqual(data["source_counts"], {"otlp_http_envelopes": 6, "spans": 9, "decision_events": 4})
         self.assertEqual(len(data["projection"]), 7)
 
