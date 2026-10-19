@@ -148,6 +148,8 @@ def _source(binary: Path, reference: str) -> dict[str, str]:
     return {
         "name": detail["name"], "id": detail["id"],
         "path": str(path.resolve()),
+        "source_type": detail.get("source_type"),
+        "source_ref": detail.get("source_ref"),
         "tree_sha256": _snapshot(path),
     }
 
