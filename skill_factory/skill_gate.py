@@ -188,6 +188,7 @@ def evaluate(
     suite = _suite(suite_path, Path(source["path"]))
     suite_fingerprint = _sha_file(suite_path.resolve())
     runner_fingerprint = _sha_file(runner)
+    manager_fingerprint = _sha_file(manager)
     cases = []
     for case in suite["cases"]:
         result = {
@@ -233,8 +234,10 @@ def evaluate(
             raise GateError("managed Skill mutated during paired evaluation")
     if _source(manager, reference) != source:
         raise GateError("managed Skill mutated during paired evaluation")
-    if _sha_file(runner) != _sha_file(_binary(runner_binary)):
+    if _sha_file(runner) != runner_fingerprint:
         raise GateError("runner executable was replaced during evaluation")
+    if _sha_file(manager) != manager_fingerprint:
+        raise GateError("manager executable was replaced during evaluation")
     if _sha_file(suite_path.resolve()) != suite_fingerprint:
         raise GateError("external suite changed during evaluation")
     gain = sum(row["skill"]["pass"] and not row["baseline"]["pass"] for row in cases)
@@ -245,6 +248,8 @@ def evaluate(
         "suite_id": suite.get("suite_id", "unnamed"),
         "runner_sha256": runner_fingerprint,
         "runner_path": str(runner),
+        "manager_sha256": manager_fingerprint,
+        "manager_path": str(manager),
         "case_count": len(cases), "cases": cases,
         "gain_cases": gain, "regression_cases": regressions,
         "min_gain": min_gain,
@@ -330,6 +335,8 @@ def promote(
     ):
         raise GateError("explicit, unique agent keys required")
     binary = _binary(manager_binary)
+    if str(binary) != receipt.get("manager_path") or _sha_file(binary) != receipt.get("manager_sha256"):
+        raise GateError("Skills Manager binary changed since evaluation")
     source = _source(binary, reference)
     if source != receipt.get("source"):
         raise GateError("Skill path, identity or contents changed since evaluation")
@@ -357,6 +364,8 @@ def promote(
         raise GateError("external suite changed after preflight")
     if _sha_file(runner_path) != receipt["runner_sha256"]:
         raise GateError("evaluation runner changed after preflight")
+    if _sha_file(binary) != receipt["manager_sha256"]:
+        raise GateError("Skills Manager binary changed after preflight")
     deployment = _manager(binary, "deploy", reference, *flags)
     if (
         deployment.get("ok") is not True
