@@ -69,6 +69,18 @@ def manager(binary: str | None, args: tuple[str, ...]) -> None:
     """Delegate to installed upstream CLI, e.g. -- skills list."""
     if not args:
         raise click.UsageError("pass arguments after --, e.g. -- skills list")
+    # Keep the general bridge observational: deployments and mutations must
+    # never bypass the explicit, signed Skill promotion path.
+    read_only = {
+        ("skills", "list"), ("skills", "show"), ("skills", "status"),
+        ("agents", "list"), ("tools", "list"), ("repo", "status"),
+        ("presets", "list"), ("presets", "status"), ("git", "versions"),
+    }
+    if tuple(args[:2]) not in read_only:
+        raise click.ClickException(
+            "direct mutation blocked; use 'counterproof skill promote' "
+            "for evaluated deployments, or use upstream app independently"
+        )
     executable = binary or os.environ.get("SKILLS_MANAGER_CLI") or "skills-manager-cli"
     found = shutil.which(executable)
     if found is None:
