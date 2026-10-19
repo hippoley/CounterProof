@@ -111,3 +111,94 @@ def evolve_skill(trace_file: Path, out: Path) -> None:
     click.echo("Candidate: " + str(packet.selected_candidate_id or "NONE"))
     click.echo("PROPOSAL only; independent proof and deployment NOT performed.")
     click.echo("Wrote " + str(out))
+
+
+@skill_mode.command("keygen")
+@click.argument("key_file", type=click.Path(dir_okay=False, path_type=Path))
+def keygen(key_file: Path) -> None:
+    """Create a 0600 local gate-attestation key; never store it in Git."""
+    from skill_factory.skill_gate import GateError, create_key
+
+    try:
+        new_path = create_key(key_file)
+    except (GateError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Created local attestation key: {new_path}")
+    click.echo("Keep this secret out of Git and outside the Skill directory.")
+
+
+@skill_mode.command("evaluate")
+@click.argument("reference")
+@click.option("--suite", "suite_path", required=True, type=click.Path(
+    exists=True, dir_okay=False, path_type=Path,
+))
+@click.option("--runner-binary", required=True)
+@click.option("--manager-binary", default="skills-manager-cli", show_default=True)
+@click.option("--key", "key_file", required=True, type=click.Path(
+    exists=True, dir_okay=False, path_type=Path,
+))
+@click.option("--min-gain", default=1, type=click.IntRange(min=1), show_default=True)
+@click.option("--out", "out_path", type=click.Path(dir_okay=False, path_type=Path),
+              default=Path("SKILL_GATE_RECEIPT.json"))
+def evaluate_skill(
+    reference: str, suite_path: Path, runner_binary: str, manager_binary: str,
+    key_file: Path, min_gain: int, out_path: Path,
+) -> None:
+    """Paired external-suite evaluation of the Skill installed by Skills Manager."""
+    from skill_factory.skill_gate import GateError, evaluate
+
+    if out_path.exists():
+        raise click.ClickException("receipt already exists; choose a new --out path")
+    try:
+        receipt = evaluate(
+            manager_binary, reference, suite_path, runner_binary,
+            key_file=key_file, min_gain=min_gain,
+        )
+        with out_path.open("x", encoding="utf-8") as stream:
+            json.dump(receipt, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+    except (GateError, OSError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(
+        f"Skill evidence: {receipt['verdict']} "
+        f"gains={receipt['gain_cases']} regressions={receipt['regression_cases']}"
+    )
+    click.echo(f"Receipt: {out_path} (HMAC-bound to your external key)")
+    if receipt["verdict"] != "PASS_SCOPED":
+        raise click.ClickException("evaluation gate failed; promotion blocked")
+
+
+@skill_mode.command("promote")
+@click.argument("reference")
+@click.option("--receipt", "receipt_path", required=True, type=click.Path(
+    exists=True, dir_okay=False, path_type=Path,
+))
+@click.option("--suite", "suite_path", required=True, type=click.Path(
+    exists=True, dir_okay=False, path_type=Path,
+))
+@click.option("--key", "key_file", required=True, type=click.Path(
+    exists=True, dir_okay=False, path_type=Path,
+))
+@click.option("--manager-binary", default="skills-manager-cli", show_default=True)
+@click.option("--agent", "agents", required=True, multiple=True)
+@click.option("--apply", is_flag=True, help="Actually deploy, never default.")
+@click.option("--confirm-sha256", default=None, help="Required for --apply.")
+def promote_skill(
+    reference: str, receipt_path: Path, suite_path: Path, key_file: Path,
+    manager_binary: str, agents: tuple[str, ...], apply: bool,
+    confirm_sha256: str | None,
+) -> None:
+    """Fail closed unless signed scope, content, suite and runner still match."""
+    from skill_factory.skill_gate import GateError, promote
+
+    try:
+        result = promote(
+            manager_binary, reference, receipt_path, agents,
+            key_file=key_file, suite_path=suite_path,
+            apply=apply, confirm_sha256=confirm_sha256,
+        )
+    except (GateError, OSError, ValueError, TypeError, KeyError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(json.dumps(result, indent=2, sort_keys=True))
+    if not apply:
+        click.echo("Preflight only: nothing was deployed.")
