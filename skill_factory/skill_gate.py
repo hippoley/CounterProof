@@ -353,7 +353,10 @@ def promote(
     ):
         raise GateError("explicit, unique agent keys required")
     binary = _binary(manager_binary)
-    if str(binary) != receipt.get("manager_path") or _sha_file(binary) != receipt.get("manager_sha256"):
+    if (
+        str(binary) != receipt.get("manager_path")
+        or _sha_file(binary) != receipt.get("manager_sha256")
+    ):
         raise GateError("Skills Manager binary changed since evaluation")
     source = _source(binary, reference)
     _guard_key_location(key_file, source["path"])
