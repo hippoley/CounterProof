@@ -1,5 +1,5 @@
 {
-  "source": "https://github.com/karank2512/Foreman/blob/2541dc0f58d34bc113ad2064da9510e444b24504/docs/otel-evidence/web-worker-receipt.ndjson",
+  "source": "https://github.com/karank2512/Foreman/blob/18d05390340ad17777708f20383b9d62fa1349a2/docs/otel-evidence/web-worker-receipt.ndjson",
   "git_blob_sha": "2541dc0f58d34bc113ad2064da9510e444b24504",
   "projection_policy": "Lossy projection of source spans with tool decisions or execute_tool, preserves stable identities, observed timestamps, tool/approval id; does NOT establish trustworthy cross-host clock synchronization.",
   "source_counts": {
@@ -140,5 +140,6 @@
       ],
       "start_ns": "1792087269118000000"
     }
-  ]
+  ],
+  "source_commit_sha": "18d05390340ad17777708f20383b9d62fa1349a2"
 }
