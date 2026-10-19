@@ -154,8 +154,14 @@ def test_evaluate_has_measured_paired_cases(rig):
     assert _checked_receipt(_write(rig, receipt), rig["key"]) == receipt
 
 
-def test_explicit_runner_regression_blocks_promotion(rig, monkeypatch):
-    monkeypatch.setenv("SIM_RUNNER_MODE", "regress")
+def test_explicit_runner_regression_blocks_promotion(rig):
+    runner = Path(rig["runner"])
+    runner.write_text(
+        runner.read_text().replace(
+            'mode = os.environ.get("SIM_RUNNER_MODE", "good")',
+            'mode = "regress"',
+        ), encoding="utf-8",
+    )
     receipt = _receipt(rig)
     assert receipt["verdict"] == "FAIL"
     with pytest.raises(GateError, match="did not pass"):
@@ -165,8 +171,14 @@ def test_explicit_runner_regression_blocks_promotion(rig, monkeypatch):
         )
 
 
-def test_no_gain_blocks_promotion(rig, monkeypatch):
-    monkeypatch.setenv("SIM_RUNNER_MODE", "no-gain")
+def test_no_gain_blocks_promotion(rig):
+    runner = Path(rig["runner"])
+    runner.write_text(
+        runner.read_text().replace(
+            'mode = os.environ.get("SIM_RUNNER_MODE", "good")',
+            'mode = "no-gain"',
+        ), encoding="utf-8",
+    )
     receipt = _receipt(rig)
     assert receipt["gain_cases"] == 0
     assert receipt["verdict"] == "FAIL"
