@@ -30,6 +30,17 @@ To propose a Skill from a trace, use a real compatible input:
 
 An evolution packet is a hypothesis/proposal, not a validated new Skill or an authorization to deploy it.
 
+## Installable CounterProof Skill (preview)
+
+A native Agent Skill is now included at [skills/counterproof-pr-proof/SKILL.md](../skills/counterproof-pr-proof/SKILL.md). It teaches coding agents to request narrow local BASE/HEAD evidence and not overstate green CI. Its evals/ folder contains **proposed test fixtures**, not measured trigger accuracy.
+
+With the pinned Skills Manager CLI, import the skill from the preview branch, then explicitly deploy to the desired agent:
+
+    counterproof skill manager -- skills install https://github.com/hippoley/CounterProof/tree/feat/skills-manager-skill-mode-20261019/skills/counterproof-pr-proof
+    counterproof skill manager -- skills status counterproof-pr-proof
+    counterproof skill manager -- skills deploy counterproof-pr-proof --agent codex --dry-run
+
+Confirm agent identifiers and CLI flags against the installed upstream version before live deployment. The commands above are integration examples, **not claims of successful execution**.
 ## Honest feature boundaries
 
 | Capability | Preview branch status |
