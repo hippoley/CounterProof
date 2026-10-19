@@ -103,6 +103,32 @@ No hidden cases or real model implementation are bundled with this preview.
 The provided repository tests use a SIMULATED manager and runner to exercise
 gate logic, not to prove actual agent improvement.
 
+### Optional local Ollama runner (text-only probe)
+
+A minimal offline-cost alternative to paid model APIs is included:
+[local_ollama_runner.py](../examples/skill_gate/local_ollama_runner.py).
+It sends OpenAI-compatible chat requests **only to the loopback Ollama port**
+`127.0.0.1:11434`, adds the exact managed `SKILL.md` only in the
+Skill arm, and sends no Skill instructions in the baseline arm.
+
+1. Install and start your own Ollama instance and obtain the model
+   `qwen2.5:3b` locally. This setup is **not performed automatically**.
+2. On Linux/macOS, run
+   `chmod +x examples/skill_gate/local_ollama_runner.py`.
+3. Point `--runner-binary` to its absolute path in the evaluation command
+   below. The program is version-pinned by SHA-256 in the receipt.
+
+[holdout.sample.json](../examples/skill_gate/holdout.sample.json) illustrates
+the JSON contract, but its cases were authored with this repository and
+**must not be claimed as independent external gold**. A reviewer should
+supply separately collected, frozen cases for credible evaluation.
+
+This runner measures text-only instruction following. It **does not**
+execute tools, simulate a full Codex/Claude/Pi Agent runtime, prove
+cross-agent portability, or provide evidence of actual real-device actions.
+The live Ollama path and the Skills Manager Rust binary have **not been
+executed end-to-end** in this change.
+
 ### Run actual paired evaluation
 
 ```bash
@@ -156,7 +182,7 @@ certification of model behavior on every target Agent.
 ### Offline regression checks
 
 ```bash
-python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py
+python -m pytest -q tests/unit/test_skill_gate.py tests/unit/test_skills_mode.py tests/unit/test_local_ollama_runner.py
 ```
 
 The suite contains simulated-manager tests for forged self-hashes, a
