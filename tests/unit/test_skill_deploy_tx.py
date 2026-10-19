@@ -36,7 +36,7 @@ class ManagerSim:
         ]
         if op == "deploy":
             for agent in wanted:
-                if self.mode == "partial" and agent == "claude_code":
+                if self.mode in ("partial", "partial-preserved") and agent == "claude_code":
                     continue
                 self.agents[agent] = {
                     "key": agent, "deployed": True,
@@ -51,7 +51,10 @@ class ManagerSim:
                 }
         else:
             raise ValueError(op)
-        return {"ok": True, "dry_run": False, "agents": wanted}
+        result = {"ok": True, "dry_run": False, "agents": wanted}
+        if op == "undeploy" and self.mode == "partial-preserved":
+            result["preserved"] = ["/path/conflict-preserved"]
+        return result
 
 
 def snapshot(path, *, allow_root_link):
@@ -123,3 +126,11 @@ def test_external_cli_crash_compensates():
     with pytest.raises(DeploymentTransactionError, match="rollback_new_pairs=CONFIRMED"):
         execute(sim)
     assert not sim.agents["codex"]["deployed"]
+
+
+def test_preserved_conflict_is_not_reported_as_clean_rollback():
+    sim = ManagerSim(mode="partial-preserved")
+    with pytest.raises(
+        DeploymentTransactionError, match="rollback_new_pairs=INCOMPLETE"
+    ):
+        execute(sim)
