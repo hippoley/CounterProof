@@ -43,14 +43,26 @@ def audit(document: dict[str, Any]) -> dict[str, Any]:
     raw_count = 0
     reexports = 0
 
+    if not isinstance(document, dict):
+        return {'check_result': 'FAIL', 'issues': [{'code': 'INVALID_OTLP_ROOT'}],
+                'attempts': [], 'retry_relation': 'UNKNOWN', 'reported_totals': None}
     resources = document.get('resourceSpans')
     if not isinstance(resources, list):
         return {'check_result': 'UNRESOLVED', 'issues': [{'code': 'NO_RESOURCE_SPANS'}],
                 'attempts': [], 'retry_relation': 'UNKNOWN', 'reported_totals': None}
 
     for resource in resources:
-        for scope in resource.get('scopeSpans', []) or []:
-            for span in scope.get('spans', []) or []:
+        if not isinstance(resource, dict) or not isinstance(resource.get('scopeSpans', []), list):
+            return {'check_result': 'FAIL', 'issues': [{'code': 'INVALID_RESOURCE_SPANS'}],
+                    'attempts': [], 'retry_relation': 'UNKNOWN', 'reported_totals': None}
+        for scope in resource.get('scopeSpans', []):
+            if not isinstance(scope, dict) or not isinstance(scope.get('spans', []), list):
+                return {'check_result': 'FAIL', 'issues': [{'code': 'INVALID_SCOPE_SPANS'}],
+                        'attempts': [], 'retry_relation': 'UNKNOWN', 'reported_totals': None}
+            for span in scope.get('spans', []):
+                if not isinstance(span, dict):
+                    return {'check_result': 'FAIL', 'issues': [{'code': 'INVALID_SPAN'}],
+                            'attempts': [], 'retry_relation': 'UNKNOWN', 'reported_totals': None}
                 attrs = attributes(span.get('attributes'))
                 if attrs.get('gen_ai.operation.name') != 'chat':
                     continue
