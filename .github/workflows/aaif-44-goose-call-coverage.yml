@@ -1,0 +1,24 @@
+name: AAIF #44 Goose call coverage experiment
+
+on:
+  pull_request:
+    paths:
+      - 'examples/interop/aaif-44-goose-call-coverage/**'
+      - '.github/workflows/aaif-44-goose-call-coverage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-call-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify synthetic negative and positive controls
+        run: python -m unittest discover -s examples/interop/aaif-44-goose-call-coverage -p 'test_*.py' -v
+      - name: Verify sample OTLP/JSON export reader
+        run: python examples/interop/aaif-44-goose-call-coverage/audit.py examples/interop/aaif-44-goose-call-coverage/sample.otlp.json
