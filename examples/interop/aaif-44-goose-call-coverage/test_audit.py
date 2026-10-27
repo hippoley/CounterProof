@@ -57,6 +57,16 @@ class CoverageTest(unittest.TestCase):
     def test_negative_usage_invalid(self):
         self.assertEqual(audit(envelope(span(inp=-1)))['check_result'], 'UNRESOLVED')
 
+    def test_malformed_root_fails_closed(self):
+        self.assertEqual(audit([])['check_result'], 'FAIL')
+
+    def test_malformed_scope_fails_closed(self):
+        self.assertEqual(audit({'resourceSpans': [None]})['check_result'], 'FAIL')
+        self.assertEqual(audit({'resourceSpans': [{'scopeSpans': [None]}]})['check_result'], 'FAIL')
+
+    def test_malformed_span_fails_closed(self):
+        self.assertEqual(audit(envelope(None))['check_result'], 'FAIL')
+
     def test_no_resource_spans(self):
         self.assertEqual(audit({})['check_result'], 'UNRESOLVED')
 
