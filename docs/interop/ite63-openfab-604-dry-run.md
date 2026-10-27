@@ -19,8 +19,8 @@ This dry run is bound to external-state observation
 
 The reviewed snapshot is:
 
-- ITE #63 head: `ef11838ea97886f5e3702513983c4bf0af50d3b3`;
-- #604: open, last observed update `2026-10-02T17:46:36Z`;
+- ITE #63 head: `8bcde6be896328056e693f457927d85bd0b12db6`;
+- #604: open, last observed update `2026-10-08T22:09:58Z`;
 - OpenFab predicate-spec Git blob:
   `77051b33a8ab5c9fdf95bab8c6b263a173810ad4`;
 - agent-evidence-vectors AI-generation manifest Git blob:
@@ -34,7 +34,7 @@ assessment**; it does not retroactively make the historical note false.
 
 ### Discussion refresh
 
-A follow-up review of the #604 discussion observed six comments. The discussion
+A fresh 2026-10-27 review of #604 observed eight comments. The discussion
 now explicitly separates generation/review provenance from runtime-effect
 evidence and records a planned non-goal in the registration text. It also
 clarifies the ACP-to-Generation join through the commit tree rather than by
@@ -45,7 +45,7 @@ dry run's E2/E3 assessment: the reviewed discussion still does not establish the
 named independent implementer/consent facts required by E2 or the complete
 full-corpus promotion-run packaging required by E3.
 
-The external-state snapshot therefore also pins the issue's comment count.
+The new discussion additionally distinguishes #600's process/session predicate from #604's per-range generation predicate. That does not establish independent E2 implementer identity, public consent, or a full E3 run bundle. ITE #63 advanced by one commit (8bcde6b): revised E1 now additionally requires a released corpus tag/digest in the index and a common pinned registry runner, not simply green project CI. Those revised E1 obligations are not established by the pinned OpenFab/third-party corpus evidence alone. The external-state snapshot therefore also pins the issue's comment count.
 A new comment is treated as a re-review trigger rather than silently allowing
 the governance reading to remain current.
 
@@ -63,7 +63,7 @@ specific evidence contract.
 
 ## E1 — conformance corpus with negative controls
 
-**Publicly observed: strong evidence.**
+**Publicly observed: substantial corpus evidence, but the revised E1 registry replay/release condition remains unverified.**
 
 The third-party `vectors-ai-generation/` corpus:
 

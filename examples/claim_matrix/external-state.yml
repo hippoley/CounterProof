@@ -31,19 +31,19 @@ observations:
     note: "Candidate standards node: predicate conformance vectors and independent-verifier parity. CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
 
   - id: ite63-openfab-604-dry-run
-    observed_at: "2026-10-07"
+    observed_at: "2026-10-27"
     refresh_after_days: 14
     sources:
       - url: https://github.com/in-toto/ITE/pull/63
         kind: pull_request
         state: open
         merged: false
-        head_sha: ef11838ea97886f5e3702513983c4bf0af50d3b3
+        head_sha: 8bcde6be896328056e693f457927d85bd0b12db6
       - url: https://github.com/in-toto/attestation/issues/604
         kind: issue
         state: open
-        updated_at: "2026-10-02T17:46:36Z"
-        comments: 6
+        updated_at: "2026-10-08T22:09:58Z"
+        comments: 8
       - url: https://github.com/Open-fab-ai/openfab
         kind: repository_file
         path: docs/generation-predicate-v0.1.md
