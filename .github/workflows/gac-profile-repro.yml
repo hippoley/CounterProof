@@ -37,11 +37,32 @@ jobs:
       - name: Verify regressions on corrected release
         shell: bash
         run: |
+          set -o pipefail
           python -m pytest -q research/gac_profile/test_regressions.py | tee patched.log
+      - name: Check out upstream source at its published tag
+        uses: actions/checkout@v4
+        with:
+          repository: ElaadNL/openadr3-client-gac-compliance
+          ref: 3.2.4
+          path: upstream
+          persist-credentials: false
+      - name: Run upstream GAC 2.0 and 2.1 domain unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q upstream/tests/domain/gac20 upstream/tests/domain/gac21 | tee upstream-tests.log
+      - name: Generate reviewable unified diff against release tag
+        run: |
+          python research/gac_profile/apply_fix.py upstream
+          git -C upstream diff --no-ext-diff > gac-3.2.4-candidate.patch
+          test -s gac-3.2.4-candidate.patch
+          echo "Patch lines: $(wc -l < gac-3.2.4-candidate.patch)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gac-3.2.4-baseline-and-fixed
+          name: gac-3.2.4-evidence-and-candidate-patch
           path: |
             baseline.log
             patched.log
+            upstream-tests.log
+            gac-3.2.4-candidate.patch
