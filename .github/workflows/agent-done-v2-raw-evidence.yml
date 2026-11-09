@@ -1,0 +1,137 @@
+name: agent-done-or-not raw v2 evidence handoff
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/agent-done-v2-raw-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  produce-raw-v2-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout CounterProof
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CounterProof
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Fetch frozen agent-done-or-not producer
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v0.13.1 \
+            https://github.com/mohamedzhioua/agent-done-or-not.git \
+            "$RUNNER_TEMP/agent-done-or-not"
+          git -C "$RUNNER_TEMP/agent-done-or-not" rev-parse HEAD
+          sha256sum "$RUNNER_TEMP/agent-done-or-not/done-gate.sh"
+          sha256sum "$RUNNER_TEMP/agent-done-or-not/proof.schema.json"
+
+      - name: Produce a real capture receipt
+        env:
+          AGENT_DONE_DIR: ${{ runner.temp }}/agent-proof
+          AGENT_DONE_SESSION: counterproof-raw-handoff-${{ github.run_id }}
+          AGENT_DONE_VERIFIER: CounterProof
+        run: |
+          set -euo pipefail
+          bash "$RUNNER_TEMP/agent-done-or-not/done-gate.sh" capture \
+            --label counterproof-unit \
+            -- \
+            python -m pytest -q \
+              tests/unit/test_conformance_receipt.py \
+              tests/unit/test_external_state_freshness.py
+
+      - name: Preserve exact producer bytes and verify output digest
+        env:
+          GH_EVENT: ${{ github.event_name }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF: ${{ github.ref }}
+          GH_RUN_ID: ${{ github.run_id }}
+          GH_RUN_ATTEMPT: ${{ github.run_attempt }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+        run: |
+          set -euo pipefail
+          run_dir="$RUNNER_TEMP/agent-proof/counterproof-raw-handoff-$GH_RUN_ID"
+          ledger="$run_dir/ledger.jsonl"
+          log="$run_dir/counterproof-unit.log"
+          test -s "$ledger"
+          test -s "$log"
+          out="$RUNNER_TEMP/raw-evidence"
+          mkdir -p "$out"
+          python - "$ledger" "$log" "$out" <<'PY'
+          import hashlib
+          import json
+          import shutil
+          import sys
+          from pathlib import Path
+
+          ledger, log, out = map(Path, sys.argv[1:])
+          lines = ledger.read_text(encoding="utf-8").splitlines()
+          if not lines:
+              raise SystemExit("producer ledger is empty")
+          raw_line = lines[-1]
+          receipt = json.loads(raw_line)
+          log_bytes = log.read_bytes()
+          actual_log_sha = hashlib.sha256(log_bytes).hexdigest()
+          if receipt.get("sha256") != actual_log_sha:
+              raise SystemExit(
+                  "producer receipt sha256 does not match captured output log bytes"
+              )
+          (out / "receipt.json").write_text(raw_line + "\n", encoding="utf-8")
+          shutil.copy2(ledger, out / "ledger.jsonl")
+          shutil.copy2(log, out / "counterproof-unit.log")
+          (out / "log.sha256").write_text(actual_log_sha + "  counterproof-unit.log\n")
+          ledger_sha = hashlib.sha256(ledger.read_bytes()).hexdigest()
+          (out / "ledger.sha256").write_text(ledger_sha + "  ledger.jsonl\n")
+          print(json.dumps({
+              "receipt_kind": "capture",
+              "producer": receipt.get("producer"),
+              "disposition": receipt.get("disposition"),
+              "recorded_commit": receipt.get("commit"),
+              "recorded_ref": receipt.get("ref"),
+              "output_sha256_verified": True,
+              "ledger_sha256": ledger_sha,
+          }, indent=2, sort_keys=True))
+          PY
+          python - "$out/capture-context.json" <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          payload = {
+              "github_event": os.environ["GH_EVENT"],
+              "github_sha": os.environ["GH_SHA"],
+              "github_ref": os.environ["GH_REF"],
+              "github_run_id": os.environ["GH_RUN_ID"],
+              "github_run_attempt": os.environ["GH_RUN_ATTEMPT"],
+              "pull_request_head_sha": os.environ.get("PR_HEAD_SHA") or None,
+              "pull_request_base_sha": os.environ.get("PR_BASE_SHA") or None,
+              "commit_semantics": (
+                  "github_pull_request_merge_preview"
+                  if os.environ["GH_EVENT"] == "pull_request"
+                  else "workflow_dispatch_checkout"
+              ),
+              "note": "GitHub event context is provenance metadata, not a cryptographic attestation."
+          }
+          Path(sys.argv[1]).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+          PY
+          cat "$out/receipt.json"
+          cat "$out/capture-context.json"
+
+      - name: Upload raw producer evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-done-v2-raw-evidence
+          path: ${{ runner.temp }}/raw-evidence/
+          if-no-files-found: error
+          retention-days: 90

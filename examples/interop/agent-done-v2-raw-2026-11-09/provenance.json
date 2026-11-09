@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "producer": {
+    "repository": "mohamedzhioua/agent-done-or-not",
+    "tag": "v0.13.1",
+    "tag_object": "34bb41a35e96d544a9a17365d694214b1e75e413",
+    "resolved_commit": "4a801bf056519af5a845e773260ef23796eea3ff",
+    "done_gate_sha256": "6f8a6fd1dad47d806d3be0ba98ca5723be4b7569c08c01e821a3eff63fb4eb2c",
+    "proof_schema_sha256": "865db35fd05cc89de305022427cd9f6e96cdefde9ee2fd112059da323b4091ef"
+  },
+  "source_run": {
+    "repository": "hippoley/CounterProof",
+    "workflow_run": 42572343237,
+    "artifact_id": 13654190281,
+    "artifact_sha256": "aa7f71b8178772f72c10aa3fc020a915637285fc72c972e4639626a570bf5600",
+    "artifact_expires_at": "2027-02-07T06:19:37Z",
+    "ledger_sha256": "e18b622c9cad942f1c191c8d733a578892c2791bcb22442d43babff0000e846d",
+    "log_sha256": "7dfc5dc2f213a4e72dd023d8f2dc54753c98c11eca01cd4ffa5d6f2fbbc37990"
+  },
+  "files": {
+    "receipt": "receipt.json",
+    "ledger": "ledger.jsonl",
+    "output_log": "counterproof-unit.log",
+    "capture_context": "capture-context.json"
+  }
+}
