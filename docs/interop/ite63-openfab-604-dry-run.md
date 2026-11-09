@@ -23,10 +23,10 @@ The reviewed snapshot is:
 - #604: open, last observed update `2026-10-08T22:09:58Z`;
 - OpenFab predicate-spec Git blob:
   `77051b33a8ab5c9fdf95bab8c6b263a173810ad4`;
-- agent-evidence-vectors AI-generation manifest Git blob:
+- agent-evidence-vectors AI-generation manifest (`corpora/vectors-ai-generation/MANIFEST.json`) Git blob:
   `89cbc4f7d8f0e268a2da35e2417eb2c5090629d5`;
 - agent-evidence-vectors findings Git blob:
-  `0b764141c515f4b6c408b92a906147a7c35d2451`.
+  `ec735cf9990f5e78e18dc8651f43a09d39501c02`.
 
 The observation expires after 14 days. Expiry means **refresh the governance
 assessment**; it does not retroactively make the historical note false.
