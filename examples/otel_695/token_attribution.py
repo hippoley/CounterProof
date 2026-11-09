@@ -64,8 +64,24 @@ def direct_sum(rows):
     return tuple(sum(r["direct"][i] for r in rows.values()) for i in (0, 1))
 
 
+def root_total_bounds(rows):
+    """Known lower bound and completeness for the observed local invocation roots.
+
+    A locally observed root is not necessarily a global request root. Even
+    complete=True only establishes completeness within this supplied forest.
+    """
+    roots = [row for row in rows.values() if row["root"]]
+    return {
+        "known_total": tuple(
+            sum(row["known_total"][i] for row in roots) for i in (0, 1)
+        ),
+        "complete": all(row["total_complete"] for row in roots),
+        "root_count": len(roots),
+    }
+
+
 def root_total_sum(rows):
-    roots = [r for r in rows.values() if r["root"]]
-    if not all(r["total_complete"] for r in roots):
+    bounds = root_total_bounds(rows)
+    if not bounds["complete"]:
         raise ValueError("root total incomplete (unreported remote usage)")
-    return tuple(sum(r["known_total"][i] for r in roots) for i in (0, 1))
+    return bounds["known_total"]
