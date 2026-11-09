@@ -1,0 +1,31 @@
+{
+  "schema_version": "claimproof.basis/v0",
+  "producer": {
+    "name": "claimproof",
+    "component": "basis"
+  },
+  "claim": {
+    "id": "dirty-candidate-export",
+    "state": "UNKNOWN",
+    "text": "A candidate-bound claim whose evidence could not be fully re-measured",
+    "recorded": "2026-11-09T00:00:00Z"
+  },
+  "evidence": [
+    {
+      "ref": "tests/test_basis_export.py",
+      "digest": "3c2365b2b22a284a",
+      "kind": "file"
+    },
+    {
+      "ref": "pytest result",
+      "digest": "<absent>",
+      "kind": "value"
+    }
+  ],
+  "candidate": {
+    "repository": "hippoley/CounterProof",
+    "identity": "0123456789abcdef0123456789abcdef01234567+dirty.89abcdef01234567",
+    "identity_kind": "git-commit-dirty"
+  },
+  "measured_at": "2026-11-09T00:00:00Z"
+}

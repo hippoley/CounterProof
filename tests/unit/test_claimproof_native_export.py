@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -57,3 +58,27 @@ def test_native_claimproof_export_never_upgrades_nonholding_states(tmp_path, sta
 def test_native_claimproof_export_fails_closed(tmp_path, changes, message):
     with pytest.raises((ValueError, TypeError), match=message):
         load_claimproof_native_export(_export(tmp_path, **changes))
+
+
+def test_pinned_native_v0_fixture_validates_against_upstream_schema():
+    import jsonschema
+
+    fixture_dir = Path("examples/interop/claimproof-basis-v0")
+    payload = json.loads(
+        (fixture_dir / "native-export-dirty-candidate.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (fixture_dir / "claimproof.basis.v0.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.validate(payload, schema)
+
+
+def test_pinned_native_v0_fixture_preserves_dirty_identity_and_unknown_state():
+    fixture_dir = Path("examples/interop/claimproof-basis-v0")
+    path = fixture_dir / "native-export-dirty-candidate.json"
+    admitted = load_claimproof_native_export(path)
+
+    assert admitted["candidate"]["identity_kind"] == "git-commit-dirty"
+    assert admitted["candidate"]["identity"].endswith("+dirty.89abcdef01234567")
+    assert admitted["claim"]["state"] == "UNKNOWN"
+    assert admitted["evidence"][1]["digest"] == "<absent>"
