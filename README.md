@@ -868,6 +868,22 @@ That is the point.
 
 ---
 
+## Open interoperability work
+
+The following are **public, independently inspectable collaboration threads**,
+not claims of official endorsement, standards acceptance, or production adoption:
+
+| External community | Our concrete evidence or contribution | Current boundary |
+|---|---|---|
+| [OpenTelemetry GenAI #695](https://github.com/open-telemetry/semantic-conventions-genai/issues/695) | [18-case attribution probe](examples/otel_695/README.md) with SDK-generated span tests and CI, merged in [CounterProof #211](https://github.com/hippoley/CounterProof/pull/211) | Consumer experiment; no accepted telemetry convention or cross-process completeness claim |
+| [OpenTelemetry GenAI #535](https://github.com/open-telemetry/semantic-conventions-genai/pull/535) | Proposed pre-execution decision-event convention and simulated cross-runtime receipts | Upstream PR open; review pending, not standard or stable |
+| [Assay privileged-MCP profile #1840](https://github.com/Rul1an/assay/issues/1840) | Independent disclosed 14/14 candidate.4 replay and [two Stage-3 marker vectors](https://github.com/hippoley/SpatialRuntime/pull/86) reviewed in principle by the maintainer | Candidate.4 result is fixed; proposed vectors are not yet part of a released or scored upstream corpus |
+| [JFrog agentic-process evidence](https://github.com/jfrog/agentic-process-evidence) | Maintainer-requested [claim-oracle boundary patch](docs/interop/jfrog-agentic-process-oracle-boundary.patch) and [discussion](https://github.com/hippoley/CounterProof/issues/131) | Patch preserved locally because upstream branch-write permission is unavailable; no JFrog PR or adoption yet |
+
+These links are meant to help maintainers reproduce or challenge one bounded
+claim at a time. A discussion, code review, external verification, upstream
+merge, and third-party product use are **different evidence states**.
+
 ## Experimental evidence profiles
 
 CounterProof's primary product path remains PR evidence replay, oracle/integrity checks, receipts, and reviewer handoff. Experimental profiles stay subordinate until an external workflow consumes them.
