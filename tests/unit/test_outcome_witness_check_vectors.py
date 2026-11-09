@@ -2,7 +2,6 @@ import importlib.util
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "examples/outcome_witness/check_vectors.py"
 FIXTURE = ROOT / "examples/outcome_witness/v0_1_vectors.json"
