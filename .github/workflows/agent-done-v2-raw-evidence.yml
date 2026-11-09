@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - ".github/workflows/agent-done-v2-raw-evidence.yml"
   workflow_dispatch:
 
 permissions:
