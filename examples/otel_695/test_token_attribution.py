@@ -1,5 +1,5 @@
 import unittest
-from token_attribution import Invocation, attributed, direct_sum, root_total_sum
+from token_attribution import Invocation, attributed, direct_sum, root_total_bounds, root_total_sum
 
 
 class AttributionTests(unittest.TestCase):
@@ -74,6 +74,38 @@ class AttributionTests(unittest.TestCase):
         self.assertEqual(direct_sum(r), (10, 3))
         with self.assertRaisesRegex(ValueError, 'incomplete'):
             root_total_sum(r)
+
+    def test_root_bounds_complete_example(self):
+        bounds = root_total_bounds(self.example())
+        self.assertEqual(bounds, {
+            'known_total': (1000, 210),
+            'complete': True,
+            'root_count': 1,
+        })
+
+    def test_remote_unknown_reports_lower_bound_without_claiming_zero(self):
+        rows = attributed([
+            Invocation('root', None, 100, 10),
+            Invocation('remote', 'root', 0, 0, True),
+        ])
+        self.assertEqual(root_total_bounds(rows), {
+            'known_total': (100, 10),
+            'complete': False,
+            'root_count': 1,
+        })
+
+    def test_mixed_roots_have_known_lower_bound_but_not_authoritative_total(self):
+        rows = attributed([
+            Invocation('a', None, 7, 2),
+            Invocation('b', None, 3, 1, True),
+        ])
+        self.assertEqual(root_total_bounds(rows), {
+            'known_total': (10, 3),
+            'complete': False,
+            'root_count': 2,
+        })
+        with self.assertRaisesRegex(ValueError, 'incomplete'):
+            root_total_sum(rows)
 
 if __name__ == '__main__':
     unittest.main()
