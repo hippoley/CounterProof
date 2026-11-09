@@ -51,5 +51,29 @@ class AttributionTests(unittest.TestCase):
             Invocation('x', None, -1, 0)
 
 
+    def test_nested_remote_gap_propagates_to_all_ancestors(self):
+        r = attributed([
+            Invocation('root', None, 10, 1),
+            Invocation('middle', 'root', 20, 2),
+            Invocation('leaf', 'middle', 0, 0, True),
+        ])
+        self.assertEqual(r['root']['known_total'], (30, 3))
+        self.assertFalse(r['leaf']['total_complete'])
+        self.assertFalse(r['middle']['total_complete'])
+        self.assertFalse(r['root']['total_complete'])
+        with self.assertRaisesRegex(ValueError, 'incomplete'):
+            root_total_sum(r)
+
+    def test_one_incomplete_root_invalidates_combined_root_total(self):
+        r = attributed([
+            Invocation('complete', None, 7, 2),
+            Invocation('incomplete', None, 3, 1, True),
+        ])
+        self.assertTrue(r['complete']['total_complete'])
+        self.assertFalse(r['incomplete']['total_complete'])
+        self.assertEqual(direct_sum(r), (10, 3))
+        with self.assertRaisesRegex(ValueError, 'incomplete'):
+            root_total_sum(r)
+
 if __name__ == '__main__':
     unittest.main()
