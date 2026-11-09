@@ -18,6 +18,6 @@ The issue's four-agent example yields:
 
 Direct usage summed across invocation nodes = **1000/210**; inclusive usage aggregated only at the root = **1000/210**; incorrectly summing inclusive input at *every* node = **2300**. When a remote child does not report usage, the synthetic oracle marks its root total incomplete rather than treating unknown consumption as zero.
 
-Eight local deterministic tests verify this accounting and reject duplicate IDs, orphans, cycles and negative token counts. No real agent traces, SDK metrics, real billing or remote child receipts are involved. No test proves a proposed metrics schema is correct in real deployments.
+Ten deterministic standard-library tests cover this accounting, duplicate IDs, orphans, cycles, negative token counts, nested unknown-usage propagation and mixed-completeness root aggregation. The fixture now runs in the repository pull-request CI matrix on Python 3.10–3.12; local test counts are not a claim that GitHub checks have passed. No real agent traces, SDK metrics, real billing or remote child receipts are involved. No test proves a proposed metrics schema is correct in real deployments.
 
 Three open questions: (1) How would consumers distinguish *complete* inclusive totals from *known lower bounds* in the presence of missing remote usage? (2) How should a top-level filter behave if a root is only local to a process? (3) What is the recommended dashboard guidance to prevent nested inclusive-histogram double counting after sampling?
