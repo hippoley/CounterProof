@@ -1,0 +1,18 @@
+{
+  "producer_repository": "Cshearer210/claimproof",
+  "producer_commit": "2c3be25",
+  "source": {
+    "basis_py_blob": "517215f265f340bd61d1e986908d7b6f1f60a027",
+    "schema_path": "src/claimproof/schemas/claimproof.basis.v0.json",
+    "schema_blob": "698afdd301787416f4f4609f20ec73b974528f4d",
+    "test_path": "tests/test_basis_export.py",
+    "test_blob": "edba4ed4a653a95f544a25c5340aab70a3cbf404"
+  },
+  "fixture_status": "synthetic_schema_conformant_consumer_fixture",
+  "not_a_producer_run": true,
+  "notes": [
+    "The payload shape follows the published claimproof.basis/v0 schema.",
+    "The dirty identity is intentionally opaque and is not asserted to be a real git object.",
+    "This fixture tests consumer preservation of identity_kind and UNKNOWN; it is not a producer-generated receipt."
+  ]
+}
