@@ -7,7 +7,6 @@ import subprocess
 import sys
 import unittest
 
-
 MARKER_OUT = "SYNTHETIC_PATH_STDOUT"
 MARKER_ERR = "SYNTHETIC_PATH_STDERR"
 SCRIPT = (
@@ -25,8 +24,7 @@ class StreamContainmentTests(unittest.TestCase):
         )
         outer = subprocess.run(
             [sys.executable, "-c", wrapper, SCRIPT],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=True,
         )
