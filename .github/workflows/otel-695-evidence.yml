@@ -1,0 +1,44 @@
+name: OTel 695 agent token attribution evidence
+
+on:
+  pull_request:
+    paths:
+      - "examples/otel_695/**"
+      - ".github/workflows/otel-695-evidence.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "examples/otel_695/**"
+      - ".github/workflows/otel-695-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-accounting:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify synthetic attribution lower-bound contract
+        run: python -m unittest discover -s examples/otel_695 -p 'test_*.py' -v
+
+  sdk-span-integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test-only OpenTelemetry SDK
+        run: python -m pip install 'opentelemetry-sdk>=1.30,<2'
+      - name: Verify SDK-generated local span attribution
+        run: python -m unittest discover -s examples/otel_695/sdk_probe -p 'test_*.py' -v
