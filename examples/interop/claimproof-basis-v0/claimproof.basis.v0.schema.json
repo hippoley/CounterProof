@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Cshearer210/claimproof/schemas/claimproof.basis.v0.json",
+  "title": "claimproof.basis/v0 durable claim export",
+  "description": "One recorded completion claim, the content fingerprints it was measured against, and WHICH version of WHICH repository those fingerprints belong to. Produced by ClaimBasis.export(). Deliberately NOT produced by capture.receipt: that line is same-turn and session-local, it has no candidate and never did, and binding it would make it outlive the only question it can honestly answer.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "claim",
+    "evidence",
+    "candidate"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": "claimproof.basis/v0"
+    },
+    "producer": {
+      "type": "object",
+      "description": "Who wrote this. Present so a reader never has to infer it.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "component": {
+          "type": "string"
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "required": [
+        "id",
+        "state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "HOLDS",
+            "REOPENED",
+            "UNKNOWN",
+            "RETIRED"
+          ],
+          "description": "RE-MEASURED at export time, never read back from the store. UNKNOWN is a real answer and is never folded into HOLDS: a reader must be able to tell 'I checked and it holds' from 'I could not check'."
+        },
+        "text": {
+          "type": "string"
+        },
+        "recorded": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Content fingerprints, not content. The raw text is deliberately never stored: this store gets committed, and evidence is often a log line.",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "digest",
+          "kind"
+        ],
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "description": "sha256 truncated to 16 hex chars, or '<absent>'."
+          },
+          "kind": {
+            "enum": [
+              "file",
+              "value"
+            ]
+          }
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "required": [
+        "repository",
+        "identity"
+      ],
+      "description": "The binding. Without it an export is a digest with nowhere to point.",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "OPAQUE ON PURPOSE. A git commit is the common case and not the only one: a dirty working tree, a generated snapshot and a container digest are all real candidates. A consumer must not require 40 hex characters."
+        },
+        "identity_kind": {
+          "type": "string",
+          "description": "What sort of thing `identity` is, so a reader decides what it may do with it instead of guessing from its shape. Known today: git-commit, git-commit-dirty, opaque."
+        }
+      }
+    },
+    "measured_at": {
+      "type": "string"
+    }
+  }
+}
