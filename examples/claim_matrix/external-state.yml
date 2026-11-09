@@ -1,7 +1,7 @@
 schema_version: 1
 observations:
   - id: avera-check-v0-upstream
-    observed_at: "2026-10-07"
+    observed_at: "2026-11-09"
     refresh_after_days: 30
     sources:
       - url: https://github.com/mikheil-galoian/avera/issues/12
@@ -14,46 +14,49 @@ observations:
         merged: true
         merged_at: "2026-10-07T04:26:03Z"
         head_sha: a6bdb0d005fc5cc72b5814255105fbaad3b62d6d
-    note: "The design thread is closed because the v0 producer contract landed; CounterProof's public interoperability claim is about the implemented producer/consumer relationship, not an open-issue status."
+    note: "Re-read on 2026-11-09: issue #12 remains closed and PR #14 remains merged at the same head; the public interoperability claim is about the implemented producer/consumer relationship, not an open-issue status."
 
   - id: in-toto-conformance-layer-node
-    observed_at: "2026-10-07"
+    observed_at: "2026-11-09"
     refresh_after_days: 14
     sources:
       - url: https://github.com/in-toto/attestation/issues/554
         kind: issue
         state: open
+        updated_at: "2026-10-01T21:31:17Z"
+        comments: 28
       - url: https://github.com/in-toto/attestation/pull/597
         kind: pull_request
         state: open
         merged: false
         head_sha: 8c8d21c4908cff5b5c241e7fce32d342975216f9
-    note: "Candidate standards node: predicate conformance vectors and independent-verifier parity. CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
+        updated_at: "2026-09-23T02:50:06Z"
+    note: "Re-read on 2026-11-09: both the agent-decision predicate discussion and conformance-layer PR remain open; CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
 
   - id: ite63-openfab-604-dry-run
-    observed_at: "2026-10-07"
+    observed_at: "2026-11-09"
     refresh_after_days: 14
     sources:
       - url: https://github.com/in-toto/ITE/pull/63
         kind: pull_request
         state: open
         merged: false
-        head_sha: ef11838ea97886f5e3702513983c4bf0af50d3b3
+        head_sha: 8bcde6be896328056e693f457927d85bd0b12db6
       - url: https://github.com/in-toto/attestation/issues/604
         kind: issue
         state: open
-        updated_at: "2026-10-02T17:46:36Z"
-        comments: 6
+        updated_at: "2026-10-08T22:09:58Z"
+        comments: 8
       - url: https://github.com/Open-fab-ai/openfab
         kind: repository_file
         path: docs/generation-predicate-v0.1.md
         blob_sha: 77051b33a8ab5c9fdf95bab8c6b263a173810ad4
       - url: https://github.com/probityai/agent-evidence-vectors
         kind: repository_file
-        path: vectors-ai-generation/MANIFEST.json
+        path: corpora/vectors-ai-generation/MANIFEST.json
         blob_sha: 89cbc4f7d8f0e268a2da35e2417eb2c5090629d5
       - url: https://github.com/probityai/agent-evidence-vectors
         kind: repository_file
         path: docs/proposals/ai-generation-v01-findings.md
-        blob_sha: 0b764141c515f4b6c408b92a906147a7c35d2451
-    note: "Governance dry-run snapshot. Conclusions about which ITE #63 evidence facts are publicly established must be refreshed when this observation expires or when any pinned source materially changes."
+        blob_sha: ec735cf9990f5e78e18dc8651f43a09d39501c02
+    note: "Re-read on 2026-11-09. The ITE #63 head, #604 discussion, OpenFab predicate, and AI-generation manifest were checked again; the manifest is pinned at its current corpora/ path. Conclusions about which ITE #63 evidence facts are publicly established must be refreshed when this observation expires or when any pinned source materially changes."
