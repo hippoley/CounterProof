@@ -54,6 +54,7 @@ def test_external_execution_receipt_is_admitted_only_as_bounded_input(tmp_path):
         "commit": "1" * 40,
         "tree": "2" * 40,
         "dirty": False,
+        "commit_role": "producer_recorded_git_commit",
     }
     assert admitted["execution"]["exit_code"] == 0
     limits = admitted["evidence_limits"]
