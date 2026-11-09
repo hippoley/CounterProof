@@ -1,0 +1,37 @@
+diff --git a/spec/agentic-process-evidence.md b/spec/agentic-process-evidence.md
+--- a/spec/agentic-process-evidence.md
++++ b/spec/agentic-process-evidence.md
+@@ -281,6 +281,33 @@
+ | `ALIGNED` | Alignment check process completed with positive verdict |
+ | `MISALIGNED` | Alignment check process completed with negative verdict  |
+ 
++### Interpretation boundary: process evidence is not claim-oracle authority
++
++A process evidence statement describes the declared process, its provenance,
++and the process outcome represented by `predicate.result`. In particular, a
++`COMPLETED` process or a successful test execution does not, by itself,
++establish that the executed test or contract is an authoritative oracle for
++an arbitrary downstream claim about the subject.
++
++For example, re-executing a CI command and obtaining a passing result can
++support the statement that the command ran and passed on the recorded subject.
++It does **not** establish that this command exercises the reported defect,
++covers the user requirement, or is sufficient to conclude that the defect was
++fixed. Likewise, `APPROVED` records the outcome of a declared review process;
++it does not assert that every possible correctness claim about its subject
++is proven.
++
++A verifier or policy engine that relies on the process evidence for a
++particular downstream claim is responsible for separately establishing the
++relevance, scope, and sufficiency of the process or test as an oracle for
++that claim. Cryptographic integrity and authentic provenance of an evidence
++statement do not remove that obligation.
++
++This is a **non-goal and composition boundary**, not a new field or required
++predicate schema: process evidence can be combined with a separate claim
++evaluation without changing `predicate.result`, `intents`, or
++`processSummary`.
++
+ ## Development process custom data
+ 
+ Optional. Custom attributes should allow adding any process-specific data (review, development, promotion, etc.).
