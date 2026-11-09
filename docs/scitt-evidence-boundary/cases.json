@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ack_only",
+    "command_accepted": true,
+    "ack": true,
+    "motor_position": 0,
+    "declared_window_position": 1,
+    "object_observation": null,
+    "independence_proven": false,
+    "expected": "UNCHECKABLE"
+  },
+  {
+    "id": "matching_bytes_no_observation",
+    "statement_digest": "abc",
+    "actual_statement_digest": "abc",
+    "object_observation": null,
+    "declared_window_position": 1,
+    "expected": "UNCHECKABLE"
+  },
+  {
+    "id": "motor_not_object",
+    "motor_position": 1,
+    "declared_window_position": 1,
+    "object_observation": null,
+    "expected": "UNCHECKABLE"
+  },
+  {
+    "id": "self_reported_separation",
+    "declared_window_position": 1,
+    "object_observation": {
+      "position": 1,
+      "quality": "measured",
+      "sensor_id": "object-1"
+    },
+    "declared_control_domains": [
+      "controller",
+      "sensor"
+    ],
+    "independence_proven": false,
+    "expected": "INDEPENDENCE_UNPROVEN"
+  },
+  {
+    "id": "observed_mismatch",
+    "declared_window_position": 1,
+    "object_observation": {
+      "position": 0,
+      "quality": "measured",
+      "sensor_id": "object-1"
+    },
+    "independence_proven": true,
+    "expected": "INCONSISTENT"
+  },
+  {
+    "id": "observed_match",
+    "declared_window_position": 1,
+    "object_observation": {
+      "position": 1,
+      "quality": "measured",
+      "sensor_id": "object-1"
+    },
+    "independence_proven": true,
+    "expected": "CONSISTENT_LIMITED"
+  },
+  {
+    "id": "bad_reference_digest",
+    "statement_digest": "abc",
+    "actual_statement_digest": "def",
+    "declared_window_position": 1,
+    "object_observation": null,
+    "expected": "REFERENCE_MISMATCH"
+  }
+]
