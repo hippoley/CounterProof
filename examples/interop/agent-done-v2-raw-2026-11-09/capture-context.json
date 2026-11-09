@@ -1,0 +1,11 @@
+{
+  "commit_semantics": "github_pull_request_merge_preview",
+  "github_event": "pull_request",
+  "github_ref": "refs/pull/206/merge",
+  "github_run_attempt": "1",
+  "github_run_id": "42572343237",
+  "github_sha": "5a5b6b988a3c047f6ab6a389fac8aeea09fc039c",
+  "note": "GitHub event context is provenance metadata, not a cryptographic attestation.",
+  "pull_request_base_sha": "7f57d31137540a0f3d40d5a6eeb5dac5d7c19a37",
+  "pull_request_head_sha": "6cc606816a8e2689292ee91c9b58016a0de41061"
+}
