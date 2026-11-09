@@ -294,11 +294,11 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
         if item["url"] == "https://github.com/probityai/agent-evidence-vectors"
     ]
     assert {item["path"]: item["blob_sha"] for item in vectors} == {
-        "vectors-ai-generation/MANIFEST.json": (
+        "corpora/vectors-ai-generation/MANIFEST.json": (
             "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5"
         ),
         "docs/proposals/ai-generation-v01-findings.md": (
-            "0b764141c515f4b6c408b92a906147a7c35d2451"
+            "ec735cf9990f5e78e18dc8651f43a09d39501c02"
         ),
     }
 
@@ -312,7 +312,7 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
         "2026-10-08T22:09:58Z",
         "77051b33a8ab5c9fdf95bab8c6b263a173810ad4",
         "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5",
-        "0b764141c515f4b6c408b92a906147a7c35d2451",
+        "ec735cf9990f5e78e18dc8651f43a09d39501c02",
     }
     for fragment in expected_fragments:
         assert fragment in dry_run
