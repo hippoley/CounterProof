@@ -8,10 +8,10 @@ import yaml
 from click.testing import CliRunner
 
 from skill_factory.evolution.capabilities import capability_report
-from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.claimproof_basis_handoff import (
     load_claimproof_basis_handoff,
 )
+from skill_factory.evolution.cli import cli as evo_cli
 from skill_factory.evolution.external_execution_receipt import (
     admit_external_execution_receipt,
 )
@@ -266,13 +266,13 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     assert ite["kind"] == "pull_request"
     assert ite["state"] == "open"
     assert ite["merged"] is False
-    assert ite["head_sha"] == "ef11838ea97886f5e3702513983c4bf0af50d3b3"
+    assert ite["head_sha"] == "8bcde6be896328056e693f457927d85bd0b12db6"
 
     proposal = sources["https://github.com/in-toto/attestation/issues/604"]
     assert proposal["kind"] == "issue"
     assert proposal["state"] == "open"
-    assert proposal["updated_at"] == "2026-10-02T17:46:36Z"
-    assert proposal["comments"] == 6
+    assert proposal["updated_at"] == "2026-10-08T22:09:58Z"
+    assert proposal["comments"] == 8
 
     openfab = [
         item
@@ -308,8 +308,8 @@ def test_governance_dry_run_is_bound_to_fresh_external_snapshot():
     assert "ite63-openfab-604-dry-run" in dry_run
 
     expected_fragments = {
-        "ef11838ea97886f5e3702513983c4bf0af50d3b3",
-        "2026-10-02T17:46:36Z",
+        "8bcde6be896328056e693f457927d85bd0b12db6",
+        "2026-10-08T22:09:58Z",
         "77051b33a8ab5c9fdf95bab8c6b263a173810ad4",
         "89cbc4f7d8f0e268a2da35e2417eb2c5090629d5",
         "0b764141c515f4b6c408b92a906147a7c35d2451",
