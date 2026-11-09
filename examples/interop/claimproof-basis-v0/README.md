@@ -43,3 +43,15 @@ The handoff experiment asks one narrow question:
 This is not a claimproof adoption or shipped producer export. It is a frozen
 downstream consumer fixture for the first-class use case invited by the
 claimproof maintainer.
+
+## Native producer export
+
+The separate [native v0 export fixture](NATIVE_EXPORT.md) now pins the
+producer's published `claimproof.basis/v0` JSON Schema and exercises the
+consumer loader against a schema-conformant payload. It explicitly preserves
+`candidate.identity_kind`, opaque dirty-candidate identity, and
+`claim.state=UNKNOWN`.
+
+The native fixture is labelled synthetic/schema-conformant, not a payload
+captured from a live ClaimProof process. The original v1 store fixture above
+remains a separate historical compatibility experiment.
