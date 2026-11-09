@@ -22,4 +22,29 @@ Thirteen deterministic standard-library tests cover this accounting, duplicate I
 
 A consumer can call `root_total_bounds(rows)` to receive the **observed known lower bound** (`known_total`), a `complete` flag, and the number of locally observed roots. For example, a locally observed 100/10 root with an unreported remote child yields `known_total=(100, 10)` and `complete=False`, **not** an asserted 100/10 request total. `root_total_sum(rows)` still refuses incomplete results. These are local forest semantics; even `complete=True` does not establish global completeness across processes or missing traces.
 
+## OpenTelemetry SDK-generated span probe
+
+The separately gated `sdk_probe/` tests exercise actual `ReadableSpan` objects
+generated with the **OpenTelemetry Python SDK** and its in-memory exporter.
+No GenAI provider, remote agent, external collector, production workload or
+exported production trace is involved.
+
+```bash
+python -m pip install 'opentelemetry-sdk>=1.30,<2'
+python -m unittest discover -s examples/otel_695/sdk_probe -p 'test_*.py' -v
+```
+
+The consumer probe attributes observed inference spans to their nearest visible
+agent ancestor in the same trace. It **does not add agent-span usage attributes**
+to inference usage, because agent usage may already be inclusive. Missing
+inference usage remains unknown, missing ancestors leave consumption
+unattributed, and `global_complete` is always false because an observed
+SDK span set cannot establish complete collection in the presence of sampling,
+cross-process calls or dropped telemetry.
+
+These SDK spans are real library-generated telemetry, but their token values
+and agent topology are intentionally constructed test inputs, **not** live
+provider-measured usage. No proposed OTel metric naming or production behavior
+is validated.
+
 Three open questions: (1) How would consumers distinguish *complete* inclusive totals from *known lower bounds* in the presence of missing remote usage? (2) How should a top-level filter behave if a root is only local to a process? (3) What is the recommended dashboard guidance to prevent nested inclusive-histogram double counting after sampling?
