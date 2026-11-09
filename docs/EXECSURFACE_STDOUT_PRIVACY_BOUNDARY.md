@@ -1,72 +1,55 @@
-# ExecSurface #164: stdout privacy boundary — reproducible review note
+# ExecSurface #164: stdout privacy boundary — upstream remediation verified
 
-Status: **source-level finding, not yet independently reproduced or upstream-qualified**.
+Status: **original raw-stream leak reported; upstream remediation merged; typed-evidence path exposure remains a separate boundary**.
 
 External intake: https://github.com/AETHERXGLOBAL/execsurface/issues/164
 
-## Exact boundary
+## Original finding
 
-In `AETHERXGLOBAL/execsurface`, `scripts/p8_a3_external_trial_capture.py` uses
-`subprocess.run(..., stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)`
-for the helper `run_text`, but the **observe** subprocess is invoked with
-`subprocess.run([... "observe", "--evidence-output", ...], cwd=workdir, check=False)`
-without capturing stdout/stderr. This inherits the caller's streams.
+The earlier `scripts/p8_a3_external_trial_capture.py` observe invocation inherited
+the caller's stdout/stderr. A path-bearing observe message could therefore reach
+a public CI log before the evaluator inspected `typed-evidence.json`.
 
-The guide tells evaluators to inspect `typed-evidence.json` before sharing.
-That instruction cannot protect any path-bearing content printed by the
-observe subprocess into a public CI log *before* inspection.
+This was reported in ExecSurface issue #164. It was a source-level finding and
+a synthetic subprocess reproduction, not a claim of product qualification.
 
-The initial independent CounterProof trial reported the observation in #164,
-while preserving the five passing stages and bounded consumer verdict.
-Do not interpret that result as AETHER X qualification or endorsement.
+## Upstream remediation
 
-## Minimal falsification probe (local, synthetic; no secrets)
+The producer maintainer merged [ExecSurface PR #184](https://github.com/AETHERXGLOBAL/execsurface/pull/184)
+at commit `6d24e5975dfa86a33d6bf316ece0f8103d3c922e` on 2026-10-08.
 
-The following standalone Python reproduces the **subprocess stream inheritance
-mechanism**, not an ExecSurface binary run:
+The current upstream source
+[`scripts/p8_a3_external_trial_capture.py`](https://github.com/AETHERXGLOBAL/execsurface/blob/main/scripts/p8_a3_external_trial_capture.py)
+has blob SHA `10cce99c076d7f70cd4087c8cb12275258108f9a`. Its
+`run_privacy_bounded()` helper now invokes child commands with both
+`stdout=subprocess.DEVNULL` and `stderr=subprocess.DEVNULL`, returning the
+exit status without retaining or forwarding raw child output.
 
-```python
-import subprocess
-import sys
+This closes the original inherited-stream path for commands run through that
+helper. It does **not** mean all evidence is path-free: the current harness
+explicitly records `typed_effect_may_contain_paths: true` in its privacy
+policy. Typed evidence still needs inspection and sanitization before sharing.
 
-secret_marker = "SYNTHETIC_PATH_MARKER_DO_NOT_PUBLISH"
-command = [sys.executable, "-c", f"print({secret_marker!r})"]
+## Synthetic regression boundary
 
-# Equivalent to observe-stage invocation: marker reaches parent stdout/CI log.
-subprocess.run(command, check=True)
+`tests/unit/test_execsurface_stdout_boundary.py` tests the Python subprocess
+stream-containment mechanism with synthetic markers only. It does not import
+the upstream harness, execute an ExecSurface binary, or prove the producer
+implementation end-to-end. The upstream source/merge commit above is the
+separate source-level remediation evidence.
 
-# Proposed containment: marker is not inherited by parent stdout.
-result = subprocess.run(
-    command, check=True, stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE, text=True,
-)
-assert secret_marker in result.stdout
-assert result.returncode == 0
-```
+## What this does and does not establish
 
-## Candidate minimal producer-side change
+Established:
+- The original observe-stage stdout/stderr inheritance was reported.
+- Upstream PR #184 merged a helper that sends both streams to `DEVNULL`.
+- The current public source contains that helper.
 
-Capture `observe` stdout/stderr at the **trial harness boundary**, without
-printing raw captured bytes or retaining them in public summary artifacts.
-Keep `observe_exit_code`, `evidence_sha256`, consumer validation, and the
-first-result preservation rules unchanged. For high-volume output, prefer
-private temporary files with explicit permissions or bounded streaming over
-unbounded in-memory `PIPE` capture. A failure should report a sanitized
-error code and pointer to private diagnostics, never the raw stream.
+Not established:
+- That every producer code path uses `run_privacy_bounded()`.
+- That typed evidence is free of filesystem paths or other sensitive values.
+- That the external workload was qualified, or that AETHER X GLOBAL endorses
+  CounterProof.
 
-## Regression contract
-
-1. A synthetic observed command emits a recognizable path marker to stdout
-   and stderr. Neither marker reaches the public job log.
-2. The same command's exit code and typed-evidence generation remain intact.
-3. A nonzero observed command still preserves the initial failed summary.
-4. Consumer validation still reads the generated evidence file.
-5. No raw output is silently promoted into `trial-summary.json` or
-   `consumer-report.json`.
-
-## Honest evidence boundary
-
-This is an upstream-facing reproduction note, **not** a claim that the fix
-was merged, that the CI log has been remediated, or that #164 has been
-qualified. Recheck the upstream harness at the current commit before applying
-any patch: a later upstream revision may already fix this.
+The original #140 Residual-Necessity run and the separate #164 privacy trial
+remain distinct evidence records and must not be combined.
