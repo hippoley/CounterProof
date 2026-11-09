@@ -1,8 +1,7 @@
-"""Executable, synthetic regression of the ExecSurface #164 stdout boundary.
+"""Synthetic regression of the ExecSurface #164 stdout privacy boundary.
 
-No ExecSurface binary, secrets, network, or private paths are used. This verifies
-Python subprocess inheritance and a safe containment mechanism, not the
-upstream harness end-to-end.
+No ExecSurface binary, secrets, network, or private paths are used. This tests
+the subprocess DEVNULL containment mechanism, not the upstream harness itself.
 """
 import subprocess
 import sys
@@ -20,7 +19,6 @@ SCRIPT = (
 
 class StreamContainmentTests(unittest.TestCase):
     def test_inherited_streams_reach_parent_capture(self):
-        # A nested Python process simulates a public CI job's stdout/stderr.
         wrapper = (
             "import subprocess,sys; "
             "subprocess.run([sys.executable, '-c', sys.argv[1]], check=True)"
@@ -35,11 +33,11 @@ class StreamContainmentTests(unittest.TestCase):
         self.assertIn(MARKER_OUT, outer.stdout)
         self.assertIn(MARKER_ERR, outer.stderr)
 
-    def test_captured_streams_do_not_reach_parent_capture(self):
+    def test_devnull_containment_drops_both_streams(self):
         wrapper = (
             "import subprocess,sys; "
             "p=subprocess.run([sys.executable, '-c', sys.argv[1]], "
-            "stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True); "
+            "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
             "sys.exit(p.returncode)"
         )
         outer = subprocess.run(
@@ -51,13 +49,14 @@ class StreamContainmentTests(unittest.TestCase):
         )
         self.assertNotIn(MARKER_OUT, outer.stdout + outer.stderr)
         self.assertNotIn(MARKER_ERR, outer.stdout + outer.stderr)
+        self.assertEqual(outer.returncode, 0)
 
-    def test_containment_preserves_nonzero_exit(self):
+    def test_devnull_containment_preserves_nonzero_exit(self):
         failing = SCRIPT + "; sys.exit(23)"
         wrapper = (
             "import subprocess,sys; "
             "p=subprocess.run([sys.executable, '-c', sys.argv[1]], "
-            "stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True); "
+            "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
             "sys.exit(p.returncode)"
         )
         outer = subprocess.run(
