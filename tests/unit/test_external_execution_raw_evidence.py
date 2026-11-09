@@ -7,7 +7,6 @@ from skill_factory.evolution.external_execution_receipt import (
     admit_external_execution_receipt,
 )
 
-
 FIXTURE = Path("examples/interop/agent-done-v2-raw-2026-11-09")
 
 
