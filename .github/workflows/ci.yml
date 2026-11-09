@@ -36,6 +36,9 @@ jobs:
       - name: Run tests
         run: pytest --cov=skill_factory --cov-report=term-missing
 
+      - name: Run OTel #695 synthetic token-attribution contract
+        run: python -m unittest discover -s examples/otel_695 -p 'test_*.py' -v
+
       - name: Check experimental Outcome Witness truth-boundary vectors
         run: python examples/outcome_witness/check_vectors.py
 
