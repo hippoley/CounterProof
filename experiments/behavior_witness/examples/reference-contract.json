@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "subject": {
+    "name": "example-normalizer",
+    "identity": "fixture:example-normalizer-v1",
+    "kind": "authorized-local-fixture"
+  },
+  "operation": "normalize_query",
+  "probe": {
+    "id": "normalize-query-001",
+    "input": {"query": "  HeLLo  "},
+    "environment": {"locale": "C"}
+  },
+  "reference_observation": {
+    "output": "hello",
+    "exit_code": 0
+  },
+  "comparator": {
+    "mode": "exact-text"
+  },
+  "evidence": {
+    "kind": "recorded-fixture",
+    "source": "experiments/behavior_witness/examples/reference-contract.json",
+    "notes": "Synthetic fixture proving the contract/replay shape only."
+  },
+  "scope": {
+    "establishes": [
+      "For probe normalize-query-001, the frozen reference observation is the exact text 'hello'."
+    ],
+    "does_not_establish": [
+      "Complete equivalence for other inputs.",
+      "The implementation technique used by the reference.",
+      "Correctness of the reference behavior."
+    ]
+  }
+}
