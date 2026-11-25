@@ -17,21 +17,21 @@ observations:
     note: "Re-read on 2026-11-09: issue #12 remains closed and PR #14 remains merged at the same head; the public interoperability claim is about the implemented producer/consumer relationship, not an open-issue status."
 
   - id: in-toto-conformance-layer-node
-    observed_at: "2026-11-09"
+    observed_at: "2026-11-25"
     refresh_after_days: 14
     sources:
       - url: https://github.com/in-toto/attestation/issues/554
         kind: issue
         state: open
-        updated_at: "2026-10-01T21:31:17Z"
-        comments: 28
+        updated_at: "2026-11-23T07:19:24Z"
+        comments: 29
       - url: https://github.com/in-toto/attestation/pull/597
         kind: pull_request
         state: open
         merged: false
         head_sha: 8c8d21c4908cff5b5c241e7fce32d342975216f9
         updated_at: "2026-09-23T02:50:06Z"
-    note: "Re-read on 2026-11-09: both the agent-decision predicate discussion and conformance-layer PR remain open; CounterProof contributes lifecycle/freshness semantics without claiming ownership of the predicate."
+    note: "Re-read on 2026-11-25: issue #554 remains open; the new 2026-11-23 comment points to independently runnable agent-decision vectors in probityai/agent-evidence-vectors v0.38.0 (number forms, 2^53-1, args_state verdicts). PR #597 remains open at its pinned head. This is an upstream conformance opportunity, not a CounterProof verification result or adoption. A separate independent-run receipt is required before making a compatibility claim."
 
   - id: ite63-openfab-604-dry-run
     observed_at: "2026-11-09"
