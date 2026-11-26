@@ -1,0 +1,30 @@
+name: Pinned external physical-completion corpus admission
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'examples/interop/probityai-physical-completion-v039/**'
+      - '.github/workflows/probityai-v039-admission.yml'
+permissions:
+  contents: read
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run negative tests
+        working-directory: examples/interop/probityai-physical-completion-v039
+        run: python -m unittest discover -v -p 'test_*.py'
+      - name: Audit pinned official 48-record release
+        working-directory: examples/interop/probityai-physical-completion-v039
+        run: python verify_release.py --receipt "${{ runner.temp }}/probity-v039-admission.json"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: probity-v039-integrity-only-receipt
+          path: ${{ runner.temp }}/probity-v039-admission.json
+          if-no-files-found: error
